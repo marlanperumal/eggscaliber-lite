@@ -1,0 +1,7 @@
+{
+  "*.py": ["ruff check --fix", "ruff format"],
+  "*.{ts,tsx,js,jsx}": ["eslint --fix", "prettier --write"],
+  "*.{json,yaml,yml,md,css}": ["prettier --write"],
+  "{pyproject.toml,apps/api/pyproject.toml}": ["sh -c 'cd apps/api && uv run pip-audit'"],
+  "{package.json,pnpm-lock.yaml,apps/web/package.json}": ["sh -c 'cd apps/web && pnpm audit --audit-level moderate'"]
+}
