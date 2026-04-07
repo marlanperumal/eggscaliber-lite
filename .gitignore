@@ -227,6 +227,7 @@ __pycache__/
 .next/
 dist/
 build/
+*.tsbuildinfo
 
 # Test coverage
 .coverage
