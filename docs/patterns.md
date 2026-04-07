@@ -2,6 +2,8 @@
 
 Authoritative index of conventions enforced in this codebase. The `audit-patterns` skill reads this file.
 
+When adding a new library, read its official docs for the installed version and add any relevant conventions here.
+
 ## Backend (FastAPI)
 
 Strict 3-layer architecture. **No layer may reach past its immediate neighbour.**

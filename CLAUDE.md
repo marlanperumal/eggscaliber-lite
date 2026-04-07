@@ -47,6 +47,16 @@ just audit          # pip-audit + pnpm audit
 - Never mock the database or internal services — see `docs/testing.md`
 - Architecture rules are in `docs/patterns.md` — run `audit-patterns` skill periodically
 
+## Adding New Libraries
+
+When adding any library or framework:
+
+1. **Use the latest stable version** — confirm with `npm show <pkg> version` or `uv pip index versions <pkg>`. Do not use version numbers from training data.
+2. **Read the official docs for that exact version** before writing any config or integration code. Use `WebFetch`/`WebSearch` — don't assume the API from memory.
+3. **Check for patterns worth documenting** — if the library's best-practice setup reveals conventions relevant to this project, add them to `docs/patterns/` (frontend, backend, or infrastructure as appropriate).
+
+This rule exists because version-specific breakage has already occurred: Storybook 8→10 changed the framework entirely, `next lint` was removed in Next.js 16, `eslint-plugin-react` v7 is incompatible with ESLint 10. Each was avoidable by reading current docs.
+
 ## Environment
 
 - Local dev: `.env.local` (Docker Postgres + MinIO + dev JWT auth)
