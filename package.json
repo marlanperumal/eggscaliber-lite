@@ -1,0 +1,15 @@
+{
+  "name": "eggscaliber-lite",
+  "private": true,
+  "scripts": {
+    "postinstall": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.0.0",
+    "@commitlint/config-conventional": "^19.0.0",
+    "concurrently": "^9.0.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "openapi-typescript": "^7.0.0"
+  }
+}

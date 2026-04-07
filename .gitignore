@@ -208,3 +208,30 @@ __marimo__/
 
 # Superpowers brainstorm sessions
 .superpowers/
+
+# Node
+node_modules/
+.pnpm-store/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Environment files (keep .env.example)
+.env.local
+.env.staging
+.env.production
+
+# Build outputs
+.next/
+dist/
+build/
+
+# Test coverage
+.coverage
+htmlcov/
+coverage/
+
+# Storybook
+storybook-static/
