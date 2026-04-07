@@ -1,0 +1,85 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/eggscaliber_dev
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/eggscaliber_test
+      MIGRATIONS_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/eggscaliber_migrations_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pnpm install
+          uv sync
+
+      - name: Create test databases and extensions
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE eggscaliber_dev;"
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE eggscaliber_test;"
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE eggscaliber_migrations_test;"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d eggscaliber_dev -c "CREATE EXTENSION IF NOT EXISTS vector;"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d eggscaliber_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d eggscaliber_migrations_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+      - name: Run migrations (test DB)
+        run: cd apps/api && uv run alembic upgrade head
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+
+      - name: Lint
+        run: just lint
+
+      - name: Format check
+        run: just format-check
+
+      - name: Type check
+        run: just typecheck
+
+      - name: Security audit
+        run: just audit
+
+      - name: Check generated types are fresh
+        run: just check-types
+
+      - name: Run tests
+        run: just test
+
+      - name: Build Storybook (verify no component errors)
+        run: cd apps/web && pnpm build-storybook
