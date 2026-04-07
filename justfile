@@ -75,25 +75,12 @@ db-migration name:
 
 # Generate TypeScript types from FastAPI OpenAPI spec
 generate-types:
-    #!/usr/bin/env bash
-    set -e
-    echo "Starting API server for type generation..."
-    cd apps/api && uv run uvicorn src.main:app --port 8001 &
-    API_PID=$!
-    sleep 2
-    pnpm openapi-typescript http://localhost:8001/openapi.json -o packages/shared/api.d.ts
-    kill $API_PID
-    echo "Types generated to packages/shared/api.d.ts"
+    bash scripts/generate-types.sh
 
 # Fail if generated types are stale (used in CI)
 check-types:
-    #!/usr/bin/env bash
-    set -e
     just generate-types
-    if ! git diff --exit-code packages/shared/api.d.ts; then
-        echo "ERROR: packages/shared/api.d.ts is stale. Run 'just generate-types' and commit."
-        exit 1
-    fi
+    git diff --exit-code packages/shared/api.d.ts || (echo "ERROR: packages/shared/api.d.ts is stale. Run 'just generate-types' and commit." && exit 1)
 
 # ===== Quality =====
 
@@ -110,20 +97,21 @@ test-api:
 test-web:
     cd apps/web && pnpm vitest run
 
-# Lint Python + TypeScript
+# Lint Python (ruff) + TypeScript (biome + next lint)
 lint:
     cd apps/api && uv run ruff check .
-    cd apps/web && pnpm eslint src/
+    cd apps/web && pnpm biome check src/
+    cd apps/web && pnpm next lint
 
-# Format Python + TypeScript
+# Format Python (ruff) + TypeScript (biome)
 format:
     cd apps/api && uv run ruff format .
-    cd apps/web && pnpm prettier --write src/
+    cd apps/web && pnpm biome format --write src/
 
 # Check formatting without writing (used in CI)
 format-check:
     cd apps/api && uv run ruff format --check .
-    cd apps/web && pnpm prettier --check src/
+    cd apps/web && pnpm biome check --formatter-enabled=true src/
 
 # Type check Python + TypeScript
 typecheck:

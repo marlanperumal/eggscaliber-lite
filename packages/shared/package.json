@@ -1,0 +1,7 @@
+{
+  "name": "@eggscaliber/shared",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./api.d.ts",
+  "types": "./api.d.ts"
+}
