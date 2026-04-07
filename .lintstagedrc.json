@@ -1,7 +1,7 @@
 {
+  "apps/web/**/*.{ts,tsx,js,jsx,json}": ["sh -c 'cd apps/web && pnpm biome check --write --no-errors-on-unmatched'"],
   "*.py": ["ruff check --fix", "ruff format"],
-  "apps/web/**/*.{ts,tsx,js,jsx}": ["sh -c 'cd apps/web && node_modules/.bin/eslint --fix \"$@\"' --", "sh -c 'cd apps/web && node_modules/.bin/prettier --write \"$@\"' --"],
-  "apps/web/**/*.{json,yaml,yml,md,css}": ["sh -c 'cd apps/web && node_modules/.bin/prettier --write \"$@\"' --"],
+  "*.{yaml,yml,md}": [],
   "{pyproject.toml,apps/api/pyproject.toml}": ["sh -c 'cd apps/api && uv run pip-audit'"],
   "{package.json,pnpm-lock.yaml,apps/web/package.json}": ["sh -c 'cd apps/web && pnpm audit --audit-level moderate'"]
 }

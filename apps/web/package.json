@@ -27,10 +27,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",
     "@radix-ui/react-slot": "^1.2.4",
-    "@storybook/addon-essentials": "^8.6.18",
-    "@storybook/addon-interactions": "^8.6.18",
-    "@storybook/nextjs": "^8.6.18",
-    "@storybook/react": "^8.6.18",
+    "@storybook/nextjs-vite": "^10.3.4",
     "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.0.0",
@@ -43,7 +40,8 @@
     "eslint": "^10.2.0",
     "eslint-config-next": "^16.2.2",
     "jsdom": "^25.0.0",
-    "storybook": "^8.6.18",
+    "storybook": "^10.3.4",
+    "vite": "^8.0.6",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
     "vitest": "^4.1.3"
