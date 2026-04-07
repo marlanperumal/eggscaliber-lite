@@ -1,0 +1,136 @@
+set dotenv-load
+set dotenv-filename := ".env.local"
+
+# Default: list available commands
+default:
+    @just --list
+
+# ===== Setup =====
+
+# Bootstrap everything for a new developer
+setup:
+    pnpm install
+    uv sync
+    just db-up
+    @sleep 3
+    just db-migrate
+    just generate-types
+
+# ===== Development =====
+
+# Run api + web concurrently (requires db to be up separately)
+dev:
+    pnpm concurrently \
+        "just api" \
+        "just web" \
+        --names "api,web" \
+        --prefix-colors "green,blue"
+
+# Next.js dev server
+web:
+    cd apps/web && pnpm dev
+
+# FastAPI dev server
+api:
+    cd apps/api && uv run uvicorn src.main:app --reload --port 8000
+
+# Storybook dev server
+storybook:
+    cd apps/web && pnpm storybook
+
+# Marimo notebook server
+notebook:
+    uv run marimo edit notebooks/
+
+# ===== Database =====
+
+# Start Docker containers
+db-up:
+    docker compose up -d
+
+# Stop Docker containers (keep volumes)
+db-down:
+    docker compose down
+
+# Wipe volumes and restart fresh
+db-reset:
+    docker compose down -v
+    docker compose up -d
+    @sleep 3
+    just db-migrate
+
+# Run seed scripts
+db-seed:
+    cd apps/api && uv run python -m scripts.seed
+
+# Run Alembic migrations (dev DB)
+db-migrate:
+    cd apps/api && uv run alembic upgrade head
+
+# Generate a new migration from model changes
+db-migration name:
+    cd apps/api && uv run alembic revision --autogenerate -m "{{name}}"
+
+# ===== Shared Types =====
+
+# Generate TypeScript types from FastAPI OpenAPI spec
+generate-types:
+    #!/usr/bin/env bash
+    set -e
+    echo "Starting API server for type generation..."
+    cd apps/api && uv run uvicorn src.main:app --port 8001 &
+    API_PID=$!
+    sleep 2
+    pnpm openapi-typescript http://localhost:8001/openapi.json -o packages/shared/api.d.ts
+    kill $API_PID
+    echo "Types generated to packages/shared/api.d.ts"
+
+# Fail if generated types are stale (used in CI)
+check-types:
+    #!/usr/bin/env bash
+    set -e
+    just generate-types
+    if ! git diff --exit-code packages/shared/api.d.ts; then
+        echo "ERROR: packages/shared/api.d.ts is stale. Run 'just generate-types' and commit."
+        exit 1
+    fi
+
+# ===== Quality =====
+
+# Run all tests
+test:
+    just test-api
+    just test-web
+
+# Run Python tests
+test-api:
+    cd apps/api && uv run pytest -v
+
+# Run TypeScript tests
+test-web:
+    cd apps/web && pnpm vitest run
+
+# Lint Python + TypeScript
+lint:
+    cd apps/api && uv run ruff check .
+    cd apps/web && pnpm eslint src/
+
+# Format Python + TypeScript
+format:
+    cd apps/api && uv run ruff format .
+    cd apps/web && pnpm prettier --write src/
+
+# Check formatting without writing (used in CI)
+format-check:
+    cd apps/api && uv run ruff format --check .
+    cd apps/web && pnpm prettier --check src/
+
+# Type check Python + TypeScript
+typecheck:
+    cd apps/api && uv run ty check src/
+    cd apps/web && pnpm tsc --noEmit
+
+# Security audit Python + JS dependencies
+audit:
+    cd apps/api && uv run pip-audit
+    cd apps/web && pnpm audit --audit-level moderate
