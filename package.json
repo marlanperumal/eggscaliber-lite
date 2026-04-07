@@ -2,15 +2,7 @@
   "name": "eggscaliber-lite",
   "private": true,
   "scripts": {
-    "postinstall": "husky",
-    "prepare": "husky"
-  },
-  "pnpm": {
-    "overrides": {
-      "vite": ">=6.4.2",
-      "rollup": ">=3.30.0",
-      "esbuild": ">=0.25.0"
-    }
+    "postinstall": "husky"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.5.0",

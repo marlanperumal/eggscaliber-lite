@@ -4,7 +4,6 @@ from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine
-
 from src.config import settings
 
 ALEMBIC_CFG_PATH = "alembic.ini"

@@ -1,11 +1,10 @@
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
 from fastapi.testclient import TestClient
-
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 from src.config import settings
-from src.main import app
 from src.database import get_session
+from src.main import app
 
 
 @pytest.fixture(scope="session")
@@ -19,8 +18,8 @@ def engine():
 def db(engine):
     connection = engine.connect()
     transaction = connection.begin()
-    TestSession = sessionmaker(bind=connection)
-    session = TestSession()
+    session_factory = sessionmaker(bind=connection)
+    session = session_factory()
     yield session
     session.close()
     transaction.rollback()

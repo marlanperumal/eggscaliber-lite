@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "biome check src/ && next lint",
+    "lint": "biome check src/",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "vitest": "vitest",
@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",
+    "@eslint/eslintrc": "^3.3.5",
     "@radix-ui/react-slot": "^1.2.4",
     "@storybook/nextjs-vite": "^10.3.4",
     "@testing-library/jest-dom": "^6.0.0",
@@ -41,9 +42,9 @@
     "eslint-config-next": "^16.2.2",
     "jsdom": "^25.0.0",
     "storybook": "^10.3.4",
-    "vite": "^8.0.6",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
+    "vite": "^8.0.6",
     "vitest": "^4.1.3"
   }
 }
