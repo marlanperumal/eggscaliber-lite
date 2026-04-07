@@ -8,6 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Check `just --list` for all available commands. Only fall back to direct invocation when no `just` recipe covers the operation (e.g. `pnpm install`, `uv sync`, `git` operations).
 
+When running `uv run` directly (not via `just`), add `--no-env-file` to prevent uv from looking for a `.env` file — `just` already loads `.env.local` and exports those vars.
+
 ```bash
 just setup          # bootstrap: install deps, start Docker, migrate, generate types
 just dev            # start api + web concurrently
@@ -22,7 +24,7 @@ just generate-types # regenerate packages/shared/api.d.ts from OpenAPI spec
 just test           # run all tests (pytest + vitest)
 just test-api       # pytest only
 just test-web       # vitest only
-just lint           # ruff + biome + next lint
+just lint           # ruff + biome
 just format         # ruff format + biome format
 just format-check   # check formatting without writing (CI)
 just typecheck      # ty + tsc

@@ -26,6 +26,22 @@ src/components/ui/
   Button.test.tsx      ← unit tests alongside the component (if needed)
 ```
 
+Storybook uses `@storybook/nextjs-vite` (Vite-based, required for Next.js 16 compatibility). Story files import from `@storybook/nextjs-vite` and use `satisfies Meta<typeof Component>`:
+
+```typescript
+import type { Meta, StoryObj } from "@storybook/nextjs-vite"
+import { Button } from "./Button"
+
+const meta = {
+  component: Button,
+} satisfies Meta<typeof Button>
+
+export default meta
+type Story = StoryObj<typeof meta>
+
+export const Default: Story = { args: { children: "Click me" } }
+```
+
 ## Feature Flags
 
 Use PostHog for feature flags:
