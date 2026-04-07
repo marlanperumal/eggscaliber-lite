@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint src/",
+    "lint": "biome check src/ && next lint",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "vitest": "vitest",
@@ -25,10 +25,12 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
-    "@storybook/addon-essentials": "^8.6.14",
-    "@storybook/addon-interactions": "^8.6.14",
-    "@storybook/nextjs": "^8.6.14",
-    "@storybook/react": "^8.6.14",
+    "@biomejs/biome": "^2.4.10",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@storybook/addon-essentials": "^8.6.18",
+    "@storybook/addon-interactions": "^8.6.18",
+    "@storybook/nextjs": "^8.6.18",
+    "@storybook/react": "^8.6.18",
     "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.0.0",
@@ -41,11 +43,8 @@
     "eslint": "^10.2.0",
     "eslint-config-next": "^16.2.2",
     "jsdom": "^25.0.0",
-    "prettier": "^3.8.1",
-    "prettier-plugin-tailwindcss": "^0.7.2",
-    "storybook": "^8.6.14",
+    "storybook": "^8.6.18",
     "tailwindcss": "^4.2.2",
-    "@radix-ui/react-slot": "^1.2.4",
     "typescript": "^6.0.2",
     "vitest": "^4.1.3"
   }
