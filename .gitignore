@@ -238,3 +238,6 @@ coverage/
 
 # Storybook
 storybook-static/
+
+# Playwright MCP snapshots
+.playwright-mcp/
