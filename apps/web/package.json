@@ -10,7 +10,8 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "vitest": "vitest",
-    "test": "vitest run"
+    "test": "vitest run",
+    "chromatic": "npx chromatic --project-token=chpt_85846330fe69bf3"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.0.11",
