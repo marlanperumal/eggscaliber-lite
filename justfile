@@ -34,6 +34,10 @@ web:
 api:
     cd apps/api && uv run --no-env-file uvicorn src.main:app --reload --port 8000
 
+# Build Next.js for production
+build:
+    cd apps/web && pnpm build
+
 # Storybook dev server
 storybook:
     cd apps/web && pnpm storybook
