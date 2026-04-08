@@ -57,7 +57,14 @@ cp -r .venv/lib/python3.13/site-packages/fastapi/.agents/skills/fastapi .claude/
 
 ## Adding New Libraries
 
-When adding any library or framework:
+When adding any library or framework, **always** do one of the following before writing any integration code:
+
+1. **Search for an existing skill** on [skills.sh](https://skills.sh) from the library's official org. If found and audits pass (Gen ✅, Socket ✅, Snyk ✅/⚠️), install it: `npx skills add <owner/repo> --skill <name> --agent claude-code -y`
+2. **Write a custom skill** by reading the official docs for the installed version via `WebFetch`. Save to `.claude/skills/<library>/SKILL.md` and commit.
+
+Do not rely on training-data knowledge for installation or integration — always read current docs.
+
+
 
 1. **Use the latest stable version** — confirm with `npm show <pkg> version` or `uv pip index versions <pkg>`. Do not use version numbers from training data.
 2. **Read the official docs for that exact version** before writing any config or integration code. Use `WebFetch`/`WebSearch` — don't assume the API from memory.

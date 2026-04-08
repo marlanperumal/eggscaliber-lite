@@ -1,8 +1,6 @@
 # PostHog — Next.js App Router Integration
 
-Use the `@posthog/next` package (not bare `posthog-js`) for Next.js App Router.
-
-> **Note:** This project currently has `posthog-js` installed. Migrate to `@posthog/next` when wiring up analytics: `pnpm add @posthog/next`
+Use `@posthog/next` for Next.js App Router. This project also has `@posthog/nextjs-config` for sourcemap uploads in `next.config.ts`.
 
 ## Environment Variables
 
