@@ -1,3 +1,4 @@
+import { PostHogPageView, PostHogProvider } from "@posthog/next"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
@@ -12,7 +13,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <PostHogProvider
+          clientOptions={{ api_host: "/ingest", debug: process.env.NODE_ENV === "development" }}
+          bootstrapFlags
+        >
+          <PostHogPageView />
+          {children}
+        </PostHogProvider>
+      </body>
     </html>
   )
 }
