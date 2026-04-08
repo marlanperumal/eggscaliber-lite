@@ -38,3 +38,4 @@ just generate-types # regenerate TypeScript types from FastAPI OpenAPI spec
 ```
 
 Run `just` at the repo root to see all available commands.
+# test
