@@ -12,8 +12,8 @@ description: Use when a PR has unresolved bot review comments (e.g.
 Fetch bot review comments → evaluate each against the rubric → implement or
 decline → push → re-request review → repeat until satisfied.
 
-**Tools:** GitHub MCP (`get_pull_request_comments`, `get_pull_request_reviews`,
-`add_issue_comment`), Read/Edit, git bash.
+**Tools:** `gh` CLI (preferred for reliability), GitHub MCP as fallback,
+Read/Edit, git bash.
 
 ---
 
@@ -25,7 +25,11 @@ Confirm `owner`, `repo`, and `pull_number` from context or ask.
 
 ## Step 2: Fetch comments
 
-Call `get_pull_request_comments` and `get_pull_request_reviews`.
+```bash
+gh pr view <number> --repo <owner>/<repo> --comments
+gh api repos/<owner>/<repo>/pulls/<number>/reviews
+gh api repos/<owner>/<repo>/pulls/<number>/comments
+```
 
 Filter to bot accounts (usernames ending in `[bot]`). Skip any comment you
 have already replied to or addressed this session. Group by file.
@@ -70,7 +74,7 @@ When in doubt, implement. Bot reviewers have seen the full diff.
 
 ## Step 5b: Declining
 
-Reply to the comment via `add_issue_comment`. The reply must:
+Reply to the comment via `gh pr comment <number> --body "..."`. The reply must:
 
 - Acknowledge the suggestion.
 - Explain in 1–3 sentences why it does not apply (project convention,
@@ -90,9 +94,11 @@ Example:
 git push origin <branch>
 ```
 
-Then post to the PR via `add_issue_comment`:
+Then notify via:
 
-> All bot review comments addressed — see commits above. Ready for re-review.
+```bash
+gh pr comment <number> --body "All bot review comments addressed — see commits above. Ready for re-review."
+```
 
 ---
 
