@@ -44,14 +44,44 @@ export const Default: Story = { args: { children: "Click me" } }
 
 ## Feature Flags
 
-Use PostHog for feature flags:
+Use PostHog via `@posthog/next` — do not import from `posthog-js/react` directly.
+
+Client components (requires `'use client'`):
 
 ```typescript
-import { useFeatureFlagEnabled } from "posthog-js/react"
+'use client'
+import { useFeatureFlag } from "@posthog/next"
 
 function MyComponent() {
-  const showNewFeature = useFeatureFlagEnabled("new-feature-flag")
+  const showNewFeature = useFeatureFlag("new-feature-flag")
   return showNewFeature ? <NewFeature /> : <OldFeature />
+}
+```
+
+Server components:
+
+```typescript
+import { getPostHog } from "@posthog/next"
+
+export default async function Page() {
+  const posthog = await getPostHog()
+  const flags = await posthog.getAllFlags()
+}
+```
+
+Event capture in client components:
+
+```typescript
+'use client'
+import { usePostHog } from "@posthog/next"
+
+export function UploadButton() {
+  const posthog = usePostHog()
+  return (
+    <button onClick={() => posthog.capture("file_uploaded", { file_type: "csv" })}>
+      Upload
+    </button>
+  )
 }
 ```
 
