@@ -67,11 +67,6 @@ Add to `~/.claude/settings.json` under `"mcpServers"`. These are user-level — 
 ```json
 {
   "mcpServers": {
-    "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "<token>" }
-    },
     "linear": {
       "command": "npx",
       "args": ["-y", "@linear/mcp-server"],
@@ -98,7 +93,6 @@ Add to `~/.claude/settings.json` under `"mcpServers"`. These are user-level — 
 
 | MCP | Key location |
 |---|---|
-| GitHub | https://github.com/settings/tokens → scopes: `repo`, `read:org`, `workflow` |
 | Linear | Linear → Settings → API → Personal API Keys |
 | Neon | Neon dashboard → Account → API Keys |
 | Context7 | No key needed |
