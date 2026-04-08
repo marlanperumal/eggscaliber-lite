@@ -47,6 +47,14 @@ just audit          # pip-audit + pnpm audit
 - Never mock the database or internal services — see `docs/testing.md`
 - Architecture rules are in `docs/patterns.md` — run `audit-patterns` skill periodically
 
+## Skills
+
+Agent skills live in `.claude/skills/`. After running `uv sync`, re-sync the FastAPI bundled skill:
+
+```bash
+cp -r .venv/lib/python3.13/site-packages/fastapi/.agents/skills/fastapi .claude/skills/fastapi
+```
+
 ## Adding New Libraries
 
 When adding any library or framework:
