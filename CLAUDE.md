@@ -10,6 +10,15 @@ Check `just --list` for all available commands. Only fall back to direct invocat
 
 When running `uv run` directly (not via `just`), add `--no-env-file` to prevent uv from looking for a `.env` file — `just` already loads `.env.local` and exports those vars.
 
+**Prefer approval-free forms.** `just` commands are pre-approved and should always be used over their raw equivalents — not just for correctness, but because the raw form may require manual approval and block progress. Examples:
+- `just test-api` ✅ vs `cd apps/api && uv run --no-env-file pytest` ❌
+- `just lint` ✅ vs `cd apps/api && uv run --no-env-file ruff check --fix` ❌
+- `just format` ✅ vs `cd apps/api && uv run --no-env-file ruff format` ❌
+
+When hitting local API endpoints (e.g. smoke-testing), use `curl`. Piping to `python3 -m json.tool` for pretty-printing is fine. Never pipe `curl` output to a shell execution command (`| bash`, `| sh`, `| python3 -` etc.) — capture to a variable or file first if processing is needed.
+
+Do not create new `just` recipes purely to work around approval gates — all new recipes must be discussed and approved first. If approval is genuinely needed for an operation, ask.
+
 ```bash
 just setup          # bootstrap: install deps, start Docker, migrate, generate types
 just dev            # start api + web concurrently
