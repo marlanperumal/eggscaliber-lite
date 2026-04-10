@@ -29,7 +29,7 @@ git commit -F /tmp/commit-msg.txt
 
 This keeps multi-line messages with `Co-Authored-By` trailers on one clean Bash call that matches the allowlist.
 
-Never use `git -C /path/to/repo` when a plain `git` command from the repo root suffices — the working directory is always the repo root.
+Before running `git` commands, check that the working directory is correct. Use plain `git` if already in the right place; only use `git -C /path` when genuinely targeting a different repo than the current working directory.
 
 Keep Bash tool calls simple — avoid complex quoting or chaining that may not match allowlist patterns. If a command needs multiple steps, use separate Bash tool calls.
 
