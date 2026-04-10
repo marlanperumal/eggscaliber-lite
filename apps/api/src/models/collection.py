@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from sqlmodel import Field, SQLModel
@@ -21,7 +21,7 @@ class CollectionBase(SQLModel):
 
 class Collection(CollectionBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class CollectionRead(CollectionBase):

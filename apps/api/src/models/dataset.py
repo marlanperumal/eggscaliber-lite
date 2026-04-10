@@ -1,8 +1,9 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import JSON, Column
+from sqlalchemy import Column
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 
@@ -24,9 +25,9 @@ class DatasetBase(SQLModel):
 class Dataset(DatasetBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     worker_config: dict[str, Any] | None = Field(
-        default=None, sa_column=Column(JSON, nullable=True)
+        default=None, sa_column=Column(JSONB, nullable=True)
     )
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class DatasetRead(DatasetBase):
