@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.models.response import Response
@@ -29,7 +29,7 @@ class JsonbResponseWorker(DataWorker):
                 yield dict(row.payload)
 
     def count(self, dataset_id: int, filters: dict[str, Any]) -> int:
-        stmt = select(Response).where(Response.dataset_id == dataset_id)
+        stmt = select(func.count()).select_from(Response).where(Response.dataset_id == dataset_id)
         for key, value in filters.items():
             stmt = stmt.where(Response.payload[key].astext == str(value))
-        return len(self._session.execute(stmt).scalars().all())
+        return self._session.execute(stmt).scalar_one()
