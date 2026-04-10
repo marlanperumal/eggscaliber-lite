@@ -21,6 +21,8 @@ Do not create new `just` recipes purely to work around approval gates — all ne
 
 Never start a Bash tool call with a `#` comment — the allowlist matches against the start of the command string, so a leading comment will block auto-approval. Put explanatory text in the surrounding response instead.
 
+Run `git add` and `git commit` as separate Bash tool calls, not chained with `&&`. Multi-line commit messages (with `Co-Authored-By` trailers) break allowlist pattern matching when chained.
+
 ```bash
 just setup          # bootstrap: install deps, start Docker, migrate, generate types
 just dev            # start api + web concurrently
