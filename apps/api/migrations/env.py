@@ -7,8 +7,10 @@ from src.config import settings
 
 config = context.config
 
-# Override the DB URL from settings (allows env vars to control target DB)
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Set the DB URL from settings, but only if the caller hasn't already set one
+# (e.g. tests set a test-specific URL via cycle_config.set_main_option before invoking upgrade/downgrade).
+if not config.get_main_option("sqlalchemy.url", default=None):
+    config.set_main_option("sqlalchemy.url", settings.database_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -16,6 +18,14 @@ if config.config_file_name is not None:
 # Import all models here so Alembic can detect them for autogenerate.
 # Add new model imports below this line as models are created.
 # e.g. from src.models.dataset import Dataset  # noqa: F401
+from src.models import (  # noqa: E402, F401
+    Collection,
+    Dataset,
+    Field,
+    Level,
+    Package,
+    Response,
+)
 
 target_metadata = SQLModel.metadata
 
