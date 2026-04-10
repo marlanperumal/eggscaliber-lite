@@ -19,6 +19,8 @@ When hitting local API endpoints (e.g. smoke-testing), use `curl`. Piping to `py
 
 Do not create new `just` recipes purely to work around approval gates — all new recipes must be discussed and approved first. If approval is genuinely needed for an operation, ask.
 
+Never start a Bash tool call with a `#` comment — the allowlist matches against the start of the command string, so a leading comment will block auto-approval. Put explanatory text in the surrounding response instead.
+
 ```bash
 just setup          # bootstrap: install deps, start Docker, migrate, generate types
 just dev            # start api + web concurrently
