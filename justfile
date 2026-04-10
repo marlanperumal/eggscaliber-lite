@@ -34,6 +34,19 @@ web:
 api:
     cd apps/api && uv run --no-env-file uvicorn src.main:app --reload --port 8000
 
+# Kill the FastAPI dev server (port 8000)
+kill-api:
+    kill $(lsof -ti:8000) 2>/dev/null || true
+
+# Kill the Next.js dev server (port 3000)
+kill-web:
+    kill $(lsof -ti:3000) 2>/dev/null || true
+
+# Kill both dev servers
+kill-dev:
+    just kill-api
+    just kill-web
+
 # Build Next.js for production
 build:
     cd apps/web && pnpm build
