@@ -33,6 +33,13 @@ Before running `git` commands, check that the working directory is correct. Use 
 
 Keep Bash tool calls simple — avoid complex quoting or chaining that may not match allowlist patterns. If a command needs multiple steps, use separate Bash tool calls.
 
+Use dedicated tools instead of Bash wherever possible — they work anywhere on the filesystem without needing allowlist approval:
+- File search: `Glob` (not `find` or `ls`)
+- Content search: `Grep` (not `grep` or `rg`)
+- Read files: `Read` (not `cat`/`head`/`tail`/`sed`)
+- Edit files: `Edit` (not `sed`/`awk`)
+- Write files: `Write` (not `echo >`/`cat <<EOF`)
+
 ```bash
 just setup          # bootstrap: install deps, start Docker, migrate, generate types
 just dev            # start api + web concurrently
