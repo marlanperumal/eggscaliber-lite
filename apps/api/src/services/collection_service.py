@@ -79,32 +79,28 @@ def check_field_consistency(collection_id: int, session: Session) -> list[FieldI
                 )
             )
 
-        # Level inconsistency — compare ordered datasets
+        # Level inconsistency — compare consecutive dataset pairs
         ordered_levels = [by_dataset[did][1] for did in dataset_ids if did in by_dataset]
-        if len(ordered_levels) > 1:
-            first = ordered_levels[0]
-            for later in ordered_levels[1:]:
-                added = later - first
-                removed = first - later
-                for val in added:
-                    result.append(
-                        FieldInconsistency(
-                            field_key=field_key,
-                            inconsistency_type=InconsistencyType.level_added,
-                            detail=(
-                                f"Level '{val}' added in a later dataset for field '{field_key}'"
-                            ),
-                        )
+        for prev, later in zip(ordered_levels, ordered_levels[1:], strict=False):
+            added = later - prev
+            removed = prev - later
+            for val in added:
+                result.append(
+                    FieldInconsistency(
+                        field_key=field_key,
+                        inconsistency_type=InconsistencyType.level_added,
+                        detail=(f"Level '{val}' added in a later dataset for field '{field_key}'"),
                     )
-                for val in removed:
-                    result.append(
-                        FieldInconsistency(
-                            field_key=field_key,
-                            inconsistency_type=InconsistencyType.level_removed,
-                            detail=(
-                                f"Level '{val}' removed in a later dataset for field '{field_key}'"
-                            ),
-                        )
+                )
+            for val in removed:
+                result.append(
+                    FieldInconsistency(
+                        field_key=field_key,
+                        inconsistency_type=InconsistencyType.level_removed,
+                        detail=(
+                            f"Level '{val}' removed in a later dataset for field '{field_key}'"
+                        ),
                     )
+                )
 
     return result
