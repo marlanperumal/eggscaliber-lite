@@ -11,6 +11,8 @@ class FieldType(StrEnum):
     ordinal = "ordinal"
     categorical = "categorical"
     multi_response = "multi_response"
+    identifier = "identifier"
+    weight = "weight"
 
 
 class FieldBase(SQLModel):
@@ -20,6 +22,7 @@ class FieldBase(SQLModel):
     sort_order: int = 0
     is_filterable: bool = True
     dataset_id: int = sql_field(foreign_key="dataset.id")
+    group_id: int | None = sql_field(default=None, foreign_key="fieldgroup.id")
 
 
 class Field(FieldBase, table=True):
