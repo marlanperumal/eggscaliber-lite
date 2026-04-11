@@ -6,7 +6,7 @@ from src.database import get_session
 from src.models.dataset import DatasetRead
 from src.models.field import FieldType
 from src.models.response import ResponseRead
-from src.repositories import dataset_repo
+from src.repositories import analytics_repo, dataset_repo
 
 router = APIRouter(tags=["datasets"])
 
@@ -63,3 +63,28 @@ def get_dataset_responses(
         raise HTTPException(status_code=404, detail="Dataset not found")
     total, items = dataset_repo.get_responses(session, dataset_id, page, page_size)
     return ResponsePage(total=total, page=page, page_size=page_size, items=items)
+
+
+class FieldOut(SQLModel):
+    id: int
+    field_key: str
+    display_name: str
+    field_type: FieldType
+    sort_order: int
+    is_filterable: bool
+
+
+@router.get("/datasets/{dataset_id}/field-tree")
+def get_field_tree(dataset_id: int, session: Session = Depends(get_session)):
+    ds = analytics_repo.get_dataset(session, dataset_id)
+    if ds is None:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+    return analytics_repo.get_field_tree(session, dataset_id)
+
+
+@router.get("/datasets/{dataset_id}/weight-fields", response_model=list[FieldOut])
+def get_weight_fields(dataset_id: int, session: Session = Depends(get_session)):
+    ds = analytics_repo.get_dataset(session, dataset_id)
+    if ds is None:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+    return analytics_repo.get_weight_fields(session, dataset_id)
