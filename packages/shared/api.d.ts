@@ -140,6 +140,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/datasets/{dataset_id}/field-tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Field Tree */
+        get: operations["get_field_tree_api_v1_datasets__dataset_id__field_tree_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasets/{dataset_id}/weight-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Weight Fields */
+        get: operations["get_weight_fields_api_v1_datasets__dataset_id__weight_fields_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/crosstab": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Crosstab */
+        post: operations["run_crosstab_api_v1_analytics_crosstab_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -183,6 +234,63 @@ export interface components {
              * @default []
              */
             datasets: components["schemas"]["DatasetSummary"][];
+        };
+        /** CrosstabMeta */
+        CrosstabMeta: {
+            /**
+             * Mode
+             * @default crosstab
+             */
+            mode: string;
+            /** Row Fields */
+            row_fields: components["schemas"]["MetaField"][];
+            /** Col Fields */
+            col_fields: components["schemas"]["MetaField"][];
+            /** Row Mode */
+            row_mode: string;
+            /** Col Mode */
+            col_mode: string;
+            measure: components["schemas"]["MeasureSpec"];
+            /** Dataset Name */
+            dataset_name: string;
+            /** Base N */
+            base_n: number;
+        };
+        /** CrosstabRequest */
+        CrosstabRequest: {
+            /** Dataset Id */
+            dataset_id: number;
+            /** Rows */
+            rows: components["schemas"]["FieldSelection"][];
+            /**
+             * Row Mode
+             * @default stacked
+             * @enum {string}
+             */
+            row_mode: "stacked" | "nested";
+            /**
+             * Columns
+             * @default []
+             */
+            columns: components["schemas"]["FieldSelection"][];
+            /**
+             * Col Mode
+             * @default stacked
+             * @enum {string}
+             */
+            col_mode: "stacked" | "nested";
+            /**
+             * Filters
+             * @default []
+             */
+            filters: components["schemas"]["FilterSpec"][];
+            measure: components["schemas"]["MeasureSpec"];
+        };
+        /** CrosstabResponse */
+        CrosstabResponse: {
+            meta: components["schemas"]["CrosstabMeta"];
+            /** Rows */
+            rows: components["schemas"]["ResultRow"][];
         };
         /** DatasetSummary */
         DatasetSummary: {
@@ -232,11 +340,30 @@ export interface components {
              */
             fields: components["schemas"]["FieldWithLevels"][];
         };
+        /** FieldOut */
+        FieldOut: {
+            /** Id */
+            id: number;
+            /** Field Key */
+            field_key: string;
+            /** Display Name */
+            display_name: string;
+            field_type: components["schemas"]["FieldType"];
+            /** Sort Order */
+            sort_order: number;
+            /** Is Filterable */
+            is_filterable: boolean;
+        };
+        /** FieldSelection */
+        FieldSelection: {
+            /** Field Key */
+            field_key: string;
+        };
         /**
          * FieldType
          * @enum {string}
          */
-        FieldType: "numeric" | "ordinal" | "categorical" | "multi_response";
+        FieldType: "numeric" | "ordinal" | "categorical" | "multi_response" | "identifier" | "weight";
         /** FieldWithLevels */
         FieldWithLevels: {
             /** Id */
@@ -255,6 +382,18 @@ export interface components {
              * @default []
              */
             levels: components["schemas"]["LevelOut"][];
+        };
+        /** FilterSpec */
+        FilterSpec: {
+            /** Field Key */
+            field_key: string;
+            /** Levels */
+            levels?: string[] | null;
+            /** Value Range */
+            value_range?: [
+                number,
+                number
+            ] | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -280,6 +419,31 @@ export interface components {
             display_label: string;
             /** Sort Order */
             sort_order: number;
+        };
+        /** MeasureSpec */
+        MeasureSpec: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "count" | "weighted" | "value_field";
+            /** Field Key */
+            field_key?: string | null;
+            /** Aggregation */
+            aggregation?: ("sum" | "mean") | null;
+            /**
+             * Display
+             * @default n
+             * @enum {string}
+             */
+            display: "pct_col" | "pct_row" | "n";
+        };
+        /** MetaField */
+        MetaField: {
+            /** Field Key */
+            field_key: string;
+            /** Display Name */
+            display_name: string;
         };
         /** PackageRead */
         PackageRead: {
@@ -344,6 +508,15 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** ResultRow */
+        ResultRow: {
+            /** Key */
+            key: string[];
+            /** Values */
+            values: {
+                [key: string]: number;
+            };
         };
         /** ValidationError */
         ValidationError: {
@@ -579,6 +752,101 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResponsePage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_field_tree_api_v1_datasets__dataset_id__field_tree_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_weight_fields_api_v1_datasets__dataset_id__weight_fields_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_crosstab_api_v1_analytics_crosstab_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrosstabRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrosstabResponse"];
                 };
             };
             /** @description Validation Error */
