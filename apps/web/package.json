@@ -19,6 +19,7 @@
     "@posthog/nextjs-config": "^1.9.1",
     "@sentry/nextjs": "^10.47.0",
     "clsx": "^2.1.1",
+    "lucide-react": "^1.8.0",
     "next": "^16.2.3",
     "openapi-fetch": "^0.17.0",
     "react": "^19.2.4",
