@@ -241,3 +241,4 @@ storybook-static/
 
 # Playwright MCP snapshots
 .playwright-mcp/
+.worktrees/
