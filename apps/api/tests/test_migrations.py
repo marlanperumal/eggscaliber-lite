@@ -3,7 +3,7 @@ from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from src.config import settings
 
 ALEMBIC_CFG_PATH = "alembic.ini"
@@ -40,8 +40,7 @@ def test_single_migration_head(alembic_config):
 def test_no_pending_model_changes(alembic_config):
     """All SQLModel model changes must have a corresponding Alembic migration.
 
-    Assumes the test DB (eggscaliber_test) has already been upgraded to head
-    before the test suite runs. CI does this via 'just db-migrate' before pytest.
+    Checks the dev DB (eggscaliber_dev) is at head. Run 'just db-migrate' if this fails.
     """
     try:
         command.check(alembic_config)
@@ -54,7 +53,11 @@ def test_no_pending_model_changes(alembic_config):
 
 def test_migration_upgrade_downgrade_cycle(alembic_config, migrations_engine):
     """Full upgrade → downgrade → upgrade cycle on the dedicated migrations test DB."""
-    # Point alembic at the migrations test DB for this test only
+    # Reset to a blank schema so stale state from prior runs never interferes.
+    with migrations_engine.begin() as conn:
+        conn.execute(text("DROP SCHEMA public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
+
     cycle_config = Config(ALEMBIC_CFG_PATH)
     cycle_config.set_main_option("sqlalchemy.url", settings.migrations_test_database_url)
 

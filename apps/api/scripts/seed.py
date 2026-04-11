@@ -1,6 +1,7 @@
 """Seed script: just db-seed runs this as `python -m scripts.seed` from apps/api/."""
 
 import random
+import uuid
 from datetime import date
 
 from sqlalchemy import select
@@ -8,6 +9,7 @@ from src.database import SessionLocal
 from src.models.collection import Collection, CollectionType
 from src.models.dataset import Dataset
 from src.models.field import Field, FieldType
+from src.models.field_group import FieldGroup
 from src.models.level import Level
 from src.models.package import Package
 from src.models.response import Response
@@ -80,7 +82,19 @@ def _seed_brand_tracker(session, package_id):
 
 
 def _define_brand_tracker_fields(session, dataset_id, wave_num):
-    fields = [
+    # Create field groups
+    brand_grp = FieldGroup(
+        name="Brand Perception", slug="brand-perception", sort_order=0, dataset_id=dataset_id
+    )
+    demo_grp = FieldGroup(
+        name="Demographics", slug="demographics", sort_order=1, dataset_id=dataset_id
+    )
+    session.add_all([brand_grp, demo_grp])
+    session.flush()
+    session.refresh(brand_grp)
+    session.refresh(demo_grp)
+
+    brand_fields = [
         (
             "brand_awareness",
             "Brand Awareness",
@@ -112,6 +126,8 @@ def _define_brand_tracker_fields(session, dataset_id, wave_num):
             ]
             + ([("podcast", "Podcast")] if wave_num == 2 else []),
         ),
+    ]
+    demo_fields = [
         (
             "age_group",
             "Age Group",
@@ -130,7 +146,8 @@ def _define_brand_tracker_fields(session, dataset_id, wave_num):
             ],
         ),
     ]
-    for i, (key, name, ftype, levels) in enumerate(fields):
+
+    for i, (key, name, ftype, levels) in enumerate(brand_fields):
         f = Field(
             field_key=key,
             display_name=name,
@@ -138,12 +155,51 @@ def _define_brand_tracker_fields(session, dataset_id, wave_num):
             sort_order=i,
             is_filterable=True,
             dataset_id=dataset_id,
+            group_id=brand_grp.id,
         )
         session.add(f)
         session.flush()
         session.refresh(f)
         for j, (val, label) in enumerate(levels):
             session.add(Level(value=val, display_label=label, sort_order=j, field_id=f.id))
+
+    for i, (key, name, ftype, levels) in enumerate(demo_fields, start=len(brand_fields)):
+        f = Field(
+            field_key=key,
+            display_name=name,
+            field_type=ftype,
+            sort_order=i,
+            is_filterable=True,
+            dataset_id=dataset_id,
+            group_id=demo_grp.id,
+        )
+        session.add(f)
+        session.flush()
+        session.refresh(f)
+        for j, (val, label) in enumerate(levels):
+            session.add(Level(value=val, display_label=label, sort_order=j, field_id=f.id))
+
+    # Special fields — excluded from field tree, used internally
+    session.add(
+        Field(
+            field_key="respondent_id",
+            display_name="Respondent ID",
+            field_type=FieldType.identifier,
+            sort_order=90,
+            is_filterable=False,
+            dataset_id=dataset_id,
+        )
+    )
+    session.add(
+        Field(
+            field_key="panel_weight",
+            display_name="Panel Weight",
+            field_type=FieldType.weight,
+            sort_order=91,
+            is_filterable=False,
+            dataset_id=dataset_id,
+        )
+    )
     session.flush()
 
 
@@ -158,6 +214,8 @@ def _add_brand_tracker_responses(session, dataset_id, wave_num, n):
             chosen_media.append("other")
 
         payload: dict = {
+            "respondent_id": str(uuid.uuid4()),
+            "panel_weight": round(random.uniform(0.5, 1.5), 4),
             "brand_awareness": random.choice(["aware", "not_aware"]),
             "brand_rating": random.choice(["very_poor", "poor", "neutral", "good", "excellent"]),
             "media_used": chosen_media,
