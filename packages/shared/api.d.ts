@@ -191,6 +191,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/analytics/trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Trend */
+        post: operations["run_trend_api_v1_analytics_trend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -517,6 +534,40 @@ export interface components {
             values: {
                 [key: string]: number;
             };
+        };
+        /** TrendMeta */
+        TrendMeta: {
+            /**
+             * Mode
+             * @default trend
+             */
+            mode: string;
+            /** Fields */
+            fields: components["schemas"]["MetaField"][];
+            breakdown?: components["schemas"]["MetaField"] | null;
+            measure: components["schemas"]["MeasureSpec"];
+            /** Collection Name */
+            collection_name: string;
+        };
+        /** TrendRequest */
+        TrendRequest: {
+            /** Collection Id */
+            collection_id: number;
+            /** Fields */
+            fields: components["schemas"]["FieldSelection"][];
+            breakdown?: components["schemas"]["FieldSelection"] | null;
+            /**
+             * Filters
+             * @default []
+             */
+            filters: components["schemas"]["FilterSpec"][];
+            measure: components["schemas"]["MeasureSpec"];
+        };
+        /** TrendResponse */
+        TrendResponse: {
+            meta: components["schemas"]["TrendMeta"];
+            /** Rows */
+            rows: components["schemas"]["ResultRow"][];
         };
         /** ValidationError */
         ValidationError: {
@@ -847,6 +898,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CrosstabResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_trend_api_v1_analytics_trend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrendRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrendResponse"];
                 };
             };
             /** @description Validation Error */

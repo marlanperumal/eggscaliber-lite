@@ -6,6 +6,85 @@ from src.models.package import Package
 from src.models.response import Response
 
 
+def _seed_trend_fixture(db):
+    pkg = Package(name="P2", slug="p2")
+    db.add(pkg)
+    db.flush()
+    db.refresh(pkg)
+    col = Collection(
+        name="Brand Tracker",
+        slug="bt",
+        package_id=pkg.id,
+        collection_type=CollectionType.survey,
+    )
+    db.add(col)
+    db.flush()
+    db.refresh(col)
+
+    ds1 = Dataset(
+        name="Wave 1",
+        slug="w1-trend",
+        collection_id=col.id,
+        worker_type=WorkerType.jsonb_response,
+        sort_order=0,
+    )
+    ds2 = Dataset(
+        name="Wave 2",
+        slug="w2-trend",
+        collection_id=col.id,
+        worker_type=WorkerType.jsonb_response,
+        sort_order=1,
+    )
+    db.add_all([ds1, ds2])
+    db.flush()
+    db.refresh(ds1)
+    db.refresh(ds2)
+
+    for ds in [ds1, ds2]:
+        f = Field(
+            field_key="brand_awareness",
+            display_name="Brand Awareness",
+            field_type=FieldType.categorical,
+            dataset_id=ds.id,
+        )
+        db.add(f)
+        db.flush()
+        db.refresh(f)
+        for val in ["Aware", "Not Aware"]:
+            db.add(Level(field_id=f.id, value=val, display_label=val, sort_order=0))
+        db.add(Response(dataset_id=ds.id, payload={"brand_awareness": "Aware"}))
+        db.add(Response(dataset_id=ds.id, payload={"brand_awareness": "Not Aware"}))
+        db.add(Response(dataset_id=ds.id, payload={"brand_awareness": "Aware"}))
+    db.flush()
+    return col
+
+
+def test_trend_returns_rows(client, db):
+    col = _seed_trend_fixture(db)
+    resp = client.post(
+        "/api/v1/analytics/trend",
+        json={
+            "collection_id": col.id,
+            "fields": [{"field_key": "brand_awareness"}],
+            "breakdown": None,
+            "filters": [],
+            "measure": {
+                "type": "count",
+                "field_key": None,
+                "aggregation": None,
+                "display": "n",
+            },
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    keys = [r["key"] for r in data["rows"]]
+    assert ["Wave 1", "brand_awareness", "Aware"] in keys
+    assert ["Wave 2", "brand_awareness", "Aware"] in keys
+    aware_w1 = next(r for r in data["rows"] if r["key"] == ["Wave 1", "brand_awareness", "Aware"])
+    assert aware_w1["values"]["Total"] == 2.0
+
+
 def _seed_crosstab_fixture(db):
     pkg = Package(name="P", slug="p")
     db.add(pkg)
