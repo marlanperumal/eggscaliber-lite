@@ -102,6 +102,15 @@ Do not rely on training-data knowledge for installation or integration — alway
 
 This rule exists because version-specific breakage has already occurred: Storybook 8→10 changed the framework entirely, `next lint` was removed in Next.js 16, `eslint-plugin-react` v7 is incompatible with ESLint 10. Each was avoidable by reading current docs.
 
+## Visual Companion (Brainstorming)
+
+When generating mockups for the visual companion, always make the images large and legible:
+- Use tall card images (min 300px height, prefer more)
+- Use readable font sizes (min 11px for body text, 13px+ for labels)
+- Show multiple states per option (e.g. default, collapsed, both-collapsed) as separate rows within the same card
+- Use inline `<style>` blocks with named classes rather than repeating inline styles — keeps the HTML cleaner and the mockups more consistent
+- Use real content from the project's seed data (field names, level names) rather than placeholder text
+
 ## Environment
 
 - Local dev: `.env.local` (Docker Postgres + MinIO + dev JWT auth)
