@@ -17,8 +17,8 @@ function AnalyticsPageInner() {
   const showAnalytics = useFeatureFlag("analytics-engine")
 
   if (!mounted) return loadingFallback
-  if (showAnalytics === false || showAnalytics === null) notFound()
   if (showAnalytics === undefined) return loadingFallback
+  if (!showAnalytics.enabled) notFound()
   return <AnalyticsLayout />
 }
 
