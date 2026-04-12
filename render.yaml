@@ -9,7 +9,7 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: CORS_ORIGINS
-        sync: false
+        value: '["https://eggscaliber-lite-web.vercel.app"]'
       - key: AUTH_MODE
         value: production
       - key: ENVIRONMENT
