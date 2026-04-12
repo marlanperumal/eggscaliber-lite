@@ -6,8 +6,8 @@ Five sub-projects, each with its own spec → plan → implementation cycle.
 |---|---|---|---|---|
 | 1 | Project Foundation | ✅ Complete | [spec](superpowers/specs/2026-04-07-project-foundation-design.md) | [plan](superpowers/plans/2026-04-07-project-foundation.md) |
 | 2 | Nomenclature & Data Model | ✅ Complete | [spec](superpowers/specs/2026-04-10-nomenclature-data-model-design.md) | [plan](superpowers/plans/2026-04-10-nomenclature-data-model.md) |
-| 3 | Analytics Engine | 🔜 Next | — | — |
-| 4 | Data Ingestion & Metadata Editor | ⏳ Pending | — | — |
+| 3 | Analytics Engine | ✅ Complete | — | [plan](superpowers/plans/2026-04-10-analytics-engine.md) |
+| 4 | Data Ingestion & Metadata Editor | 🔜 Next | — | — |
 | 5 | AI Interface | ⏳ Pending | — | — |
 
 ---
@@ -22,7 +22,7 @@ Scaffold the monorepo, configure all services, set up MCPs, establish design sys
 Land on the naming hierarchy for data entities, define all field types (numeric, ordinal, multi-response variants), design the Postgres schema, establish the migration system.  
 **Done when:** Schema finalised, seed data representing 2–3 real dataset structures, OpenAPI types generated.
 
-### 3 — Analytics Engine 🔜
+### 3 — Analytics Engine ✅
 Cross-tab and trending queries against seed data, table + chart output components, query builder UI, working prototype deployed and accessible via feature flag.  
 **Done when:** End-to-end — select dataset → configure analysis → view table + chart — deployed to Vercel/Render.
 
