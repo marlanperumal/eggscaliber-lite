@@ -64,8 +64,6 @@ jobs:
 
       - name: Run migrations
         run: cd apps/api && uv run alembic upgrade head
-        env:
-          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
 
       - name: Run all checks and tests
         run: |
