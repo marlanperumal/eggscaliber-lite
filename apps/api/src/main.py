@@ -1,5 +1,6 @@
 import sentry_sdk
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
 from src.routes import analytics, collections, datasets, health, packages, sentry
@@ -12,6 +13,13 @@ if settings.sentry_dsn:
     )
 
 app = FastAPI(title="Eggscaliber-Lite API", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(sentry.router, prefix="/api/v1")

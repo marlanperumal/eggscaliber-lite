@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     sentry_dsn: str | None = None
     environment: str = "development"
+    cors_origins: list[str] = ["http://localhost:3000"]
 
 
 settings = Settings()
