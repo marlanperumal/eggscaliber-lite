@@ -192,3 +192,18 @@ def test_aggregate_stacked_value_field_mean_measure_averages_values_per_level():
 
     poor = next(r for r in rows if r["key"] == ["brand_rating", "Poor"])
     assert poor["values"]["Total"] == pytest.approx(3.0)
+
+
+def test_apply_filters_multi_response_keeps_rows_containing_any_selected_level():
+    data = [
+        {"tags": ["fun", "reliable"], "brand_rating": "Good"},
+        {"tags": ["reliable"], "brand_rating": "Good"},
+        {"tags": ["fun"], "brand_rating": "Poor"},
+        {"tags": ["expensive"], "brand_rating": "Poor"},
+    ]
+    filters = [{"field_key": "tags", "levels": ["fun"], "value_range": None}]
+    field_metas = {"tags": {"field_type": FieldType.multi_response}}
+    result = apply_filters(data, filters, field_metas)
+
+    assert len(result) == 2
+    assert all("fun" in r["tags"] for r in result)
