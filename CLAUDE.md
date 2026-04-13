@@ -13,16 +13,16 @@ Check `just --list` for all available commands. Only fall back to direct invocat
 - **`just` commands** handle subdirectory navigation internally — always prefer these.
 - **pnpm workspace commands** — use `--filter` to target a workspace from root:
   ```bash
-  pnpm --filter web add <package>          # add a dep to apps/web
-  pnpm --filter web add -D <package>       # add a dev dep to apps/web
   pnpm --filter web run build              # run a script in apps/web
   pnpm --filter web exec tsc --noEmit      # run a binary in apps/web context
   ```
+  For adding packages, prefer `just add-web-dep` / `just add-web-dev-dep`.
 - **uv one-off commands** — use `--project` to target apps/api from root:
   ```bash
   uv run --no-env-file --project apps/api <command>
   ```
   Add `--no-env-file` always — `just` loads `.env.local` automatically but direct `uv run` does not.
+  For adding packages, prefer `just add-api-dep` / `just add-api-dev-dep`.
 
 **Prefer approval-free forms.** `just` commands are pre-approved and should always be used over their raw equivalents — not just for correctness, but because the raw form may require manual approval and block progress. Examples:
 - `just test-api` ✅ vs `cd apps/api && uv run --no-env-file pytest` ❌
@@ -56,6 +56,11 @@ Use dedicated tools instead of Bash wherever possible — they work anywhere on 
 - Write files: `Write` (not `echo >`/`cat <<EOF`)
 
 ```bash
+just add-api-dep <package>      # add runtime dep to apps/api
+just add-api-dev-dep <package>  # add dev dep to apps/api
+just add-web-dep <package>      # add runtime dep to apps/web
+just add-web-dev-dep <package>  # add dev dep to apps/web
+
 just setup          # bootstrap: install deps, start Docker, migrate, generate types
 just dev            # start api + web concurrently
 just web            # Next.js dev server (localhost:3000)

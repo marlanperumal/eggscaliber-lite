@@ -5,6 +5,24 @@ set dotenv-filename := ".env.local"
 default:
     @just --list
 
+# ===== Dependencies =====
+
+# Add a runtime dependency to apps/api
+add-api-dep package:
+    uv add --project apps/api {{package}}
+
+# Add a dev dependency to apps/api
+add-api-dev-dep package:
+    uv add --dev --project apps/api {{package}}
+
+# Add a runtime dependency to apps/web
+add-web-dep package:
+    pnpm --filter web add {{package}}
+
+# Add a dev dependency to apps/web
+add-web-dev-dep package:
+    pnpm --filter web add -D {{package}}
+
 # ===== Setup =====
 
 # Bootstrap everything for a new developer
@@ -106,9 +124,9 @@ test:
     just test-api
     just test-web
 
-# Run Python tests
-test-api:
-    cd apps/api && uv run --no-env-file pytest -v
+# Run Python tests (pass extra args e.g. `just test-api -k test_name`)
+test-api *args:
+    cd apps/api && uv run --no-env-file pytest -v {{args}}
 
 # Run TypeScript tests
 test-web:
