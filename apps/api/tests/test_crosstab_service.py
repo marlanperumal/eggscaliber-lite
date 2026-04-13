@@ -112,6 +112,38 @@ def test_apply_filters_range():
     assert len(result) == 2
 
 
+def test_aggregate_nested_two_row_fields_computes_four_part_key_and_cell_values():
+    data = [
+        {"region": "North", "channel": "TV", "gender": "Female"},
+        {"region": "North", "channel": "TV", "gender": "Male"},
+        {"region": "North", "channel": "Radio", "gender": "Female"},
+        {"region": "South", "channel": "TV", "gender": "Female"},
+    ]
+    row_fields = [
+        _fm("region", FieldType.categorical, ["North", "South"]),
+        _fm("channel", FieldType.categorical, ["TV", "Radio"]),
+    ]
+    col_fields = [_fm("gender", FieldType.categorical, ["Female", "Male"])]
+    from src.services.crosstab_service import aggregate_nested
+
+    rows = aggregate_nested(data, row_fields, col_fields, MEASURE_COUNT)
+
+    keys = [r["key"] for r in rows]
+    assert ["region", "North", "channel", "TV"] in keys
+    assert ["region", "North", "channel", "Radio"] in keys
+    assert ["region", "South", "channel", "TV"] in keys
+
+    north_tv = next(r for r in rows if r["key"] == ["region", "North", "channel", "TV"])
+    assert north_tv["values"]["Female"] == 1.0
+    assert north_tv["values"]["Male"] == 1.0
+    assert north_tv["values"]["Total"] == 2.0
+
+    north_radio = next(r for r in rows if r["key"] == ["region", "North", "channel", "Radio"])
+    assert north_radio["values"]["Female"] == 1.0
+    assert north_radio["values"]["Male"] == 0.0
+    assert north_radio["values"]["Total"] == 1.0
+
+
 def test_aggregate_stacked_weighted():
     data = [
         {"brand_rating": "Good", "gender": "Female", "pw": 1.5},
