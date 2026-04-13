@@ -210,3 +210,81 @@ def test_crosstab_nested_row_limit(client, db):
         },
     )
     assert resp.status_code == 422
+
+
+def test_crosstab_stacked_row_limit_exceeded_returns_422(client):
+    resp = client.post(
+        "/api/v1/analytics/crosstab",
+        json={
+            "dataset_id": 1,
+            "rows": [
+                {"field_key": "f1"},
+                {"field_key": "f2"},
+                {"field_key": "f3"},
+                {"field_key": "f4"},
+                {"field_key": "f5"},
+                {"field_key": "f6"},
+            ],
+            "row_mode": "stacked",
+            "columns": [],
+            "col_mode": "stacked",
+            "filters": [],
+            "measure": {"type": "count", "field_key": None, "aggregation": None, "display": "n"},
+        },
+    )
+    assert resp.status_code == 422
+
+
+def test_crosstab_nested_col_limit_exceeded_returns_422(client, db):
+    ds = _seed_crosstab_fixture(db)
+    resp = client.post(
+        "/api/v1/analytics/crosstab",
+        json={
+            "dataset_id": ds.id,
+            "rows": [{"field_key": "brand_rating"}],
+            "row_mode": "stacked",
+            "columns": [
+                {"field_key": "brand_rating"},
+                {"field_key": "gender"},
+                {"field_key": "extra"},
+            ],
+            "col_mode": "nested",
+            "filters": [],
+            "measure": {"type": "count", "field_key": None, "aggregation": None, "display": "n"},
+        },
+    )
+    assert resp.status_code == 422
+
+
+def test_trend_with_nonexistent_collection_returns_404(client):
+    resp = client.post(
+        "/api/v1/analytics/trend",
+        json={
+            "collection_id": 99999,
+            "fields": [{"field_key": "brand_awareness"}],
+            "breakdown": None,
+            "filters": [],
+            "measure": {"type": "count", "field_key": None, "aggregation": None, "display": "n"},
+        },
+    )
+    assert resp.status_code == 404
+
+
+def test_trend_with_breakdown_returns_breakdown_level_columns(client, db):
+    col = _seed_trend_fixture(db)
+    resp = client.post(
+        "/api/v1/analytics/trend",
+        json={
+            "collection_id": col.id,
+            "fields": [{"field_key": "brand_awareness"}],
+            "breakdown": {"field_key": "brand_awareness"},
+            "filters": [],
+            "measure": {"type": "count", "field_key": None, "aggregation": None, "display": "n"},
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    for row in data["rows"]:
+        assert "Aware" in row["values"]
+        assert "Not Aware" in row["values"]
+        assert "Total" in row["values"]
