@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.errors import CollectionNotFoundError, DatasetNotFoundError
 from src.models.analytics import (
@@ -18,8 +18,8 @@ from src.services import crosstab_service, trend_service
 from src.workers.factory import WorkerFactory
 
 
-def run_crosstab(session: Session, request: CrosstabRequest) -> CrosstabResponse:
-    dataset = analytics_repo.get_dataset(session, request.dataset_id)
+async def run_crosstab(session: AsyncSession, request: CrosstabRequest) -> CrosstabResponse:
+    dataset = await analytics_repo.get_dataset(session, request.dataset_id)
     if dataset is None:
         raise DatasetNotFoundError(request.dataset_id)
 
@@ -31,10 +31,10 @@ def run_crosstab(session: Session, request: CrosstabRequest) -> CrosstabResponse
         extra_keys.append(request.measure.field_key)
     all_keys = list(set(row_keys + col_keys + filter_keys + extra_keys))
 
-    field_metas = analytics_repo.get_field_metas(session, request.dataset_id, all_keys)
+    field_metas = await analytics_repo.get_field_metas(session, request.dataset_id, all_keys)
 
     worker = WorkerFactory.for_dataset(dataset, session)
-    data = list(worker.fetch(request.dataset_id, all_keys, {}))
+    data = await worker.fetch(request.dataset_id, all_keys, {})
 
     filters_raw = [f.model_dump() for f in request.filters]
     data = crosstab_service.apply_filters(data, filters_raw, field_metas)
@@ -67,12 +67,12 @@ def run_crosstab(session: Session, request: CrosstabRequest) -> CrosstabResponse
     return CrosstabResponse(meta=meta, rows=[ResultRow(**r) for r in result_rows])
 
 
-def run_trend(session: Session, request: TrendRequest) -> TrendResponse:
-    col = collection_repo.get_by_id(session, request.collection_id)
+async def run_trend(session: AsyncSession, request: TrendRequest) -> TrendResponse:
+    col = await collection_repo.get_by_id(session, request.collection_id)
     if col is None:
         raise CollectionNotFoundError(request.collection_id)
 
-    datasets = collection_repo.get_datasets_for_collection(session, request.collection_id)
+    datasets = await collection_repo.get_datasets_for_collection(session, request.collection_id)
     field_keys = [f.field_key for f in request.fields]
     breakdown_key = request.breakdown.field_key if request.breakdown else None
     filter_keys = [f.field_key for f in request.filters]
@@ -80,7 +80,7 @@ def run_trend(session: Session, request: TrendRequest) -> TrendResponse:
 
     field_metas: dict = {}
     for ds in datasets:
-        for k, v in analytics_repo.get_field_metas(session, ds.id, all_keys).items():
+        for k, v in (await analytics_repo.get_field_metas(session, ds.id, all_keys)).items():
             if k not in field_metas:
                 field_metas[k] = v
 
@@ -88,7 +88,7 @@ def run_trend(session: Session, request: TrendRequest) -> TrendResponse:
     datasets_data = []
     for ds in datasets:
         worker = WorkerFactory.for_dataset(ds, session)
-        data = list(worker.fetch(ds.id, all_keys, {}))
+        data = await worker.fetch(ds.id, all_keys, {})
         data = crosstab_service.apply_filters(
             data, [f.model_dump() for f in request.filters], field_metas
         )
@@ -117,17 +117,17 @@ def run_trend(session: Session, request: TrendRequest) -> TrendResponse:
     return TrendResponse(meta=meta, rows=[ResultRow(**r) for r in result_rows])
 
 
-def get_field_tree(session: Session, dataset_id: int) -> FieldTreeOut:
+async def get_field_tree(session: AsyncSession, dataset_id: int) -> FieldTreeOut:
     """Raises DatasetNotFoundError if dataset_id does not exist."""
-    ds = analytics_repo.get_dataset(session, dataset_id)
+    ds = await analytics_repo.get_dataset(session, dataset_id)
     if ds is None:
         raise DatasetNotFoundError(dataset_id)
-    return analytics_repo.get_field_tree(session, dataset_id)
+    return await analytics_repo.get_field_tree(session, dataset_id)
 
 
-def get_weight_fields(session: Session, dataset_id: int) -> list[FieldOut]:
+async def get_weight_fields(session: AsyncSession, dataset_id: int) -> list[FieldOut]:
     """Raises DatasetNotFoundError if dataset_id does not exist."""
-    ds = analytics_repo.get_dataset(session, dataset_id)
+    ds = await analytics_repo.get_dataset(session, dataset_id)
     if ds is None:
         raise DatasetNotFoundError(dataset_id)
-    return analytics_repo.get_weight_fields(session, dataset_id)
+    return await analytics_repo.get_weight_fields(session, dataset_id)

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.errors import CollectionNotFoundError
 from src.models.collection import CollectionWithDatasets
@@ -23,32 +23,34 @@ class FieldInconsistency:
     detail: str
 
 
-def get_with_datasets(session: Session, collection_id: int) -> CollectionWithDatasets:
+async def get_with_datasets(session: AsyncSession, collection_id: int) -> CollectionWithDatasets:
     """Raises CollectionNotFoundError if collection_id does not exist."""
-    col = collection_repo.get_by_id(session, collection_id)
+    col = await collection_repo.get_by_id(session, collection_id)
     if col is None:
         raise CollectionNotFoundError(collection_id)
-    datasets = collection_repo.get_datasets_for_collection(session, collection_id)
+    datasets = await collection_repo.get_datasets_for_collection(session, collection_id)
     return CollectionWithDatasets(**col.model_dump(), datasets=datasets)
 
 
-def get_consistency(session: Session, collection_id: int) -> list[FieldInconsistency]:
+async def get_consistency(session: AsyncSession, collection_id: int) -> list[FieldInconsistency]:
     """Raises CollectionNotFoundError if collection_id does not exist.
     Wraps check_field_consistency with the existence check."""
-    col = collection_repo.get_by_id(session, collection_id)
+    col = await collection_repo.get_by_id(session, collection_id)
     if col is None:
         raise CollectionNotFoundError(collection_id)
-    return check_field_consistency(collection_id, session)
+    return await check_field_consistency(collection_id, session)
 
 
-def check_field_consistency(collection_id: int, session: Session) -> list[FieldInconsistency]:
-    datasets = collection_repo.get_datasets_for_collection(session, collection_id)
+async def check_field_consistency(
+    collection_id: int, session: AsyncSession
+) -> list[FieldInconsistency]:
+    datasets = await collection_repo.get_datasets_for_collection(session, collection_id)
 
     if len(datasets) <= 1:
         return []
 
-    all_fields = dataset_repo.get_fields_for_datasets(session, [ds.id for ds in datasets])
-    all_levels = dataset_repo.get_levels_for_field_ids(session, [f.id for f in all_fields])
+    all_fields = await dataset_repo.get_fields_for_datasets(session, [ds.id for ds in datasets])
+    all_levels = await dataset_repo.get_levels_for_field_ids(session, [f.id for f in all_fields])
 
     levels_by_field: dict[int, list[str]] = {}
     for lv in all_levels:
