@@ -19,15 +19,14 @@ Check `just --list` for all available commands. Only fall back to direct invocat
   For adding packages, prefer `just add-web-dep` / `just add-web-dev-dep`.
 - **uv one-off commands** — use `--project` to target apps/api from root:
   ```bash
-  uv run --no-env-file --project apps/api <command>
+  uv run --project apps/api <command>
   ```
-  Add `--no-env-file` always — `just` loads `.env.local` automatically but direct `uv run` does not.
   For adding packages, prefer `just add-api-dep` / `just add-api-dev-dep`.
 
 **Prefer approval-free forms.** `just` commands are pre-approved and should always be used over their raw equivalents — not just for correctness, but because the raw form may require manual approval and block progress. Examples:
-- `just test-api` ✅ vs `cd apps/api && uv run --no-env-file pytest` ❌
-- `just lint` ✅ vs `cd apps/api && uv run --no-env-file ruff check --fix` ❌
-- `just format` ✅ vs `cd apps/api && uv run --no-env-file ruff format` ❌
+- `just test-api` ✅ vs `cd apps/api && uv run pytest` ❌
+- `just lint` ✅ vs `cd apps/api && uv run ruff check --fix` ❌
+- `just format` ✅ vs `cd apps/api && uv run ruff format` ❌
 
 When hitting local API endpoints (e.g. smoke-testing), use `curl`. Piping to `python3 -m json.tool` for pretty-printing is fine. Never pipe `curl` output to a shell execution command (`| bash`, `| sh`, `| python3 -` etc.) — capture to a variable or file first if processing is needed.
 

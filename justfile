@@ -50,7 +50,7 @@ web:
 
 # FastAPI dev server
 api:
-    cd apps/api && uv run --no-env-file uvicorn src.main:app --reload --port 8000
+    cd apps/api && uv run uvicorn src.main:app --reload --port 8000
 
 # Kill the FastAPI dev server (port 8000)
 kill-api:
@@ -75,7 +75,7 @@ storybook:
 
 # Marimo notebook server
 notebook:
-    uv run --no-env-file marimo edit notebooks/
+    uv run marimo edit notebooks/
 
 # ===== Database =====
 
@@ -96,15 +96,15 @@ db-reset:
 
 # Run seed scripts
 db-seed:
-    cd apps/api && uv run --no-env-file python -m scripts.seed
+    cd apps/api && uv run python -m scripts.seed
 
 # Run Alembic migrations (dev DB)
 db-migrate:
-    cd apps/api && uv run --no-env-file alembic upgrade head
+    cd apps/api && uv run alembic upgrade head
 
 # Generate a new migration from model changes
 db-migration name:
-    cd apps/api && uv run --no-env-file alembic revision --autogenerate -m "{{name}}"
+    cd apps/api && uv run alembic revision --autogenerate -m "{{name}}"
 
 # ===== Shared Types =====
 
@@ -126,7 +126,7 @@ test:
 
 # Run Python tests (pass extra args e.g. `just test-api -k test_name`)
 test-api *args:
-    cd apps/api && uv run --no-env-file pytest -v {{args}}
+    cd apps/api && uv run pytest -v {{args}}
 
 # Run TypeScript tests
 test-web:
@@ -134,25 +134,25 @@ test-web:
 
 # Lint Python (ruff) + TypeScript (biome)
 lint:
-    cd apps/api && uv run --no-env-file ruff check .
+    cd apps/api && uv run ruff check .
     cd apps/web && pnpm biome check src/
 
 # Format Python (ruff) + TypeScript (biome)
 format:
-    cd apps/api && uv run --no-env-file ruff format .
+    cd apps/api && uv run ruff format .
     cd apps/web && pnpm biome format --write src/
 
 # Check formatting without writing (used in CI)
 format-check:
-    cd apps/api && uv run --no-env-file ruff format --check .
+    cd apps/api && uv run ruff format --check .
     cd apps/web && pnpm biome check --formatter-enabled=true src/
 
 # Type check Python + TypeScript
 typecheck:
-    cd apps/api && uv run --no-env-file ty check src/
+    cd apps/api && uv run ty check src/
     cd apps/web && pnpm tsc --noEmit
 
 # Security audit Python + JS dependencies
 audit:
-    cd apps/api && uv run --no-env-file pip-audit
+    cd apps/api && uv run pip-audit
     cd apps/web && pnpm audit --audit-level moderate
