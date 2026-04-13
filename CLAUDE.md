@@ -6,9 +6,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Always run commands via `just <command>` from the repo root.** Do not invoke tools directly (e.g. use `just test-api` not `cd apps/api && uv run pytest`). The justfile loads `.env.local` automatically via `set dotenv-load`.
 
-Check `just --list` for all available commands. Only fall back to direct invocation when no `just` recipe covers the operation (e.g. `pnpm install`, `uv sync`, `git` operations).
+Check `just --list` for all available commands. Only fall back to direct invocation when no `just` recipe covers the operation.
 
-When running `uv run` directly (not via `just`), add `--no-env-file` to prevent uv from looking for a `.env` file — `just` already loads `.env.local` and exports those vars.
+**Everything runs from the repo root — never `cd` into a subdirectory to run a command.** The monorepo is set up so all tooling can be targeted from root:
+
+- **`just` commands** handle subdirectory navigation internally — always prefer these.
+- **pnpm workspace commands** — use `--filter` to target a workspace from root:
+  ```bash
+  pnpm --filter web add <package>          # add a dep to apps/web
+  pnpm --filter web add -D <package>       # add a dev dep to apps/web
+  pnpm --filter web run build              # run a script in apps/web
+  pnpm --filter web exec tsc --noEmit      # run a binary in apps/web context
+  ```
+- **uv one-off commands** — use `--project` to target apps/api from root:
+  ```bash
+  uv run --no-env-file --project apps/api <command>
+  ```
+  Add `--no-env-file` always — `just` loads `.env.local` automatically but direct `uv run` does not.
 
 **Prefer approval-free forms.** `just` commands are pre-approved and should always be used over their raw equivalents — not just for correctness, but because the raw form may require manual approval and block progress. Examples:
 - `just test-api` ✅ vs `cd apps/api && uv run --no-env-file pytest` ❌
@@ -29,7 +43,8 @@ git commit -F /tmp/commit-msg.txt
 
 This keeps multi-line messages with `Co-Authored-By` trailers on one clean Bash call that matches the allowlist.
 
-Before running `git` commands, check that the working directory is correct. Use plain `git` if already in the right place; only use `git -C /path` when genuinely targeting a different repo than the current working directory.
+**Never use `git -C`.** Run all `git` commands from the repo root without `-C`. If a git command fails because the working directory is wrong, fix it with `cd` first — do not reach for `-C` as a shortcut.
+- `git add apps/api/src/foo.py` ✅ vs `git -C apps/api add src/foo.py` ❌
 
 Keep Bash tool calls simple — avoid complex quoting or chaining that may not match allowlist patterns. If a command needs multiple steps, use separate Bash tool calls.
 
