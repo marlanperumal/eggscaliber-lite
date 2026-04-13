@@ -2,7 +2,6 @@ services:
   - type: web
     name: eggscaliber-api
     runtime: python
-    pythonVersion: "3.12"
     buildCommand: cd apps/api && pip install uv && uv sync --no-dev
     preDeployCommand: cd apps/api && uv run --no-env-file alembic upgrade head && uv run --no-env-file python -m scripts.seed
     startCommand: cd apps/api && uv run --no-env-file uvicorn src.main:app --host 0.0.0.0 --port $PORT
