@@ -5,6 +5,8 @@ from src.models.analytics import (
     CrosstabMeta,
     CrosstabRequest,
     CrosstabResponse,
+    FieldTreeFieldOut,
+    FieldTreeGroupOut,
     FieldTreeOut,
     MetaField,
     ResultRow,
@@ -13,6 +15,8 @@ from src.models.analytics import (
     TrendResponse,
 )
 from src.models.dataset import FieldOut
+from src.models.field import Field
+from src.models.field_group import FieldGroup
 from src.repositories import analytics_repo, collection_repo
 from src.services import crosstab_service, trend_service
 from src.workers.factory import WorkerFactory
@@ -117,12 +121,67 @@ async def run_trend(session: AsyncSession, request: TrendRequest) -> TrendRespon
     return TrendResponse(meta=meta, rows=[ResultRow(**r) for r in result_rows])
 
 
+def _build_group_out(
+    g: FieldGroup,
+    groups_by_parent: dict[int | None, list[FieldGroup]],
+    fields_by_group: dict[int | None, list[Field]],
+) -> FieldTreeGroupOut:
+    return FieldTreeGroupOut(
+        id=g.id,
+        name=g.name,
+        slug=g.slug,
+        sort_order=g.sort_order,
+        fields=[
+            FieldTreeFieldOut(
+                id=f.id,
+                field_key=f.field_key,
+                display_name=f.display_name,
+                field_type=f.field_type,
+                sort_order=f.sort_order,
+                is_filterable=f.is_filterable,
+            )
+            for f in fields_by_group.get(g.id, [])
+        ],
+        children=[
+            _build_group_out(child, groups_by_parent, fields_by_group)
+            for child in groups_by_parent.get(g.id, [])
+        ],
+    )
+
+
 async def get_field_tree(session: AsyncSession, dataset_id: int) -> FieldTreeOut:
     """Raises DatasetNotFoundError if dataset_id does not exist."""
     ds = await analytics_repo.get_dataset(session, dataset_id)
     if ds is None:
         raise DatasetNotFoundError(dataset_id)
-    return await analytics_repo.get_field_tree(session, dataset_id)
+
+    groups, fields = await analytics_repo.get_groups_and_fields(session, dataset_id)
+
+    groups_by_parent: dict[int | None, list[FieldGroup]] = {}
+    for g in groups:
+        groups_by_parent.setdefault(g.parent_id, []).append(g)
+
+    fields_by_group: dict[int | None, list[Field]] = {}
+    for f in fields:
+        fields_by_group.setdefault(f.group_id, []).append(f)
+
+    return FieldTreeOut(
+        groups=[
+            _build_group_out(g, groups_by_parent, fields_by_group)
+            for g in groups_by_parent.get(None, [])
+        ],
+        ungrouped_fields=[
+            FieldTreeFieldOut(
+                id=f.id,
+                field_key=f.field_key,
+                display_name=f.display_name,
+                field_type=f.field_type,
+                sort_order=f.sort_order,
+                is_filterable=f.is_filterable,
+            )
+            for f in fields_by_group.get(None, [])
+        ],
+    )
 
 
 async def get_weight_fields(session: AsyncSession, dataset_id: int) -> list[FieldOut]:

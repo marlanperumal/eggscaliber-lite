@@ -60,8 +60,8 @@ export function AnalyticsLayout() {
 
   return (
     <div className="flex h-screen flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-2">
-        <h1 className="text-lg font-semibold">Analytics</h1>
+      <div className="flex items-center justify-between border-b border-border px-4 py-2">
+        <h1 className="text-xl font-bold tracking-tight">Analytics</h1>
       </div>
       <Group orientation="horizontal" className="flex-1">
         <Panel

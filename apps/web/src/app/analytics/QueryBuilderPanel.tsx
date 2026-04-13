@@ -80,8 +80,8 @@ export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }
   }
 
   return (
-    <div className="flex h-full flex-col border-r">
-      <div className="flex items-center justify-between border-b px-3 py-2">
+    <div className="flex h-full flex-col border-r border-border">
+      <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <span className="text-sm font-medium">Query Builder</span>
         <button
           type="button"
@@ -215,7 +215,7 @@ export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }
         </div>
       </div>
 
-      <div className="border-t p-3">
+      <div className="border-t border-border p-3">
         {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
         <button
           type="button"
@@ -283,12 +283,6 @@ function Zone({
   )
 }
 
-interface PackageOption {
-  id: number
-  name: string
-  collections: { id: number; name: string; datasets: { id: number; name: string }[] }[]
-}
-
 function ScopePicker({
   query,
   onSet,
@@ -296,37 +290,17 @@ function ScopePicker({
   query: QueryConfig
   onSet: (patch: Partial<QueryConfig>) => void
 }) {
-  const [packages, setPackages] = useState<PackageOption[]>([])
+  const [packages, setPackages] = useState<
+    {
+      id: number
+      name: string
+      collections: { id: number; name: string; datasets: { id: number; name: string }[] }[]
+    }[]
+  >([])
 
   useEffect(() => {
-    api.GET("/api/v1/packages").then(async ({ data }) => {
-      if (!data) return
-      const withDetails = await Promise.all(
-        (data as { id: number; name: string }[]).map(async (pkg) => {
-          const { data: pkgData } = await api.GET("/api/v1/packages/{package_id}", {
-            params: { path: { package_id: pkg.id } },
-          })
-          if (!pkgData) return null
-          const withDatasets = await Promise.all(
-            ((pkgData as { collections?: { id: number; name: string }[] }).collections ?? []).map(
-              async (col) => {
-                const { data: colData } = await api.GET("/api/v1/collections/{collection_id}", {
-                  params: { path: { collection_id: col.id } },
-                })
-                const datasets =
-                  (
-                    colData as {
-                      datasets?: { id: number; name: string }[]
-                    } | null
-                  )?.datasets ?? []
-                return { id: col.id, name: col.name, datasets }
-              },
-            ),
-          )
-          return { id: pkg.id, name: pkg.name, collections: withDatasets }
-        }),
-      )
-      setPackages(withDetails.filter(Boolean) as PackageOption[])
+    api.GET("/api/v1/scope").then(({ data }) => {
+      if (data) setPackages(data)
     })
   }, [])
 

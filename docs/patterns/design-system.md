@@ -22,6 +22,24 @@ semantic token utilities.
 | `border-border` | All panel and input borders |
 | `ring-ring` | Focus rings |
 | `bg-nav` | Top navigation bar background (custom token) |
+| `--chart-1` … `--chart-8` | Chart series colours — 8 hues evenly spaced from the brand base hue (read via `getComputedStyle`, not Tailwind utilities) |
+
+### Chart series colours
+
+Chart libraries (e.g. recharts) require actual color values for `stroke`/`fill` props — CSS class names are not supported. Read `--chart-1` through `--chart-8` at render time via `getComputedStyle`:
+
+```tsx
+function useChartColors(): string[] {
+  return useMemo(() => {
+    const style = getComputedStyle(document.documentElement)
+    return Array.from({ length: 8 }, (_, i) =>
+      style.getPropertyValue(`--chart-${i + 1}`).trim(),
+    )
+  }, [])
+}
+```
+
+`getComputedStyle` returns the currently active value, so dark mode is handled automatically. Never hardcode hex values for chart series — always go through the chart tokens.
 
 ### Critical rule — never use `text-primary`
 

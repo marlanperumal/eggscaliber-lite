@@ -1,4 +1,5 @@
 "use client"
+import { useMemo } from "react"
 import {
   Bar,
   BarChart,
@@ -13,16 +14,17 @@ import {
 } from "recharts"
 import type { AnalyticsResult, ChartType } from "./analytics-types"
 
-const COLORS = [
-  "#3b82f6",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#06b6d4",
-  "#f97316",
-  "#84cc16",
-]
+const CHART_COLOR_COUNT = 8
+
+function useChartColors(): string[] {
+  return useMemo(() => {
+    const root = document.documentElement
+    const style = getComputedStyle(root)
+    return Array.from({ length: CHART_COLOR_COUNT }, (_, i) =>
+      style.getPropertyValue(`--chart-${i + 1}`).trim(),
+    )
+  }, [])
+}
 
 interface Props {
   result: AnalyticsResult
@@ -30,6 +32,7 @@ interface Props {
 }
 
 export function AnalyticsChart({ result, chartType }: Props) {
+  const colors = useChartColors()
   const { rows } = result
   if (rows.length === 0) return null
 
@@ -60,7 +63,7 @@ export function AnalyticsChart({ result, chartType }: Props) {
               key={s}
               type="monotone"
               dataKey={s}
-              stroke={COLORS[i % COLORS.length]}
+              stroke={colors[i % colors.length]}
               dot={{ r: 3 }}
             />
           ))}
@@ -92,7 +95,7 @@ export function AnalyticsChart({ result, chartType }: Props) {
         <Tooltip />
         <Legend />
         {seriesKeys.map((sk, i) => (
-          <Bar key={sk} dataKey={sk} stackId={stackId} fill={COLORS[i % COLORS.length]} />
+          <Bar key={sk} dataKey={sk} stackId={stackId} fill={colors[i % colors.length]} />
         ))}
       </BarChart>
     </ResponsiveContainer>

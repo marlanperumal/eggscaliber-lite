@@ -16,7 +16,7 @@ export function AnalyticsTable({ result }: Props) {
     <div className="overflow-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b bg-muted/50">
+          <tr className="border-b border-border bg-muted/50">
             {isNested ? (
               <>
                 <th className="px-3 py-2 text-left font-medium">
@@ -50,7 +50,7 @@ export function AnalyticsTable({ result }: Props) {
             return (
               <tr
                 key={row.key.join("||")}
-                className={`border-b hover:bg-muted/30 ${isNewSection ? "border-t-2 border-t-border" : ""}`}
+                className={`border-b border-border hover:bg-muted/30 ${isNewSection ? "border-t-2 border-t-border" : ""}`}
               >
                 {isNested ? (
                   <>

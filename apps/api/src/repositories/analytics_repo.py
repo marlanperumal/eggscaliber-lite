@@ -22,62 +22,36 @@ async def get_weight_fields(session: AsyncSession, dataset_id: int) -> list[Fiel
     return list((await session.execute(stmt)).scalars().all())
 
 
-async def get_field_tree(session: AsyncSession, dataset_id: int) -> dict:
-    groups_stmt = (
-        select(FieldGroup)
-        .where(FieldGroup.dataset_id == dataset_id)
-        .order_by(FieldGroup.sort_order)
-    )
-    all_groups = list((await session.execute(groups_stmt)).scalars().all())
-
-    fields_stmt = (
-        select(Field)
-        .where(
-            Field.dataset_id == dataset_id,
-            Field.field_type.not_in(_EXCLUDED_TYPES),
+async def get_groups_and_fields(
+    session: AsyncSession, dataset_id: int
+) -> tuple[list[FieldGroup], list[Field]]:
+    """Return all FieldGroups and non-excluded Fields for a dataset, ordered by sort_order."""
+    groups = list(
+        (
+            await session.execute(
+                select(FieldGroup)
+                .where(FieldGroup.dataset_id == dataset_id)
+                .order_by(FieldGroup.sort_order)
+            )
         )
-        .order_by(Field.sort_order)
+        .scalars()
+        .all()
     )
-    all_fields = list((await session.execute(fields_stmt)).scalars().all())
-
-    def _field_dict(f: Field) -> dict:
-        return {
-            "id": f.id,
-            "field_key": f.field_key,
-            "display_name": f.display_name,
-            "field_type": f.field_type,
-            "sort_order": f.sort_order,
-            "is_filterable": f.is_filterable,
-        }
-
-    def _group_dict(g: FieldGroup, groups_by_parent: dict, fields_by_group: dict) -> dict:
-        children = [
-            _group_dict(child, groups_by_parent, fields_by_group)
-            for child in groups_by_parent.get(g.id, [])
-        ]
-        return {
-            "id": g.id,
-            "name": g.name,
-            "slug": g.slug,
-            "sort_order": g.sort_order,
-            "fields": [_field_dict(f) for f in fields_by_group.get(g.id, [])],
-            "children": children,
-        }
-
-    groups_by_parent: dict[int | None, list[FieldGroup]] = {}
-    for g in all_groups:
-        groups_by_parent.setdefault(g.parent_id, []).append(g)
-
-    fields_by_group: dict[int | None, list[Field]] = {}
-    for f in all_fields:
-        fields_by_group.setdefault(f.group_id, []).append(f)
-
-    top_level_groups = groups_by_parent.get(None, [])
-
-    return {
-        "groups": [_group_dict(g, groups_by_parent, fields_by_group) for g in top_level_groups],
-        "ungrouped_fields": [_field_dict(f) for f in fields_by_group.get(None, [])],
-    }
+    fields = list(
+        (
+            await session.execute(
+                select(Field)
+                .where(
+                    Field.dataset_id == dataset_id,
+                    Field.field_type.not_in(_EXCLUDED_TYPES),
+                )
+                .order_by(Field.sort_order)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return groups, fields
 
 
 async def get_field_metas(session: AsyncSession, dataset_id: int, field_keys: list[str]) -> dict:

@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
 from src.database import lifespan
-from src.routes import analytics, collections, datasets, health, packages, sentry
+from src.routes import analytics, collections, datasets, health, packages, scope, sentry
 
 if settings.sentry_dsn:
     sentry_sdk.init(
@@ -25,6 +25,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(sentry.router, prefix="/api/v1")
 app.include_router(packages.router, prefix="/api/v1")
+app.include_router(scope.router, prefix="/api/v1")
 app.include_router(collections.router, prefix="/api/v1")
 app.include_router(datasets.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")

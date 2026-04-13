@@ -65,9 +65,20 @@ export const DEFAULT_DESTRUCTIVE: DestructiveConfig = {
   foregroundDark: "oklch(0.12 0.08 295deg)",
 }
 
+// 8 hue stops evenly distributed around the wheel from the base hue.
+const CHART_HUE_OFFSETS = [0, 45, 90, 135, 180, 225, 270, 315] as const
+
+function generateChartTokens(baseHue: number, lightness: number, chroma: number): string {
+  return CHART_HUE_OFFSETS.map((offset, i) => {
+    const hue = (((baseHue + offset) % 360) + 360) % 360
+    return `      --chart-${i + 1}: oklch(${lightness} ${chroma} ${hue}deg);`
+  }).join("\n")
+}
+
 export function generateThemeCSS(config: ThemeConfig): string {
   const s = generateOklchScale(config.palette)
   const d = config.destructive ?? DEFAULT_DESTRUCTIVE
+  const { baseHue } = config.palette
 
   return `
     :root {
@@ -92,6 +103,7 @@ export function generateThemeCSS(config: ThemeConfig): string {
       --ring: ${s[600]};
       --nav: ${s[900]};
       --radius: ${config.radius};
+${generateChartTokens(baseHue, 0.58, 0.15)}
     }
     .dark {
       --background: ${s[950]};
@@ -115,6 +127,7 @@ export function generateThemeCSS(config: ThemeConfig): string {
       --ring: ${s[400]};
       --nav: ${s[950]};
       --radius: ${config.radius};
+${generateChartTokens(baseHue, 0.72, 0.15)}
     }
   `.trim()
 }

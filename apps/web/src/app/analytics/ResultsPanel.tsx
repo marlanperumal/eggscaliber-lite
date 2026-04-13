@@ -28,7 +28,7 @@ export function ResultsPanel({ result, query }: Props) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-2">
+      <div className="flex items-center justify-between border-b border-border px-4 py-2">
         <div>
           <p className="text-sm font-medium">
             {result.meta.dataset_name ?? result.meta.collection_name}
@@ -90,7 +90,9 @@ export function ResultsPanel({ result, query }: Props) {
         className={`flex flex-1 overflow-hidden ${viewMode === "side_by_side" ? "flex-row" : "flex-col"}`}
       >
         {showChart && (
-          <div className={`p-4 ${viewMode === "stacked" ? "border-b" : "flex-1 border-r"}`}>
+          <div
+            className={`p-4 ${viewMode === "stacked" ? "border-b border-border" : "flex-1 border-r border-border"}`}
+          >
             <AnalyticsChart result={result} chartType={chartType} />
           </div>
         )}

@@ -39,6 +39,24 @@ async def get_levels_for_field_ids(session: AsyncSession, field_ids: list[int]) 
     )
 
 
+async def get_all_for_collections(
+    session: AsyncSession, collection_ids: list[int]
+) -> list[Dataset]:
+    if not collection_ids:
+        return []
+    return list(
+        (
+            await session.execute(
+                select(Dataset)
+                .where(Dataset.collection_id.in_(collection_ids))
+                .order_by(Dataset.collection_id, Dataset.sort_order)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+
 async def get_by_id(session: AsyncSession, dataset_id: int) -> Dataset | None:
     return (
         (await session.execute(select(Dataset).where(Dataset.id == dataset_id))).scalars().first()

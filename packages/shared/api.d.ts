@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/scope": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Scope */
+        get: operations["get_scope_api_v1_scope_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/collections/{collection_id}": {
         parameters: {
             query?: never;
@@ -376,6 +393,54 @@ export interface components {
             /** Field Key */
             field_key: string;
         };
+        /** FieldTreeFieldOut */
+        FieldTreeFieldOut: {
+            /** Id */
+            id: number;
+            /** Field Key */
+            field_key: string;
+            /** Display Name */
+            display_name: string;
+            field_type: components["schemas"]["FieldType"];
+            /** Sort Order */
+            sort_order: number;
+            /** Is Filterable */
+            is_filterable: boolean;
+        };
+        /** FieldTreeGroupOut */
+        FieldTreeGroupOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Slug */
+            slug: string;
+            /** Sort Order */
+            sort_order: number;
+            /**
+             * Fields
+             * @default []
+             */
+            fields: components["schemas"]["FieldTreeFieldOut"][];
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["FieldTreeGroupOut"][];
+        };
+        /** FieldTreeOut */
+        FieldTreeOut: {
+            /**
+             * Groups
+             * @default []
+             */
+            groups: components["schemas"]["FieldTreeGroupOut"][];
+            /**
+             * Ungrouped Fields
+             * @default []
+             */
+            ungrouped_fields: components["schemas"]["FieldTreeFieldOut"][];
+        };
         /**
          * FieldType
          * @enum {string}
@@ -535,6 +600,37 @@ export interface components {
                 [key: string]: number;
             };
         };
+        /** ScopeCollection */
+        ScopeCollection: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /**
+             * Datasets
+             * @default []
+             */
+            datasets: components["schemas"]["ScopeDataset"][];
+        };
+        /** ScopeDataset */
+        ScopeDataset: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+        };
+        /** ScopePackage */
+        ScopePackage: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /**
+             * Collections
+             * @default []
+             */
+            collections: components["schemas"]["ScopeCollection"][];
+        };
         /** TrendMeta */
         TrendMeta: {
             /**
@@ -689,6 +785,26 @@ export interface operations {
             };
         };
     };
+    get_scope_api_v1_scope_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScopePackage"][];
+                };
+            };
+        };
+    };
     get_collection_api_v1_collections__collection_id__get: {
         parameters: {
             query?: never;
@@ -833,7 +949,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FieldTreeOut"];
                 };
             };
             /** @description Validation Error */

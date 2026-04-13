@@ -80,6 +80,9 @@ const tokenGroups: TokenGroup[] = [
   },
 ]
 
+const CHART_COLOR_COUNT = 8
+const CHART_HUE_OFFSETS = [0, 45, 90, 135, 180, 225, 270, 315]
+
 export const ColourPalette: StoryObj = {
   render: () => (
     <div className="space-y-8">
@@ -177,6 +180,42 @@ export const ThemeComparison: StoryObj = {
                     </span>
                   </div>
                 ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  ),
+}
+
+export const ChartColours: StoryObj = {
+  name: "Chart Colours",
+  render: () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold tracking-tight">Chart Colours</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          8 hues evenly distributed from the brand base hue. Light/dark values differ — toggle the
+          theme to compare. Read via{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">getComputedStyle</code>{" "}
+          at render time; never hardcode hex values for chart series.
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {Array.from({ length: CHART_COLOR_COUNT }, (_, i) => {
+          const n = i + 1
+          const offset = CHART_HUE_OFFSETS[i]
+          return (
+            <div key={n} className="flex items-center gap-3">
+              <div
+                className="h-10 w-10 shrink-0 rounded-md border border-border"
+                style={{ backgroundColor: `var(--chart-${n})` }}
+              />
+              <div>
+                <p className="text-sm font-medium leading-none">Series {n}</p>
+                <p className="mt-1 font-mono text-xs text-muted-foreground">--chart-{n}</p>
+                <p className="font-mono text-xs text-muted-foreground">+{offset}°</p>
               </div>
             </div>
           )

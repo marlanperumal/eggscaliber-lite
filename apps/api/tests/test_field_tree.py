@@ -2,12 +2,13 @@ from src.models.field import Field, FieldType
 from src.models.field_group import FieldGroup
 from src.models.level import Level
 from src.repositories import analytics_repo
+from src.services import analytics_service
 
 
 async def test_get_field_tree_empty_dataset(db, bare_dataset):
-    tree = await analytics_repo.get_field_tree(db, bare_dataset.id)
-    assert tree["groups"] == []
-    assert tree["ungrouped_fields"] == []
+    tree = await analytics_service.get_field_tree(db, bare_dataset.id)
+    assert tree.groups == []
+    assert tree.ungrouped_fields == []
 
 
 async def test_get_field_tree_returns_groups_and_fields(db, bare_dataset):
@@ -31,13 +32,13 @@ async def test_get_field_tree_returns_groups_and_fields(db, bare_dataset):
     db.add_all([f1, f2])
     await db.flush()
 
-    tree = await analytics_repo.get_field_tree(db, bare_dataset.id)
-    assert len(tree["groups"]) == 1
-    assert tree["groups"][0]["name"] == "Brand"
-    assert len(tree["groups"][0]["fields"]) == 1
-    assert tree["groups"][0]["fields"][0]["field_key"] == "brand_rating"
-    assert len(tree["ungrouped_fields"]) == 1
-    assert tree["ungrouped_fields"][0]["field_key"] == "gender"
+    tree = await analytics_service.get_field_tree(db, bare_dataset.id)
+    assert len(tree.groups) == 1
+    assert tree.groups[0].name == "Brand"
+    assert len(tree.groups[0].fields) == 1
+    assert tree.groups[0].fields[0].field_key == "brand_rating"
+    assert len(tree.ungrouped_fields) == 1
+    assert tree.ungrouped_fields[0].field_key == "gender"
 
 
 async def test_get_field_tree_nested_groups(db, bare_dataset):
@@ -62,12 +63,12 @@ async def test_get_field_tree_nested_groups(db, bare_dataset):
     )
     await db.flush()
 
-    tree = await analytics_repo.get_field_tree(db, bare_dataset.id)
-    assert len(tree["groups"]) == 1
-    assert tree["groups"][0]["name"] == "Parent"
-    assert len(tree["groups"][0]["children"]) == 1
-    assert tree["groups"][0]["children"][0]["name"] == "Child"
-    assert len(tree["groups"][0]["children"][0]["fields"]) == 1
+    tree = await analytics_service.get_field_tree(db, bare_dataset.id)
+    assert len(tree.groups) == 1
+    assert tree.groups[0].name == "Parent"
+    assert len(tree.groups[0].children) == 1
+    assert tree.groups[0].children[0].name == "Child"
+    assert len(tree.groups[0].children[0].fields) == 1
 
 
 async def test_get_field_tree_excludes_identifier_and_weight(db, bare_dataset):
@@ -88,8 +89,8 @@ async def test_get_field_tree_excludes_identifier_and_weight(db, bare_dataset):
         )
     )
     await db.flush()
-    tree = await analytics_repo.get_field_tree(db, bare_dataset.id)
-    all_keys = [f["field_key"] for f in tree["ungrouped_fields"]]
+    tree = await analytics_service.get_field_tree(db, bare_dataset.id)
+    all_keys = [f.field_key for f in tree.ungrouped_fields]
     assert "rid" not in all_keys
     assert "wt" not in all_keys
 

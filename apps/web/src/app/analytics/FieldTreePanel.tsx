@@ -131,8 +131,8 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
   }
 
   return (
-    <div className="flex h-full flex-col border-r">
-      <div className="flex items-center justify-between border-b px-3 py-2">
+    <div className="flex h-full flex-col border-r border-border">
+      <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <span className="text-sm font-medium">Fields</span>
         <button
           type="button"
