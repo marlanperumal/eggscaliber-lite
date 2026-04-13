@@ -36,6 +36,16 @@ async def test_jsonb_worker_fetch_with_filter(worker_dataset, db):
     assert all(r["gender"] == "Male" for r in rows)
 
 
+async def test_jsonb_worker_fetch_with_multiple_filters(worker_dataset, db):
+    worker = JsonbResponseWorker(db)
+    rows = await worker.fetch(
+        worker_dataset.id, field_keys=[], filters={"gender": "Male", "age_group": "18-34"}
+    )
+    assert len(rows) == 2
+    assert all(r["gender"] == "Male" for r in rows)
+    assert all(r["age_group"] == "18-34" for r in rows)
+
+
 async def test_jsonb_worker_count(worker_dataset, db):
     worker = JsonbResponseWorker(db)
     assert await worker.count(worker_dataset.id, filters={}) == 3

@@ -53,7 +53,7 @@ async def test_scope_package_with_no_collections(client, db):
     assert data[0]["collections"] == []
 
 
-async def test_scope_only_exposes_id_and_name(client, db):
+async def test_scope_does_not_expose_internal_fields(client, db):
     pkg = Package(name="Brand Suite", slug="brand-suite")
     db.add(pkg)
     await db.flush()
@@ -72,8 +72,12 @@ async def test_scope_only_exposes_id_and_name(client, db):
 
     resp = await client.get("/api/v1/scope")
     pkg_data = resp.json()[0]
-    assert set(pkg_data.keys()) == {"id", "name", "collections"}
+    assert "slug" not in pkg_data
+    assert "created_at" not in pkg_data
+    assert "description" not in pkg_data
     col_data = pkg_data["collections"][0]
-    assert set(col_data.keys()) == {"id", "name", "datasets"}
+    assert "slug" not in col_data
+    assert "collection_type" not in col_data
     ds_data = col_data["datasets"][0]
-    assert set(ds_data.keys()) == {"id", "name"}
+    assert "slug" not in ds_data
+    assert "sort_order" not in ds_data

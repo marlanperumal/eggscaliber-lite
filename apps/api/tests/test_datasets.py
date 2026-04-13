@@ -71,3 +71,18 @@ async def test_get_dataset_responses_paginated(client, db):
     assert data["total"] == 2
     assert len(data["items"]) == 2
     assert data["page"] == 1
+
+
+async def test_get_dataset_responses_not_found(client):
+    response = await client.get("/api/v1/datasets/99999/responses")
+    assert response.status_code == 404
+
+
+async def test_get_dataset_field_tree_not_found(client):
+    response = await client.get("/api/v1/datasets/99999/field-tree")
+    assert response.status_code == 404
+
+
+async def test_get_dataset_weight_fields_not_found(client):
+    response = await client.get("/api/v1/datasets/99999/weight-fields")
+    assert response.status_code == 404

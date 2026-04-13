@@ -39,6 +39,11 @@ async def test_get_collection_not_found(client):
     assert response.status_code == 404
 
 
+async def test_get_collection_consistency_not_found(client):
+    response = await client.get("/api/v1/collections/99999/consistency")
+    assert response.status_code == 404
+
+
 async def test_get_collection_with_datasets(client, db):
     col = await _seed_collection(db)
 

@@ -96,6 +96,22 @@ async def test_detects_level_inconsistency(db):
     assert InconsistencyType.level_added in types
 
 
+async def test_detects_level_removed(db):
+    col = await _make_collection(db)
+    ds1 = await _add_dataset(db, col, "W1", "w1-lr", 1)
+    ds2 = await _add_dataset(db, col, "W2", "w2-lr", 2)
+    f1 = await _add_field(db, ds1, "media", FieldType.multi_response)
+    f2 = await _add_field(db, ds2, "media", FieldType.multi_response)
+    await _add_levels(db, f1, ["tv", "radio", "podcast"])
+    await _add_levels(db, f2, ["tv", "radio"])  # podcast dropped in wave 2
+
+    result = await check_field_consistency(col.id, db)
+    types = {r.inconsistency_type for r in result}
+    assert InconsistencyType.level_removed in types
+    removed = [r for r in result if r.inconsistency_type == InconsistencyType.level_removed]
+    assert any(r.field_key == "media" for r in removed)
+
+
 async def test_consistency_endpoint(client, db):
     col = await _make_collection(db)
     ds1 = await _add_dataset(db, col, "W1", "w1-ep", 1)

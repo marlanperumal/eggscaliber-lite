@@ -83,6 +83,7 @@ async def test_trend_count_measure_returns_per_wave_per_level_rows(client, db):
     assert ["Wave 2", "brand_awareness", "Aware"] in keys
     aware_w1 = next(r for r in data["rows"] if r["key"] == ["Wave 1", "brand_awareness", "Aware"])
     assert aware_w1["values"]["Total"] == 2.0
+    assert all(set(r["values"].keys()) == {"Total"} for r in data["rows"])
 
 
 async def _seed_crosstab_fixture(db):
@@ -181,6 +182,48 @@ async def test_crosstab_dataset_not_found(client):
                 "aggregation": None,
                 "display": "n",
             },
+        },
+    )
+    assert resp.status_code == 404
+
+
+async def test_crosstab_nested_row_limit_at_boundary_accepts(client):
+    # Exactly 2 rows in nested mode is at the allowed limit — validation must pass.
+    # Uses a nonexistent dataset so we get 404, not 422.
+    resp = await client.post(
+        "/api/v1/analytics/crosstab",
+        json={
+            "dataset_id": 99999,
+            "rows": [{"field_key": "f1"}, {"field_key": "f2"}],
+            "row_mode": "nested",
+            "columns": [],
+            "col_mode": "stacked",
+            "filters": [],
+            "measure": {"type": "count", "field_key": None, "aggregation": None, "display": "n"},
+        },
+    )
+    assert resp.status_code == 404
+
+
+async def test_crosstab_stacked_row_limit_at_boundary_accepts(client):
+    # Exactly 5 rows in stacked mode is at the allowed limit — validation must pass.
+    # Uses a nonexistent dataset so we get 404, not 422.
+    resp = await client.post(
+        "/api/v1/analytics/crosstab",
+        json={
+            "dataset_id": 99999,
+            "rows": [
+                {"field_key": "f1"},
+                {"field_key": "f2"},
+                {"field_key": "f3"},
+                {"field_key": "f4"},
+                {"field_key": "f5"},
+            ],
+            "row_mode": "stacked",
+            "columns": [],
+            "col_mode": "stacked",
+            "filters": [],
+            "measure": {"type": "count", "field_key": None, "aggregation": None, "display": "n"},
         },
     )
     assert resp.status_code == 404
