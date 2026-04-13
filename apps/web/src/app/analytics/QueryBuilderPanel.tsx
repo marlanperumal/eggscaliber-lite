@@ -9,6 +9,7 @@ import type {
   MeasureType,
   QueryConfig,
 } from "./analytics-types"
+import { DEFAULT_QUERY } from "./analytics-types"
 
 interface Props {
   onCollapse: () => void
@@ -21,7 +22,7 @@ export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const q = query ?? emptyQuery()
+  const q = query ?? DEFAULT_QUERY
   const set = (patch: Partial<QueryConfig>) => onQueryChange({ ...q, ...patch })
 
   const removeRow = (fk: string) => set({ rows: q.rows.filter((r) => r.field_key !== fk) })
@@ -374,19 +375,4 @@ function ScopePicker({
       </select>
     </div>
   )
-}
-
-function emptyQuery(): QueryConfig {
-  return {
-    mode: "crosstab",
-    dataset_id: null,
-    collection_id: null,
-    rows: [],
-    row_mode: "stacked",
-    columns: [],
-    col_mode: "stacked",
-    breakdown: null,
-    filters: [],
-    measure: { type: "count", field_key: null, aggregation: null, display: "n" },
-  }
 }

@@ -7,27 +7,51 @@ from src.models.level import Level
 from src.models.response import Response
 
 
+def get_fields_for_datasets(session: Session, dataset_ids: list[int]) -> list[Field]:
+    if not dataset_ids:
+        return []
+    return list(
+        session.execute(
+            select(Field)
+            .where(Field.dataset_id.in_(dataset_ids))
+            .order_by(Field.dataset_id, Field.sort_order)
+        )
+        .scalars()
+        .all()
+    )
+
+
+def get_levels_for_field_ids(session: Session, field_ids: list[int]) -> list[Level]:
+    if not field_ids:
+        return []
+    return list(
+        session.execute(
+            select(Level)
+            .where(Level.field_id.in_(field_ids))
+            .order_by(Level.field_id, Level.sort_order)
+        )
+        .scalars()
+        .all()
+    )
+
+
 def get_by_id(session: Session, dataset_id: int) -> Dataset | None:
     return session.execute(select(Dataset).where(Dataset.id == dataset_id)).scalars().first()
 
 
 def get_fields_with_levels(session: Session, dataset_id: int) -> list[tuple[Field, list[Level]]]:
-    fields = (
+    fields = list(
         session.execute(
             select(Field).where(Field.dataset_id == dataset_id).order_by(Field.sort_order)
         )
         .scalars()
         .all()
     )
-    result = []
-    for f in fields:
-        levels = (
-            session.execute(select(Level).where(Level.field_id == f.id).order_by(Level.sort_order))
-            .scalars()
-            .all()
-        )
-        result.append((f, levels))
-    return result
+    all_levels = get_levels_for_field_ids(session, [f.id for f in fields])
+    levels_by_field: dict[int, list[Level]] = {}
+    for lv in all_levels:
+        levels_by_field.setdefault(lv.field_id, []).append(lv)
+    return [(f, levels_by_field.get(f.id, [])) for f in fields]
 
 
 def get_responses(

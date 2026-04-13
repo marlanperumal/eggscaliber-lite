@@ -1,12 +1,10 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.models.dataset import Dataset
-from src.models.field import Field, FieldType
-from src.models.level import Level
+from src.models.field import FieldType
+from src.repositories import collection_repo, dataset_repo
 
 
 class InconsistencyType(StrEnum):
@@ -24,27 +22,23 @@ class FieldInconsistency:
 
 
 def check_field_consistency(collection_id: int, session: Session) -> list[FieldInconsistency]:
-    datasets = (
-        session.execute(
-            select(Dataset)
-            .where(Dataset.collection_id == collection_id)
-            .order_by(Dataset.sort_order)
-        )
-        .scalars()
-        .all()
-    )
+    datasets = collection_repo.get_datasets_for_collection(session, collection_id)
 
     if len(datasets) <= 1:
         return []
 
+    all_fields = dataset_repo.get_fields_for_datasets(session, [ds.id for ds in datasets])
+    all_levels = dataset_repo.get_levels_for_field_ids(session, [f.id for f in all_fields])
+
+    levels_by_field: dict[int, list[str]] = {}
+    for lv in all_levels:
+        levels_by_field.setdefault(lv.field_id, []).append(lv.value)
+
     # Build {field_key: {dataset_id: (field_type, frozenset[level_values])}}
     field_map: dict[str, dict[int, tuple[FieldType, frozenset[str]]]] = {}
-    for ds in datasets:
-        fields = session.execute(select(Field).where(Field.dataset_id == ds.id)).scalars().all()
-        for f in fields:
-            levels = session.execute(select(Level).where(Level.field_id == f.id)).scalars().all()
-            level_values = frozenset(lv.value for lv in levels)
-            field_map.setdefault(f.field_key, {})[ds.id] = (f.field_type, level_values)
+    for f in all_fields:
+        level_values = frozenset(levels_by_field.get(f.id, []))
+        field_map.setdefault(f.field_key, {})[f.dataset_id] = (f.field_type, level_values)
 
     dataset_ids = [ds.id for ds in datasets]
     result: list[FieldInconsistency] = []

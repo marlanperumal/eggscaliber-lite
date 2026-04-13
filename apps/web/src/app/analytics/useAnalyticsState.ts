@@ -2,19 +2,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback } from "react"
 import type { QueryConfig } from "./analytics-types"
-
-const DEFAULT_QUERY: QueryConfig = {
-  mode: "crosstab",
-  dataset_id: null,
-  collection_id: null,
-  rows: [],
-  row_mode: "stacked",
-  columns: [],
-  col_mode: "stacked",
-  breakdown: null,
-  filters: [],
-  measure: { type: "count", field_key: null, aggregation: null, display: "n" },
-}
+import { DEFAULT_QUERY } from "./analytics-types"
 
 export function useAnalyticsState() {
   const router = useRouter()

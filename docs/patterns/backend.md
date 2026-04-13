@@ -40,6 +40,50 @@ class DatasetNotFoundError(DomainError): ...
 
 Routes catch these and map to HTTP codes. Never raise `HTTPException` in services.
 
+## CRUD Passthrough Exception
+
+For **pure read-only endpoints** with no business logic (no validation, aggregation, cross-entity mutation), routes may call a single repository function directly without an intermediate service. The rule is: **as soon as any business logic appears, introduce a service**.
+
+```python
+# ALLOWED — pure read, no business logic
+@router.get("/packages", response_model=list[PackageRead])
+def list_packages(session: Session = Depends(get_session)):
+    return package_repo.get_all(session)
+
+# WRONG — business logic belongs in a service, not the route
+@router.get("/packages/{package_id}/summary")
+def package_summary(package_id: int, session: Session = Depends(get_session)):
+    pkg = package_repo.get_by_id(session, package_id)
+    # ← any logic beyond a single repo call belongs in a service
+    summary = compute_summary(pkg)
+    return summary
+```
+
+## Analytics / Orchestration Services
+
+Complex endpoints that coordinate multiple repos, workers, or lower-level services belong in an **orchestration service**. The route handles input validation and error-to-HTTP mapping only; the service owns the logic.
+
+```python
+# Route: validates input, calls one service method, maps errors
+@router.post("/analytics/crosstab", response_model=CrosstabResponse)
+def run_crosstab(request: CrosstabRequest, session: Session = Depends(get_session)):
+    if request.row_mode == "nested" and len(request.rows) > 2:
+        raise HTTPException(422, "Nested row mode supports at most 2 fields")
+    try:
+        return analytics_service.run_crosstab(session, request)
+    except DatasetNotFoundError:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+# Service: owns all orchestration
+def run_crosstab(session: Session, request: CrosstabRequest) -> CrosstabResponse:
+    dataset = analytics_repo.get_dataset(session, request.dataset_id)
+    if dataset is None:
+        raise DatasetNotFoundError(request.dataset_id)
+    # ... coordinate repos, workers, lower-level services
+```
+
+Request/response schemas for complex analytics endpoints live in `src/models/analytics.py` (not in the route file) so that both routes and services can import them without circular dependencies.
+
 ## Adding Models to Alembic
 
 After adding a new SQLModel `table=True` class, always:

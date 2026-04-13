@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, X } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { api } from "@/lib/api"
 import type { QueryConfig } from "./analytics-types"
+import { DEFAULT_QUERY } from "./analytics-types"
 
 interface FieldNode {
   id: number
@@ -66,7 +67,7 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
   const addToRows = useCallback(
     (field: FieldNode) => {
       onQueryChange((prev) => {
-        const base = prev ?? emptyQuery()
+        const base = prev ?? DEFAULT_QUERY
         if (base.rows.some((r) => r.field_key === field.field_key)) return base
         return {
           ...base,
@@ -170,19 +171,4 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
       </div>
     </div>
   )
-}
-
-function emptyQuery(): QueryConfig {
-  return {
-    mode: "crosstab",
-    dataset_id: null,
-    collection_id: null,
-    rows: [],
-    row_mode: "stacked",
-    columns: [],
-    col_mode: "stacked",
-    breakdown: null,
-    filters: [],
-    measure: { type: "count", field_key: null, aggregation: null, display: "n" },
-  }
 }

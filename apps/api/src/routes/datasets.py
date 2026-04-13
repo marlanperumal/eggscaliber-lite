@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlmodel import SQLModel
 
 from src.database import get_session
+from src.models.analytics import FieldTreeOut
 from src.models.dataset import DatasetRead
 from src.models.field import FieldType
 from src.models.response import ResponseRead
@@ -74,7 +75,7 @@ class FieldOut(SQLModel):
     is_filterable: bool
 
 
-@router.get("/datasets/{dataset_id}/field-tree")
+@router.get("/datasets/{dataset_id}/field-tree", response_model=FieldTreeOut)
 def get_field_tree(dataset_id: int, session: Session = Depends(get_session)):
     ds = analytics_repo.get_dataset(session, dataset_id)
     if ds is None:

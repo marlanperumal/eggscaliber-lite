@@ -42,6 +42,19 @@ export interface ResultRow {
   values: Record<string, number>
 }
 
+export const DEFAULT_QUERY: QueryConfig = {
+  mode: "crosstab",
+  dataset_id: null,
+  collection_id: null,
+  rows: [],
+  row_mode: "stacked",
+  columns: [],
+  col_mode: "stacked",
+  breakdown: null,
+  filters: [],
+  measure: { type: "count", field_key: null, aggregation: null, display: "n" },
+}
+
 export interface AnalyticsResult {
   meta: {
     mode: string
