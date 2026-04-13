@@ -47,8 +47,8 @@ The CRUD passthrough exception applies to **list endpoints** — endpoints with 
 ```python
 # ALLOWED — list endpoint, no entity ID, no existence question
 @router.get("/packages", response_model=list[PackageRead])
-def list_packages(session: Session = Depends(get_session)):
-    return package_repo.get_all(session)
+async def list_packages(session: AsyncSession = Depends(get_session)):
+    return await package_repo.get_all(session)
 ```
 
 As soon as an endpoint has an `{entity_id}` path parameter, there is an implicit existence question — use a service.
@@ -63,18 +63,18 @@ Single-entity endpoints (those with an `{entity_id}` path parameter) must go thr
 ```python
 # ROUTE — only HTTP concerns
 @router.get("/collections/{collection_id}", response_model=CollectionWithDatasets)
-def get_collection(collection_id: int, session: Session = Depends(get_session)):
+async def get_collection(collection_id: int, session: AsyncSession = Depends(get_session)):
     try:
-        return collection_service.get_with_datasets(session, collection_id)
+        return await collection_service.get_with_datasets(session, collection_id)
     except CollectionNotFoundError:
         raise HTTPException(status_code=404, detail="Collection not found") from None
 
 # SERVICE — owns existence semantics
-def get_with_datasets(session: Session, collection_id: int) -> CollectionWithDatasets:
-    col = collection_repo.get_by_id(session, collection_id)
+async def get_with_datasets(session: AsyncSession, collection_id: int) -> CollectionWithDatasets:
+    col = await collection_repo.get_by_id(session, collection_id)
     if col is None:
         raise CollectionNotFoundError(collection_id)
-    datasets = collection_repo.get_datasets_for_collection(session, collection_id)
+    datasets = await collection_repo.get_datasets_for_collection(session, collection_id)
     return CollectionWithDatasets(**col.model_dump(), datasets=datasets)
 ```
 
@@ -101,17 +101,17 @@ Complex endpoints that coordinate multiple repos, workers, or lower-level servic
 ```python
 # Route: validates input, calls one service method, maps errors
 @router.post("/analytics/crosstab", response_model=CrosstabResponse)
-def run_crosstab(request: CrosstabRequest, session: Session = Depends(get_session)):
+async def run_crosstab(request: CrosstabRequest, session: AsyncSession = Depends(get_session)):
     if request.row_mode == "nested" and len(request.rows) > 2:
         raise HTTPException(422, "Nested row mode supports at most 2 fields")
     try:
-        return analytics_service.run_crosstab(session, request)
+        return await analytics_service.run_crosstab(session, request)
     except DatasetNotFoundError:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
 # Service: owns all orchestration
-def run_crosstab(session: Session, request: CrosstabRequest) -> CrosstabResponse:
-    dataset = analytics_repo.get_dataset(session, request.dataset_id)
+async def run_crosstab(session: AsyncSession, request: CrosstabRequest) -> CrosstabResponse:
+    dataset = await analytics_repo.get_dataset(session, request.dataset_id)
     if dataset is None:
         raise DatasetNotFoundError(request.dataset_id)
     # ... coordinate repos, workers, lower-level services
@@ -119,23 +119,122 @@ def run_crosstab(session: Session, request: CrosstabRequest) -> CrosstabResponse
 
 Request/response schemas for complex analytics endpoints live in `src/models/analytics.py` (not in the route file) so that both routes and services can import them without circular dependencies.
 
-## Async vs sync route handlers
+## Async session and query patterns
 
-Use `def` (sync) for all route handlers. FastAPI runs sync handlers in a thread-pool executor, which is the correct pattern for blocking SQLAlchemy calls. `async def` without any `await` blocks the event loop unnecessarily.
+The app uses `AsyncSession` (SQLAlchemy async) everywhere. The engine and session factory are created inside `lifespan` (not at module level) so they run within the running event loop.
 
 ```python
-# CORRECT
-@router.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+# database.py — engine and session factory live inside lifespan
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global engine, SessionLocal
+    engine = create_async_engine(settings.database_url)   # postgresql+asyncpg://
+    SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+    yield
+    await engine.dispose()   # required — omitting causes "Event loop is closed" warnings
 
-# WRONG — async with no await blocks the event loop
-@router.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    async with SessionLocal() as session:
+        yield session
 ```
 
-Only use `async def` when the handler genuinely awaits an async operation (e.g. an async HTTP call or async queue push).
+`expire_on_commit=False` is **required**. Without it, accessing any attribute after `session.commit()` triggers a lazy-load which raises `MissingGreenlet` in async context.
+
+### Repository query patterns
+
+```python
+# Fetch many
+result = await session.execute(select(Model).where(...))
+rows = result.scalars().all()
+
+# Fetch one or None
+result = await session.execute(select(Model).where(Model.id == id))
+row = result.scalars().first()
+
+# Fetch by PK
+row = await session.get(Model, id)
+
+# Count
+result = await session.execute(select(func.count()).select_from(Model).where(...))
+count = result.scalar_one()
+
+# Insert
+session.add(obj)
+await session.commit()
+await session.refresh(obj)   # re-reads generated fields (id, created_at, etc.)
+
+# Delete
+await session.delete(obj)
+await session.commit()
+```
+
+### Route handlers — always `async def`
+
+All route handlers are `async def`. They `await` service calls; services `await` repo calls. The session type annotation is `AsyncSession` (from `sqlalchemy.ext.asyncio`), not `Session`.
+
+```python
+@router.get("/datasets/{dataset_id}", response_model=DatasetWithFields)
+async def get_dataset(
+    dataset_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    try:
+        return await dataset_service.get_with_fields(session, dataset_id)
+    except DatasetNotFoundError:
+        raise HTTPException(status_code=404, detail="Dataset not found") from None
+```
+
+### Workers — `async def fetch()` and `count()`
+
+Worker classes accept `AsyncSession` and expose async methods:
+
+```python
+class JsonbResponseWorker(DataWorker):
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def fetch(self, dataset_id: int, field_keys: list[str], filters: dict[str, Any]) -> list[dict[str, Any]]:
+        stmt = select(Response).where(Response.dataset_id == dataset_id)
+        rows = (await self._session.execute(stmt)).scalars().all()
+        ...
+
+    async def count(self, dataset_id: int, filters: dict[str, Any]) -> int:
+        stmt = select(func.count()).select_from(Response).where(Response.dataset_id == dataset_id)
+        return (await self._session.execute(stmt)).scalar_one()
+```
+
+### Lazy loading is banned
+
+Accessing an unloaded relationship attribute on an `AsyncSession`-loaded object raises `MissingGreenlet` at runtime. The two allowed loading strategies:
+
+**1. Explicit separate queries (current pattern — preferred)**  
+Repos do explicit multi-step queries rather than relationship traversal. Keep it this way.
+
+**2. Eager loading with `selectinload` (if a relationship is ever added)**
+```python
+stmt = select(Dataset).options(selectinload(Dataset.fields))
+result = await session.execute(stmt)
+```
+
+If a `Relationship()` is ever declared on a model, add `lazy="raise"` so accidental lazy access fails loudly in tests rather than silently in production.
+
+### Prohibited patterns
+
+```python
+# NEVER — SQLModel-only method, does not exist on AsyncSession
+session.exec(select(Model))
+
+# NEVER — lazy relationship access raises MissingGreenlet
+obj = await session.get(Dataset, 1)
+obj.fields   # crash if fields not eager-loaded
+
+# NEVER — sync Session type in async route
+from sqlalchemy.orm import Session
+async def get_dataset(..., session: Session = Depends(get_session)): ...
+
+# NEVER — engine or sessionmaker at module level (must be in lifespan)
+engine = create_async_engine(...)   # at module scope — wrong
+```
 
 ## Adding Models to Alembic
 
