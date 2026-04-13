@@ -2,6 +2,8 @@ from datetime import UTC, datetime
 
 from sqlmodel import Field, SQLModel
 
+from src.models.collection import CollectionType
+
 
 class PackageBase(SQLModel):
     name: str
@@ -17,3 +19,14 @@ class Package(PackageBase, table=True):
 class PackageRead(PackageBase):
     id: int
     created_at: datetime
+
+
+class CollectionSummary(SQLModel):
+    id: int
+    name: str
+    slug: str
+    collection_type: CollectionType
+
+
+class PackageWithCollections(PackageRead):
+    collections: list[CollectionSummary] = []

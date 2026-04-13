@@ -6,6 +6,8 @@ from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
+from src.models.field import FieldType
+
 
 class WorkerType(StrEnum):
     jsonb_response = "jsonb_response"
@@ -34,3 +36,33 @@ class DatasetRead(DatasetBase):
     id: int
     worker_config: dict[str, Any] | None = None
     created_at: datetime
+
+
+class LevelOut(SQLModel):
+    id: int
+    value: str
+    display_label: str
+    sort_order: int
+
+
+class FieldWithLevels(SQLModel):
+    id: int
+    field_key: str
+    display_name: str
+    field_type: FieldType
+    sort_order: int
+    is_filterable: bool
+    levels: list[LevelOut] = []
+
+
+class DatasetWithFields(DatasetRead):
+    fields: list[FieldWithLevels] = []
+
+
+class FieldOut(SQLModel):
+    id: int
+    field_key: str
+    display_name: str
+    field_type: FieldType
+    sort_order: int
+    is_filterable: bool

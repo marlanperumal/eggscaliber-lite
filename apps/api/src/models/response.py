@@ -21,3 +21,10 @@ class Response(ResponseBase, table=True):
 class ResponseRead(ResponseBase):
     id: int
     created_at: datetime
+
+
+class ResponsePage(SQLModel):
+    total: int
+    page: int
+    page_size: int
+    items: list[ResponseRead]

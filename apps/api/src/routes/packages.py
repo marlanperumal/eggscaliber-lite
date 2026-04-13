@@ -1,24 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlmodel import SQLModel
 
 from src.database import get_session
-from src.models.collection import CollectionType
-from src.models.package import PackageRead
+from src.models.package import PackageRead, PackageWithCollections
 from src.repositories import package_repo
 
 router = APIRouter(tags=["packages"])
-
-
-class CollectionSummary(SQLModel):
-    id: int
-    name: str
-    slug: str
-    collection_type: CollectionType
-
-
-class PackageWithCollections(PackageRead):
-    collections: list[CollectionSummary] = []
 
 
 @router.get("/packages", response_model=list[PackageRead])

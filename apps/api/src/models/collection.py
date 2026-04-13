@@ -3,6 +3,8 @@ from enum import StrEnum
 
 from sqlmodel import Field, SQLModel
 
+from src.models.dataset import WorkerType
+
 
 class CollectionType(StrEnum):
     survey = "survey"
@@ -27,3 +29,21 @@ class Collection(CollectionBase, table=True):
 class CollectionRead(CollectionBase):
     id: int
     created_at: datetime
+
+
+class DatasetSummary(SQLModel):
+    id: int
+    name: str
+    slug: str
+    sort_order: int
+    worker_type: WorkerType
+
+
+class CollectionWithDatasets(CollectionRead):
+    datasets: list[DatasetSummary] = []
+
+
+class InconsistencyOut(SQLModel):
+    field_key: str
+    inconsistency_type: str
+    detail: str

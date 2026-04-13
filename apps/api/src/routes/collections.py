@@ -1,32 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlmodel import SQLModel
 
 from src.database import get_session
-from src.models.collection import CollectionRead
-from src.models.dataset import WorkerType
+from src.models.collection import CollectionWithDatasets, InconsistencyOut
 from src.repositories import collection_repo
 from src.services.collection_service import check_field_consistency
 
 router = APIRouter(tags=["collections"])
-
-
-class DatasetSummary(SQLModel):
-    id: int
-    name: str
-    slug: str
-    sort_order: int
-    worker_type: WorkerType
-
-
-class CollectionWithDatasets(CollectionRead):
-    datasets: list[DatasetSummary] = []
-
-
-class InconsistencyOut(SQLModel):
-    field_key: str
-    inconsistency_type: str
-    detail: str
 
 
 @router.get("/collections/{collection_id}", response_model=CollectionWithDatasets)
@@ -43,6 +23,8 @@ def get_collection(collection_id: int, session: Session = Depends(get_session)):
     response_model=list[InconsistencyOut],
 )
 def get_collection_consistency(collection_id: int, session: Session = Depends(get_session)):
+    # Exception: one existence check via repo before delegating to the service — see
+    # docs/patterns/backend.md "Existence-check + data-fetch variant".
     col = collection_repo.get_by_id(session, collection_id)
     if col is None:
         raise HTTPException(status_code=404, detail="Collection not found")
