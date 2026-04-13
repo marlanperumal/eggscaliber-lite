@@ -1,17 +1,16 @@
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
 from typing import Any
 
 
 class DataWorker(ABC):
     @abstractmethod
-    def fetch(
+    async def fetch(
         self,
         dataset_id: int,
         field_keys: list[str],
         filters: dict[str, Any],
-    ) -> Iterator[dict[str, Any]]:
-        """Yield normalized rows as {field_key: value}.
+    ) -> list[dict[str, Any]]:
+        """Return normalized rows as {field_key: value}.
 
         Args:
             dataset_id: the Dataset to query
@@ -22,6 +21,6 @@ class DataWorker(ABC):
         ...
 
     @abstractmethod
-    def count(self, dataset_id: int, filters: dict[str, Any]) -> int:
+    async def count(self, dataset_id: int, filters: dict[str, Any]) -> int:
         """Return count of matching rows — the base value denominator."""
         ...
