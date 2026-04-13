@@ -31,26 +31,26 @@ describe("generateOklchScale", () => {
 
   test("s[50] has higher hue than s[600] (highlight rotates toward orange)", () => {
     const scale = generateOklchScale(directionalConfig.palette)
-    const hOf = (s: string) => parseFloat(s.match(/oklch\([\d.]+ [\d.]+ ([\d.]+)deg\)/)![1])
+    const hOf = (s: string) => parseFloat(s.match(/oklch\([\d.]+ [\d.]+ ([\d.]+)deg\)/)?.[1] ?? "")
     expect(hOf(scale[50])).toBeGreaterThan(hOf(scale[600]))
   })
 
   test("s[950] has lower hue than s[600] (shadow rotates toward magenta)", () => {
     const scale = generateOklchScale(directionalConfig.palette)
-    const hOf = (s: string) => parseFloat(s.match(/oklch\([\d.]+ [\d.]+ ([\d.]+)deg\)/)![1])
+    const hOf = (s: string) => parseFloat(s.match(/oklch\([\d.]+ [\d.]+ ([\d.]+)deg\)/)?.[1] ?? "")
     expect(hOf(scale[950])).toBeLessThan(hOf(scale[600]))
   })
 
   test("hue wraps correctly for baseHue near 0 (does not clamp to 0)", () => {
     const scale = generateOklchScale({ baseHue: 2, baseChroma: 0.2, hueShift: 14 })
-    const hOf = (s: string) => parseFloat(s.match(/oklch\([\d.]+ [\d.]+ ([\d.]+)deg\)/)![1])
+    const hOf = (s: string) => parseFloat(s.match(/oklch\([\d.]+ [\d.]+ ([\d.]+)deg\)/)?.[1] ?? "")
     // step 950: rawHue = 2 + (-16) = -14, should wrap to 346, not clamp to 0
     expect(hOf(scale[950])).toBeCloseTo(346, 0)
   })
 
   test("s[50] has highest lightness, s[950] has lowest", () => {
     const scale = generateOklchScale(testConfig.palette)
-    const lOf = (s: string) => parseFloat(s.match(/oklch\(([\d.]+)/)![1])
+    const lOf = (s: string) => parseFloat(s.match(/oklch\(([\d.]+)/)?.[1] ?? "")
     expect(lOf(scale[50])).toBeGreaterThan(lOf(scale[600]))
     expect(lOf(scale[950])).toBeLessThan(lOf(scale[600]))
   })
@@ -70,10 +70,18 @@ describe("generateThemeCSS", () => {
       "--foreground",
       "--card",
       "--card-foreground",
+      "--popover",
+      "--popover-foreground",
       "--primary",
       "--primary-foreground",
+      "--secondary",
+      "--secondary-foreground",
       "--muted",
       "--muted-foreground",
+      "--accent",
+      "--accent-foreground",
+      "--destructive",
+      "--destructive-foreground",
       "--border",
       "--input",
       "--ring",
@@ -97,7 +105,7 @@ describe("generateThemeCSS", () => {
     // Extract all --primary: lines (excluding --primary-foreground)
     const matches = css.match(/--primary:\s*(oklch\([^)]+\))/g)
     expect(matches).toHaveLength(2)
-    expect(matches![0]).toBe(matches![1])
+    expect(matches?.[0]).toBe(matches?.[1])
   })
 
   test("radius is injected from config", () => {

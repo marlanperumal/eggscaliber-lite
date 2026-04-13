@@ -43,6 +43,11 @@ export function generateOklchScale(palette: PaletteConfig): Scale {
   )
 }
 
+// Fixed destructive red — danger states are always red regardless of brand hue.
+// oklch(0.577 0.245 27deg) ≈ a standard crimson-red with WCAG AA on white (#fff at 4.8:1).
+const DESTRUCTIVE_LIGHT = "oklch(0.577 0.245 27deg)"
+const DESTRUCTIVE_DARK = "oklch(0.704 0.191 22deg)" // lighter red for dark surfaces
+
 export function generateThemeCSS(config: ThemeConfig): string {
   const s = generateOklchScale(config.palette)
 
@@ -52,10 +57,18 @@ export function generateThemeCSS(config: ThemeConfig): string {
       --foreground: ${s[950]};
       --card: #ffffff;
       --card-foreground: ${s[950]};
+      --popover: #ffffff;
+      --popover-foreground: ${s[950]};
       --primary: ${s[600]};
       --primary-foreground: #ffffff;
+      --secondary: ${s[100]};
+      --secondary-foreground: ${s[900]};
       --muted: ${s[50]};
       --muted-foreground: ${s[800]};
+      --accent: ${s[100]};
+      --accent-foreground: ${s[900]};
+      --destructive: ${DESTRUCTIVE_LIGHT};
+      --destructive-foreground: #ffffff;
       --border: ${s[200]};
       --input: ${s[200]};
       --ring: ${s[600]};
@@ -67,10 +80,18 @@ export function generateThemeCSS(config: ThemeConfig): string {
       --foreground: ${s[50]};
       --card: ${s[900]};
       --card-foreground: ${s[50]};
+      --popover: ${s[900]};
+      --popover-foreground: ${s[50]};
       --primary: ${s[600]};
       --primary-foreground: #ffffff;
+      --secondary: ${s[800]};
+      --secondary-foreground: ${s[100]};
       --muted: ${s[900]};
       --muted-foreground: ${s[300]};
+      --accent: ${s[800]};
+      --accent-foreground: ${s[100]};
+      --destructive: ${DESTRUCTIVE_DARK};
+      --destructive-foreground: #ffffff;
       --border: ${s[800]};
       --input: ${s[800]};
       --ring: ${s[400]};
