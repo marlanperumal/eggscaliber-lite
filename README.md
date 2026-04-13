@@ -38,3 +38,15 @@ just generate-types # regenerate TypeScript types from FastAPI OpenAPI spec
 ```
 
 Run `just` at the repo root to see all available commands.
+
+## Deployment
+
+Pushes to `master` deploy automatically:
+
+| Service | Platform | URL |
+|---|---|---|
+| Web (Next.js) | Vercel | [eggscaliber-lite-web.vercel.app](https://eggscaliber-lite-web.vercel.app) |
+| API (FastAPI) | Render | [eggscaliber-lite-api.onrender.com](https://eggscaliber-lite-api.onrender.com) |
+| Database | Neon (Postgres + pgvector) | — |
+
+Render runs `alembic upgrade head` and the seed script before each deploy. The seed is idempotent — it skips if demo data already exists.

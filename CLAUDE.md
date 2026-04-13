@@ -115,3 +115,15 @@ When generating mockups for the visual companion, always make the images large a
 
 - Local dev: `.env.local` (Docker Postgres + MinIO + dev JWT auth)
 - All required env vars documented in `.env.example`
+
+## Production Infrastructure
+
+| Service | Platform | URL |
+|---------|----------|-----|
+| Web | Vercel | https://eggscaliber-lite-web.vercel.app |
+| API | Render | https://eggscaliber-lite-api.onrender.com |
+| Database | Neon | configured via `DATABASE_URL` on Render |
+
+- Vercel config: `apps/web/vercel.json` — overrides `installCommand` to run `pnpm install` from the workspace root (required for monorepo)
+- Render: manually configured web service; build command runs migrations + seed before starting
+- CORS: `CORS_ORIGINS` env var on Render must include the Vercel URL — update it if the Vercel project URL ever changes
