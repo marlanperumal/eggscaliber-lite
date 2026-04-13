@@ -29,10 +29,7 @@ export const ColourPalette: StoryObj = {
       <div className="grid grid-cols-3 gap-4">
         {colours.map(({ name, var: v }) => (
           <div key={v} className="flex items-center gap-3">
-            <div
-              className="h-10 w-10 rounded-md border"
-              style={{ backgroundColor: `hsl(var(${v}))` }}
-            />
+            <div className="h-10 w-10 rounded-md border" style={{ backgroundColor: `var(${v})` }} />
             <div>
               <p className="text-sm font-medium">{name}</p>
               <p className="font-mono text-xs text-muted-foreground">{v}</p>
