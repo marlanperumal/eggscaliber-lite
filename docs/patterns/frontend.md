@@ -85,6 +85,19 @@ export function UploadButton() {
 }
 ```
 
+## Storybook
+
+Stories are colocated with their component in the same directory. One exception: **documentation-only stories** with no corresponding component file (e.g. design-token showcases, typography references) may live in `src/stories/`. These exist solely to document the design system, not to test a component.
+
+```
+src/components/ui/
+  Button.tsx
+  Button.stories.tsx      ← colocated with component
+
+src/stories/
+  DesignTokens.stories.tsx  ← documentation-only, no component to colocate with
+```
+
 ## Design System
 
 Follow `docs/patterns/design-system.md` for all styling decisions. Key rules:
@@ -94,7 +107,9 @@ Follow `docs/patterns/design-system.md` for all styling decisions. Key rules:
 - Never use `text-primary` as a text colour — it is reserved for interactive
   element backgrounds only
 - Never write `dark:` overrides in component classes — tokens handle both
-  modes automatically
+  modes automatically. **Exception:** `dark:` transform utilities (`dark:rotate-*`,
+  `dark:scale-*`) used for icon animations are allowed, since they don't bypass
+  the colour token system.
 - Typography: `text-sm` is the body default; use the scale in
   `design-system.md` for headings and labels
 

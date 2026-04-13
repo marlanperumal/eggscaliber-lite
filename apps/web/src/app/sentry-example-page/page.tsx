@@ -78,6 +78,9 @@ export default function Page() {
                 op: "test",
               },
               async () => {
+                // Exception: raw fetch() — this is Sentry's non-production demo
+                // page, not a real API call. The typed openapi-fetch client is
+                // for app API routes only.
                 const res = await fetch("/api/sentry-example-api")
                 if (!res.ok) {
                   setHasSentError(true)
