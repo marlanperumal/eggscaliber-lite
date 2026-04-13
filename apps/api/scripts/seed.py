@@ -1,11 +1,13 @@
 """Seed script: just db-seed runs this as `python -m scripts.seed` from apps/api/."""
 
+import asyncio
 import random
 import uuid
 from datetime import date
 
 from sqlalchemy import select
-from src.database import SessionLocal
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from src.config import settings
 from src.models.collection import Collection, CollectionType
 from src.models.dataset import Dataset
 from src.models.field import Field, FieldType
@@ -17,21 +19,29 @@ from src.models.response import Response
 random.seed(42)
 
 
-def run():
-    session = SessionLocal()
-    try:
-        _seed(session)
-        session.commit()
-        print("Seed complete.")
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+async def run():
+    db_url = settings.database_url.replace("postgresql://", "postgresql+asyncpg://", 1).replace(
+        "postgres://", "postgresql+asyncpg://", 1
+    )
+    engine = create_async_engine(db_url)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        try:
+            await _seed(session)
+            await session.commit()
+            print("Seed complete.")
+        except Exception:
+            await session.rollback()
+            raise
+    await engine.dispose()
 
 
-def _seed(session):
-    existing = session.execute(select(Package).where(Package.slug == "demo-data")).scalars().first()
+async def _seed(session: AsyncSession):
+    existing = (
+        (await session.execute(select(Package).where(Package.slug == "demo-data")))
+        .scalars()
+        .first()
+    )
     if existing:
         print("Demo Data package already exists — skipping.")
         return
@@ -40,18 +50,18 @@ def _seed(session):
         name="Demo Data", slug="demo-data", description="Seed data for development and testing"
     )
     session.add(pkg)
-    session.flush()
-    session.refresh(pkg)
+    await session.flush()
+    await session.refresh(pkg)
 
-    _seed_brand_tracker(session, pkg.id)
-    _seed_customer_satisfaction(session, pkg.id)
-    _seed_market_report(session, pkg.id)
+    await _seed_brand_tracker(session, pkg.id)
+    await _seed_customer_satisfaction(session, pkg.id)
+    await _seed_market_report(session, pkg.id)
 
 
 # ─── Seed 1: Brand Tracker ────────────────────────────────────────────────────
 
 
-def _seed_brand_tracker(session, package_id):
+async def _seed_brand_tracker(session: AsyncSession, package_id):
     col = Collection(
         name="Brand Tracker",
         slug="brand-tracker",
@@ -60,8 +70,8 @@ def _seed_brand_tracker(session, package_id):
         description="Two-wave brand awareness tracker",
     )
     session.add(col)
-    session.flush()
-    session.refresh(col)
+    await session.flush()
+    await session.refresh(col)
 
     for wave_num, wave_name, collected in [
         (1, "Wave 1", date(2025, 10, 1)),
@@ -75,14 +85,13 @@ def _seed_brand_tracker(session, package_id):
             collected_at=collected,
         )
         session.add(ds)
-        session.flush()
-        session.refresh(ds)
-        _define_brand_tracker_fields(session, ds.id, wave_num)
-        _add_brand_tracker_responses(session, ds.id, wave_num, n=50)
+        await session.flush()
+        await session.refresh(ds)
+        await _define_brand_tracker_fields(session, ds.id, wave_num)
+        await _add_brand_tracker_responses(session, ds.id, wave_num, n=50)
 
 
-def _define_brand_tracker_fields(session, dataset_id, wave_num):
-    # Create field groups
+async def _define_brand_tracker_fields(session: AsyncSession, dataset_id, wave_num):
     brand_grp = FieldGroup(
         name="Brand Perception", slug="brand-perception", sort_order=0, dataset_id=dataset_id
     )
@@ -90,9 +99,9 @@ def _define_brand_tracker_fields(session, dataset_id, wave_num):
         name="Demographics", slug="demographics", sort_order=1, dataset_id=dataset_id
     )
     session.add_all([brand_grp, demo_grp])
-    session.flush()
-    session.refresh(brand_grp)
-    session.refresh(demo_grp)
+    await session.flush()
+    await session.refresh(brand_grp)
+    await session.refresh(demo_grp)
 
     brand_fields = [
         (
@@ -158,8 +167,8 @@ def _define_brand_tracker_fields(session, dataset_id, wave_num):
             group_id=brand_grp.id,
         )
         session.add(f)
-        session.flush()
-        session.refresh(f)
+        await session.flush()
+        await session.refresh(f)
         for j, (val, label) in enumerate(levels):
             session.add(Level(value=val, display_label=label, sort_order=j, field_id=f.id))
 
@@ -174,12 +183,11 @@ def _define_brand_tracker_fields(session, dataset_id, wave_num):
             group_id=demo_grp.id,
         )
         session.add(f)
-        session.flush()
-        session.refresh(f)
+        await session.flush()
+        await session.refresh(f)
         for j, (val, label) in enumerate(levels):
             session.add(Level(value=val, display_label=label, sort_order=j, field_id=f.id))
 
-    # Special fields — excluded from field tree, used internally
     session.add(
         Field(
             field_key="respondent_id",
@@ -200,10 +208,10 @@ def _define_brand_tracker_fields(session, dataset_id, wave_num):
             dataset_id=dataset_id,
         )
     )
-    session.flush()
+    await session.flush()
 
 
-def _add_brand_tracker_responses(session, dataset_id, wave_num, n):
+async def _add_brand_tracker_responses(session: AsyncSession, dataset_id, wave_num, n):
     media_options = ["tv", "radio", "social", "print"]
     if wave_num == 2:
         media_options.append("podcast")
@@ -227,13 +235,13 @@ def _add_brand_tracker_responses(session, dataset_id, wave_num, n):
                 ["TikTok", "YouTube", "Newsletter", "Word of mouth"]
             )
         session.add(Response(dataset_id=dataset_id, payload=payload))
-    session.flush()
+    await session.flush()
 
 
 # ─── Seed 2: Customer Satisfaction ───────────────────────────────────────────
 
 
-def _seed_customer_satisfaction(session, package_id):
+async def _seed_customer_satisfaction(session: AsyncSession, package_id):
     col = Collection(
         name="Customer Satisfaction",
         slug="customer-satisfaction",
@@ -242,8 +250,8 @@ def _seed_customer_satisfaction(session, package_id):
         description="Single-wave customer satisfaction survey",
     )
     session.add(col)
-    session.flush()
-    session.refresh(col)
+    await session.flush()
+    await session.refresh(col)
 
     ds = Dataset(
         name="2026 Survey",
@@ -253,13 +261,13 @@ def _seed_customer_satisfaction(session, package_id):
         collected_at=date(2026, 2, 1),
     )
     session.add(ds)
-    session.flush()
-    session.refresh(ds)
-    _define_csat_fields(session, ds.id)
-    _add_csat_responses(session, ds.id, n=50)
+    await session.flush()
+    await session.refresh(ds)
+    await _define_csat_fields(session, ds.id)
+    await _add_csat_responses(session, ds.id, n=50)
 
 
-def _define_csat_fields(session, dataset_id):
+async def _define_csat_fields(session: AsyncSession, dataset_id):
     fields = [
         (
             "overall_satisfaction",
@@ -302,12 +310,11 @@ def _define_csat_fields(session, dataset_id):
             dataset_id=dataset_id,
         )
         session.add(f)
-        session.flush()
-        session.refresh(f)
+        await session.flush()
+        await session.refresh(f)
         for j, (val, label) in enumerate(levels):
             session.add(Level(value=val, display_label=label, sort_order=j, field_id=f.id))
 
-    # NPS score — numeric, no levels
     f = Field(
         field_key="nps_score",
         display_name="NPS Score",
@@ -317,10 +324,10 @@ def _define_csat_fields(session, dataset_id):
         dataset_id=dataset_id,
     )
     session.add(f)
-    session.flush()
+    await session.flush()
 
 
-def _add_csat_responses(session, dataset_id, n):
+async def _add_csat_responses(session: AsyncSession, dataset_id, n):
     issue_options = ["delivery", "quality", "support", "pricing"]
     for _ in range(n):
         issues = random.sample(issue_options, k=random.randint(0, 2))
@@ -346,13 +353,13 @@ def _add_csat_responses(session, dataset_id, n):
                     ["Too expensive", "Poor UX", "Missing feature"]
                 )
         session.add(Response(dataset_id=dataset_id, payload=payload))
-    session.flush()
+    await session.flush()
 
 
 # ─── Seed 3: Market Report ────────────────────────────────────────────────────
 
 
-def _seed_market_report(session, package_id):
+async def _seed_market_report(session: AsyncSession, package_id):
     col = Collection(
         name="Market Share Report",
         slug="market-share-report",
@@ -361,8 +368,8 @@ def _seed_market_report(session, package_id):
         description="Quarterly market share by segment",
     )
     session.add(col)
-    session.flush()
-    session.refresh(col)
+    await session.flush()
+    await session.refresh(col)
 
     for period_num, period_name, collected in [
         (1, "Q3 2025", date(2025, 9, 30)),
@@ -376,13 +383,13 @@ def _seed_market_report(session, package_id):
             collected_at=collected,
         )
         session.add(ds)
-        session.flush()
-        session.refresh(ds)
-        _define_market_fields(session, ds.id)
-        _add_market_responses(session, ds.id, n=30)
+        await session.flush()
+        await session.refresh(ds)
+        await _define_market_fields(session, ds.id)
+        await _add_market_responses(session, ds.id, n=30)
 
 
-def _define_market_fields(session, dataset_id):
+async def _define_market_fields(session: AsyncSession, dataset_id):
     fields_def = [
         (
             "segment",
@@ -406,12 +413,11 @@ def _define_market_fields(session, dataset_id):
             dataset_id=dataset_id,
         )
         session.add(f)
-        session.flush()
-        session.refresh(f)
+        await session.flush()
+        await session.refresh(f)
         for j, (val, label) in enumerate(levels):
             session.add(Level(value=val, display_label=label, sort_order=j, field_id=f.id))
 
-    # Numeric fields — no levels
     for i, (key, name) in enumerate(
         [("market_share", "Market Share (%)"), ("growth_rate", "Growth Rate (%)")],
         start=len(fields_def),
@@ -426,10 +432,10 @@ def _define_market_fields(session, dataset_id):
                 dataset_id=dataset_id,
             )
         )
-    session.flush()
+    await session.flush()
 
 
-def _add_market_responses(session, dataset_id, n):
+async def _add_market_responses(session: AsyncSession, dataset_id, n):
     segments = ["enterprise", "mid_market", "smb", "consumer"]
     for _ in range(n):
         session.add(
@@ -442,8 +448,8 @@ def _add_market_responses(session, dataset_id, n):
                 },
             )
         )
-    session.flush()
+    await session.flush()
 
 
 if __name__ == "__main__":
-    run()
+    asyncio.run(run())
