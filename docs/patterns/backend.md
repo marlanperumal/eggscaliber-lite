@@ -42,21 +42,56 @@ Routes catch these and map to HTTP codes. Never raise `HTTPException` in service
 
 ## CRUD Passthrough Exception
 
-For **pure read-only endpoints** with no business logic (no validation, aggregation, cross-entity mutation), routes may call a single repository function directly without an intermediate service. The rule is: **as soon as any business logic appears, introduce a service**.
+The CRUD passthrough exception applies to **list endpoints** — endpoints with no entity ID in the path, where there is no existence question. Routes may call a single repository function directly for these.
 
 ```python
-# ALLOWED — pure read, no business logic
+# ALLOWED — list endpoint, no entity ID, no existence question
 @router.get("/packages", response_model=list[PackageRead])
 def list_packages(session: Session = Depends(get_session)):
     return package_repo.get_all(session)
+```
 
-# WRONG — business logic belongs in a service, not the route
-@router.get("/packages/{package_id}/summary")
-def package_summary(package_id: int, session: Session = Depends(get_session)):
-    pkg = package_repo.get_by_id(session, package_id)
-    # ← any logic beyond a single repo call belongs in a service
-    summary = compute_summary(pkg)
-    return summary
+As soon as an endpoint has an `{entity_id}` path parameter, there is an implicit existence question — use a service.
+
+## Single-entity reads
+
+Single-entity endpoints (those with an `{entity_id}` path parameter) must go through a service:
+
+- **Service** owns existence semantics — it calls the repo, checks for `None`, and raises the appropriate typed domain error from `src/errors.py`
+- **Route** only handles HTTP concerns — it calls the service and catches domain errors, mapping them to HTTP status codes
+
+```python
+# ROUTE — only HTTP concerns
+@router.get("/collections/{collection_id}", response_model=CollectionWithDatasets)
+def get_collection(collection_id: int, session: Session = Depends(get_session)):
+    try:
+        return collection_service.get_with_datasets(session, collection_id)
+    except CollectionNotFoundError:
+        raise HTTPException(status_code=404, detail="Collection not found") from None
+
+# SERVICE — owns existence semantics
+def get_with_datasets(session: Session, collection_id: int) -> CollectionWithDatasets:
+    col = collection_repo.get_by_id(session, collection_id)
+    if col is None:
+        raise CollectionNotFoundError(collection_id)
+    datasets = collection_repo.get_datasets_for_collection(session, collection_id)
+    return CollectionWithDatasets(**col.model_dump(), datasets=datasets)
+```
+
+Repos return `Model | None` — they never raise and have no opinion on what `None` means.
+
+## Route-specific response schemas
+
+All view schemas live in `src/models/` so they can be shared between routes and services without circular dependencies.
+
+```python
+# models/collection.py — shared between routes AND services
+class CollectionWithDatasets(CollectionRead):
+    datasets: list[DatasetRead] = []
+
+# models/analytics.py — shared between routes AND services
+class CrosstabRequest(SQLModel): ...
+class CrosstabResponse(SQLModel): ...
 ```
 
 ## Analytics / Orchestration Services
@@ -83,6 +118,24 @@ def run_crosstab(session: Session, request: CrosstabRequest) -> CrosstabResponse
 ```
 
 Request/response schemas for complex analytics endpoints live in `src/models/analytics.py` (not in the route file) so that both routes and services can import them without circular dependencies.
+
+## Async vs sync route handlers
+
+Use `def` (sync) for all route handlers. FastAPI runs sync handlers in a thread-pool executor, which is the correct pattern for blocking SQLAlchemy calls. `async def` without any `await` blocks the event loop unnecessarily.
+
+```python
+# CORRECT
+@router.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+# WRONG — async with no await blocks the event loop
+@router.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
+```
+
+Only use `async def` when the handler genuinely awaits an async operation (e.g. an async HTTP call or async queue push).
 
 ## Adding Models to Alembic
 
