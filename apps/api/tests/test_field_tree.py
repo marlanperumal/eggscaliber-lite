@@ -4,17 +4,17 @@ from src.models.level import Level
 from src.repositories import analytics_repo
 
 
-def test_get_field_tree_empty_dataset(db, bare_dataset):
-    tree = analytics_repo.get_field_tree(db, bare_dataset.id)
+async def test_get_field_tree_empty_dataset(db, bare_dataset):
+    tree = await analytics_repo.get_field_tree(db, bare_dataset.id)
     assert tree["groups"] == []
     assert tree["ungrouped_fields"] == []
 
 
-def test_get_field_tree_returns_groups_and_fields(db, bare_dataset):
+async def test_get_field_tree_returns_groups_and_fields(db, bare_dataset):
     grp = FieldGroup(name="Brand", slug="brand", sort_order=0, dataset_id=bare_dataset.id)
     db.add(grp)
-    db.flush()
-    db.refresh(grp)
+    await db.flush()
+    await db.refresh(grp)
     f1 = Field(
         field_key="brand_rating",
         display_name="Brand Rating",
@@ -29,9 +29,9 @@ def test_get_field_tree_returns_groups_and_fields(db, bare_dataset):
         dataset_id=bare_dataset.id,
     )
     db.add_all([f1, f2])
-    db.flush()
+    await db.flush()
 
-    tree = analytics_repo.get_field_tree(db, bare_dataset.id)
+    tree = await analytics_repo.get_field_tree(db, bare_dataset.id)
     assert len(tree["groups"]) == 1
     assert tree["groups"][0]["name"] == "Brand"
     assert len(tree["groups"][0]["fields"]) == 1
@@ -40,17 +40,17 @@ def test_get_field_tree_returns_groups_and_fields(db, bare_dataset):
     assert tree["ungrouped_fields"][0]["field_key"] == "gender"
 
 
-def test_get_field_tree_nested_groups(db, bare_dataset):
+async def test_get_field_tree_nested_groups(db, bare_dataset):
     parent = FieldGroup(name="Parent", slug="parent", sort_order=0, dataset_id=bare_dataset.id)
     db.add(parent)
-    db.flush()
-    db.refresh(parent)
+    await db.flush()
+    await db.refresh(parent)
     child = FieldGroup(
         name="Child", slug="child", sort_order=0, dataset_id=bare_dataset.id, parent_id=parent.id
     )
     db.add(child)
-    db.flush()
-    db.refresh(child)
+    await db.flush()
+    await db.refresh(child)
     db.add(
         Field(
             field_key="f1",
@@ -60,9 +60,9 @@ def test_get_field_tree_nested_groups(db, bare_dataset):
             group_id=child.id,
         )
     )
-    db.flush()
+    await db.flush()
 
-    tree = analytics_repo.get_field_tree(db, bare_dataset.id)
+    tree = await analytics_repo.get_field_tree(db, bare_dataset.id)
     assert len(tree["groups"]) == 1
     assert tree["groups"][0]["name"] == "Parent"
     assert len(tree["groups"][0]["children"]) == 1
@@ -70,7 +70,7 @@ def test_get_field_tree_nested_groups(db, bare_dataset):
     assert len(tree["groups"][0]["children"][0]["fields"]) == 1
 
 
-def test_get_field_tree_excludes_identifier_and_weight(db, bare_dataset):
+async def test_get_field_tree_excludes_identifier_and_weight(db, bare_dataset):
     db.add(
         Field(
             field_key="rid",
@@ -87,14 +87,14 @@ def test_get_field_tree_excludes_identifier_and_weight(db, bare_dataset):
             dataset_id=bare_dataset.id,
         )
     )
-    db.flush()
-    tree = analytics_repo.get_field_tree(db, bare_dataset.id)
+    await db.flush()
+    tree = await analytics_repo.get_field_tree(db, bare_dataset.id)
     all_keys = [f["field_key"] for f in tree["ungrouped_fields"]]
     assert "rid" not in all_keys
     assert "wt" not in all_keys
 
 
-def test_get_weight_fields(db, bare_dataset):
+async def test_get_weight_fields(db, bare_dataset):
     db.add(
         Field(
             field_key="pw",
@@ -111,13 +111,13 @@ def test_get_weight_fields(db, bare_dataset):
             dataset_id=bare_dataset.id,
         )
     )
-    db.flush()
-    weights = analytics_repo.get_weight_fields(db, bare_dataset.id)
+    await db.flush()
+    weights = await analytics_repo.get_weight_fields(db, bare_dataset.id)
     assert len(weights) == 1
     assert weights[0].field_key == "pw"
 
 
-def test_get_field_metas(db, bare_dataset):
+async def test_get_field_metas(db, bare_dataset):
     f = Field(
         field_key="brand_rating",
         display_name="Brand Rating",
@@ -125,13 +125,13 @@ def test_get_field_metas(db, bare_dataset):
         dataset_id=bare_dataset.id,
     )
     db.add(f)
-    db.flush()
-    db.refresh(f)
+    await db.flush()
+    await db.refresh(f)
     db.add(Level(value="good", display_label="Good", sort_order=0, field_id=f.id))
     db.add(Level(value="poor", display_label="Poor", sort_order=1, field_id=f.id))
-    db.flush()
+    await db.flush()
 
-    metas = analytics_repo.get_field_metas(db, bare_dataset.id, ["brand_rating"])
+    metas = await analytics_repo.get_field_metas(db, bare_dataset.id, ["brand_rating"])
     assert "brand_rating" in metas
     assert metas["brand_rating"]["field_type"] == FieldType.ordinal
     assert metas["brand_rating"]["levels"] == ["good", "poor"]
@@ -140,16 +140,16 @@ def test_get_field_metas(db, bare_dataset):
 # ─── Route tests ─────────────────────────────────────────────────────────────
 
 
-def test_get_field_tree_endpoint_not_found(client):
-    resp = client.get("/api/v1/datasets/99999/field-tree")
+async def test_get_field_tree_endpoint_not_found(client):
+    resp = await client.get("/api/v1/datasets/99999/field-tree")
     assert resp.status_code == 404
 
 
-def test_get_field_tree_endpoint_returns_tree(client, db, bare_dataset):
+async def test_get_field_tree_endpoint_returns_tree(client, db, bare_dataset):
     grp = FieldGroup(name="Brand", slug="brand", sort_order=0, dataset_id=bare_dataset.id)
     db.add(grp)
-    db.flush()
-    db.refresh(grp)
+    await db.flush()
+    await db.refresh(grp)
     db.add(
         Field(
             field_key="brand_rating",
@@ -159,9 +159,9 @@ def test_get_field_tree_endpoint_returns_tree(client, db, bare_dataset):
             group_id=grp.id,
         )
     )
-    db.flush()
+    await db.flush()
 
-    resp = client.get(f"/api/v1/datasets/{bare_dataset.id}/field-tree")
+    resp = await client.get(f"/api/v1/datasets/{bare_dataset.id}/field-tree")
     assert resp.status_code == 200
     data = resp.json()
     assert "groups" in data
@@ -169,7 +169,7 @@ def test_get_field_tree_endpoint_returns_tree(client, db, bare_dataset):
     assert data["groups"][0]["name"] == "Brand"
 
 
-def test_get_weight_fields_endpoint(client, db, bare_dataset):
+async def test_get_weight_fields_endpoint(client, db, bare_dataset):
     db.add(
         Field(
             field_key="pw",
@@ -178,15 +178,15 @@ def test_get_weight_fields_endpoint(client, db, bare_dataset):
             dataset_id=bare_dataset.id,
         )
     )
-    db.flush()
+    await db.flush()
 
-    resp = client.get(f"/api/v1/datasets/{bare_dataset.id}/weight-fields")
+    resp = await client.get(f"/api/v1/datasets/{bare_dataset.id}/weight-fields")
     assert resp.status_code == 200
     data = resp.json()
     assert len(data) == 1
     assert data[0]["field_key"] == "pw"
 
 
-def test_get_weight_fields_endpoint_not_found(client):
-    resp = client.get("/api/v1/datasets/99999/weight-fields")
+async def test_get_weight_fields_endpoint_not_found(client):
+    resp = await client.get("/api/v1/datasets/99999/weight-fields")
     assert resp.status_code == 404

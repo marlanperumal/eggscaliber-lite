@@ -29,7 +29,7 @@ class Dataset(DatasetBase, table=True):
     worker_config: dict[str, Any] | None = Field(
         default=None, sa_column=Column(JSONB, nullable=True)
     )
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
 
 
 class DatasetRead(DatasetBase):

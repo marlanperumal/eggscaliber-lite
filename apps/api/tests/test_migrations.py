@@ -21,7 +21,8 @@ def migrations_engine():
     Uses eggscaliber_migrations_test so the cycle does not disrupt the
     main test DB that other tests rely on being at head.
     """
-    eng = create_engine(settings.migrations_test_database_url)
+    sync_url = settings.migrations_test_database_url.replace("+asyncpg", "")
+    eng = create_engine(sync_url)
     yield eng
     eng.dispose()
 

@@ -15,7 +15,7 @@ class ResponseBase(SQLModel):
 class Response(ResponseBase, table=True):
     __table_args__ = (Index("ix_response_payload_gin", "payload", postgresql_using="gin"),)
     id: int | None = sql_field(default=None, primary_key=True)
-    created_at: datetime = sql_field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = sql_field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
 
 
 class ResponseRead(ResponseBase):

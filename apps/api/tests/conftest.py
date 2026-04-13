@@ -1,3 +1,6 @@
+import asyncio
+
+import pytest
 import pytest_asyncio
 import src.models  # noqa: F401 — ensures all table metadata is registered before create_all
 from httpx import ASGITransport, AsyncClient
@@ -9,6 +12,14 @@ from src.main import app
 from src.models.collection import Collection, CollectionType
 from src.models.dataset import Dataset
 from src.models.package import Package
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Single event loop for the entire test session."""
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -24,11 +35,15 @@ async def async_engine():
 @pytest_asyncio.fixture
 async def db(async_engine):
     async with async_engine.connect() as conn:
+        await conn.begin()
         await conn.begin_nested()
-        session_factory = async_sessionmaker(conn, expire_on_commit=False)
+        session_factory = async_sessionmaker(
+            conn, expire_on_commit=False, join_transaction_mode="create_savepoint"
+        )
         async with session_factory() as session:
             yield session
             await session.rollback()
+        await conn.rollback()
 
 
 @pytest_asyncio.fixture

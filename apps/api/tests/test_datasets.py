@@ -6,23 +6,23 @@ from src.models.package import Package
 from src.models.response import Response
 
 
-def _seed_dataset(db):
+async def _seed_dataset(db):
     pkg = Package(name="P", slug="p-ds-test")
     db.add(pkg)
-    db.flush()
-    db.refresh(pkg)
+    await db.flush()
+    await db.refresh(pkg)
 
     col = Collection(
         name="C", slug="c-ds-test", package_id=pkg.id, collection_type=CollectionType.survey
     )
     db.add(col)
-    db.flush()
-    db.refresh(col)
+    await db.flush()
+    await db.refresh(col)
 
     ds = Dataset(name="Wave 1", slug="wave-1-ds-test", collection_id=col.id, sort_order=1)
     db.add(ds)
-    db.flush()
-    db.refresh(ds)
+    await db.flush()
+    await db.refresh(ds)
 
     f = Field(
         field_key="gender",
@@ -31,26 +31,26 @@ def _seed_dataset(db):
         dataset_id=ds.id,
     )
     db.add(f)
-    db.flush()
-    db.refresh(f)
+    await db.flush()
+    await db.refresh(f)
 
     for i, (val, label) in enumerate([("male", "Male"), ("female", "Female")]):
         db.add(Level(value=val, display_label=label, sort_order=i, field_id=f.id))
 
     db.add(Response(dataset_id=ds.id, payload={"gender": "male"}))
     db.add(Response(dataset_id=ds.id, payload={"gender": "female"}))
-    db.flush()
+    await db.flush()
     return ds
 
 
-def test_get_dataset_not_found(client):
-    response = client.get("/api/v1/datasets/99999")
+async def test_get_dataset_not_found(client):
+    response = await client.get("/api/v1/datasets/99999")
     assert response.status_code == 404
 
 
-def test_get_dataset_with_fields_and_levels(client, db):
-    ds = _seed_dataset(db)
-    response = client.get(f"/api/v1/datasets/{ds.id}")
+async def test_get_dataset_with_fields_and_levels(client, db):
+    ds = await _seed_dataset(db)
+    response = await client.get(f"/api/v1/datasets/{ds.id}")
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "Wave 1"
@@ -63,9 +63,9 @@ def test_get_dataset_with_fields_and_levels(client, db):
     assert level_values == {"male", "female"}
 
 
-def test_get_dataset_responses_paginated(client, db):
-    ds = _seed_dataset(db)
-    response = client.get(f"/api/v1/datasets/{ds.id}/responses")
+async def test_get_dataset_responses_paginated(client, db):
+    ds = await _seed_dataset(db)
+    response = await client.get(f"/api/v1/datasets/{ds.id}/responses")
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 2

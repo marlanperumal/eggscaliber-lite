@@ -6,11 +6,11 @@ from src.models.package import Package
 from src.models.response import Response
 
 
-def _seed_trend_fixture(db):
+async def _seed_trend_fixture(db):
     pkg = Package(name="P2", slug="p2")
     db.add(pkg)
-    db.flush()
-    db.refresh(pkg)
+    await db.flush()
+    await db.refresh(pkg)
     col = Collection(
         name="Brand Tracker",
         slug="bt",
@@ -18,8 +18,8 @@ def _seed_trend_fixture(db):
         collection_type=CollectionType.survey,
     )
     db.add(col)
-    db.flush()
-    db.refresh(col)
+    await db.flush()
+    await db.refresh(col)
 
     ds1 = Dataset(
         name="Wave 1",
@@ -36,9 +36,9 @@ def _seed_trend_fixture(db):
         sort_order=1,
     )
     db.add_all([ds1, ds2])
-    db.flush()
-    db.refresh(ds1)
-    db.refresh(ds2)
+    await db.flush()
+    await db.refresh(ds1)
+    await db.refresh(ds2)
 
     for ds in [ds1, ds2]:
         f = Field(
@@ -48,20 +48,20 @@ def _seed_trend_fixture(db):
             dataset_id=ds.id,
         )
         db.add(f)
-        db.flush()
-        db.refresh(f)
+        await db.flush()
+        await db.refresh(f)
         for val in ["Aware", "Not Aware"]:
             db.add(Level(field_id=f.id, value=val, display_label=val, sort_order=0))
         db.add(Response(dataset_id=ds.id, payload={"brand_awareness": "Aware"}))
         db.add(Response(dataset_id=ds.id, payload={"brand_awareness": "Not Aware"}))
         db.add(Response(dataset_id=ds.id, payload={"brand_awareness": "Aware"}))
-    db.flush()
+    await db.flush()
     return col
 
 
-def test_trend_count_measure_returns_per_wave_per_level_rows(client, db):
-    col = _seed_trend_fixture(db)
-    resp = client.post(
+async def test_trend_count_measure_returns_per_wave_per_level_rows(client, db):
+    col = await _seed_trend_fixture(db)
+    resp = await client.post(
         "/api/v1/analytics/trend",
         json={
             "collection_id": col.id,
@@ -85,15 +85,15 @@ def test_trend_count_measure_returns_per_wave_per_level_rows(client, db):
     assert aware_w1["values"]["Total"] == 2.0
 
 
-def _seed_crosstab_fixture(db):
+async def _seed_crosstab_fixture(db):
     pkg = Package(name="P", slug="p")
     db.add(pkg)
-    db.flush()
-    db.refresh(pkg)
+    await db.flush()
+    await db.refresh(pkg)
     col = Collection(name="C", slug="c", package_id=pkg.id, collection_type=CollectionType.survey)
     db.add(col)
-    db.flush()
-    db.refresh(col)
+    await db.flush()
+    await db.refresh(col)
     ds = Dataset(
         name="Wave 1",
         slug="w1",
@@ -102,8 +102,8 @@ def _seed_crosstab_fixture(db):
         sort_order=0,
     )
     db.add(ds)
-    db.flush()
-    db.refresh(ds)
+    await db.flush()
+    await db.refresh(ds)
 
     brand_field = Field(
         field_key="brand_rating",
@@ -118,26 +118,26 @@ def _seed_crosstab_fixture(db):
         dataset_id=ds.id,
     )
     db.add_all([brand_field, gender_field])
-    db.flush()
-    db.refresh(brand_field)
-    db.refresh(gender_field)
+    await db.flush()
+    await db.refresh(brand_field)
+    await db.refresh(gender_field)
 
     for val in ["Good", "Poor"]:
         db.add(Level(field_id=brand_field.id, value=val, display_label=val, sort_order=0))
     for val in ["Female", "Male"]:
         db.add(Level(field_id=gender_field.id, value=val, display_label=val, sort_order=0))
-    db.flush()
+    await db.flush()
 
     db.add(Response(dataset_id=ds.id, payload={"brand_rating": "Good", "gender": "Female"}))
     db.add(Response(dataset_id=ds.id, payload={"brand_rating": "Good", "gender": "Male"}))
     db.add(Response(dataset_id=ds.id, payload={"brand_rating": "Poor", "gender": "Female"}))
-    db.flush()
+    await db.flush()
     return ds
 
 
-def test_crosstab_count_measure_returns_cell_values_per_level(client, db):
-    ds = _seed_crosstab_fixture(db)
-    resp = client.post(
+async def test_crosstab_count_measure_returns_cell_values_per_level(client, db):
+    ds = await _seed_crosstab_fixture(db)
+    resp = await client.post(
         "/api/v1/analytics/crosstab",
         json={
             "dataset_id": ds.id,
@@ -165,8 +165,8 @@ def test_crosstab_count_measure_returns_cell_values_per_level(client, db):
     assert good["values"]["Total"] == 2.0
 
 
-def test_crosstab_dataset_not_found(client):
-    resp = client.post(
+async def test_crosstab_dataset_not_found(client):
+    resp = await client.post(
         "/api/v1/analytics/crosstab",
         json={
             "dataset_id": 99999,
@@ -186,9 +186,9 @@ def test_crosstab_dataset_not_found(client):
     assert resp.status_code == 404
 
 
-def test_crosstab_nested_row_limit(client, db):
-    ds = _seed_crosstab_fixture(db)
-    resp = client.post(
+async def test_crosstab_nested_row_limit(client, db):
+    ds = await _seed_crosstab_fixture(db)
+    resp = await client.post(
         "/api/v1/analytics/crosstab",
         json={
             "dataset_id": ds.id,
@@ -212,8 +212,8 @@ def test_crosstab_nested_row_limit(client, db):
     assert resp.status_code == 422
 
 
-def test_crosstab_stacked_row_limit_exceeded_returns_422(client):
-    resp = client.post(
+async def test_crosstab_stacked_row_limit_exceeded_returns_422(client):
+    resp = await client.post(
         "/api/v1/analytics/crosstab",
         json={
             "dataset_id": 1,
@@ -235,9 +235,9 @@ def test_crosstab_stacked_row_limit_exceeded_returns_422(client):
     assert resp.status_code == 422
 
 
-def test_crosstab_nested_col_limit_exceeded_returns_422(client, db):
-    ds = _seed_crosstab_fixture(db)
-    resp = client.post(
+async def test_crosstab_nested_col_limit_exceeded_returns_422(client, db):
+    ds = await _seed_crosstab_fixture(db)
+    resp = await client.post(
         "/api/v1/analytics/crosstab",
         json={
             "dataset_id": ds.id,
@@ -256,8 +256,8 @@ def test_crosstab_nested_col_limit_exceeded_returns_422(client, db):
     assert resp.status_code == 422
 
 
-def test_trend_with_nonexistent_collection_returns_404(client):
-    resp = client.post(
+async def test_trend_with_nonexistent_collection_returns_404(client):
+    resp = await client.post(
         "/api/v1/analytics/trend",
         json={
             "collection_id": 99999,
@@ -270,9 +270,9 @@ def test_trend_with_nonexistent_collection_returns_404(client):
     assert resp.status_code == 404
 
 
-def test_trend_with_breakdown_returns_breakdown_level_columns(client, db):
-    col = _seed_trend_fixture(db)
-    resp = client.post(
+async def test_trend_with_breakdown_returns_breakdown_level_columns(client, db):
+    col = await _seed_trend_fixture(db)
+    resp = await client.post(
         "/api/v1/analytics/trend",
         json={
             "collection_id": col.id,

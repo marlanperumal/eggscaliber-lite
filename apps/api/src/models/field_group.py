@@ -14,7 +14,7 @@ class FieldGroupBase(SQLModel):
 
 class FieldGroup(FieldGroupBase, table=True):
     id: int | None = sql_field(default=None, primary_key=True)
-    created_at: datetime = sql_field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = sql_field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
 
 
 class FieldGroupRead(FieldGroupBase):
