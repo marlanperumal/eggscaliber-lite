@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_session
 from src.errors import PackageNotFoundError
@@ -11,13 +11,13 @@ router = APIRouter(tags=["packages"])
 
 
 @router.get("/packages", response_model=list[PackageRead])
-def list_packages(session: Session = Depends(get_session)):
-    return package_repo.get_all(session)
+async def list_packages(session: AsyncSession = Depends(get_session)):
+    return await package_repo.get_all(session)
 
 
 @router.get("/packages/{package_id}", response_model=PackageWithCollections)
-def get_package(package_id: int, session: Session = Depends(get_session)):
+async def get_package(package_id: int, session: AsyncSession = Depends(get_session)):
     try:
-        return package_service.get_with_collections(session, package_id)
+        return await package_service.get_with_collections(session, package_id)
     except PackageNotFoundError:
         raise HTTPException(status_code=404, detail="Package not found") from None

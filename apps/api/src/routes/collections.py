@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_session
 from src.errors import CollectionNotFoundError
@@ -10,9 +10,9 @@ router = APIRouter(tags=["collections"])
 
 
 @router.get("/collections/{collection_id}", response_model=CollectionWithDatasets)
-def get_collection(collection_id: int, session: Session = Depends(get_session)):
+async def get_collection(collection_id: int, session: AsyncSession = Depends(get_session)):
     try:
-        return collection_service.get_with_datasets(session, collection_id)
+        return await collection_service.get_with_datasets(session, collection_id)
     except CollectionNotFoundError:
         raise HTTPException(status_code=404, detail="Collection not found") from None
 
@@ -21,9 +21,11 @@ def get_collection(collection_id: int, session: Session = Depends(get_session)):
     "/collections/{collection_id}/consistency",
     response_model=list[InconsistencyOut],
 )
-def get_collection_consistency(collection_id: int, session: Session = Depends(get_session)):
+async def get_collection_consistency(
+    collection_id: int, session: AsyncSession = Depends(get_session)
+):
     try:
-        issues = collection_service.get_consistency(session, collection_id)
+        issues = await collection_service.get_consistency(session, collection_id)
     except CollectionNotFoundError:
         raise HTTPException(status_code=404, detail="Collection not found") from None
     return [
