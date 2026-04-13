@@ -3,6 +3,8 @@ from enum import StrEnum
 
 from sqlalchemy.orm import Session
 
+from src.errors import CollectionNotFoundError
+from src.models.collection import CollectionWithDatasets
 from src.models.field import FieldType
 from src.repositories import collection_repo, dataset_repo
 
@@ -19,6 +21,24 @@ class FieldInconsistency:
     field_key: str
     inconsistency_type: InconsistencyType
     detail: str
+
+
+def get_with_datasets(session: Session, collection_id: int) -> CollectionWithDatasets:
+    """Raises CollectionNotFoundError if collection_id does not exist."""
+    col = collection_repo.get_by_id(session, collection_id)
+    if col is None:
+        raise CollectionNotFoundError(collection_id)
+    datasets = collection_repo.get_datasets_for_collection(session, collection_id)
+    return CollectionWithDatasets(**col.model_dump(), datasets=datasets)
+
+
+def get_consistency(session: Session, collection_id: int) -> list[FieldInconsistency]:
+    """Raises CollectionNotFoundError if collection_id does not exist.
+    Wraps check_field_consistency with the existence check."""
+    col = collection_repo.get_by_id(session, collection_id)
+    if col is None:
+        raise CollectionNotFoundError(collection_id)
+    return check_field_consistency(collection_id, session)
 
 
 def check_field_consistency(collection_id: int, session: Session) -> list[FieldInconsistency]:
