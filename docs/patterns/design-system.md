@@ -1,0 +1,163 @@
+# Design System Patterns
+
+Practical implementation reference for the Eggscaliber Lite design system.
+For the rationale behind these decisions, see
+`docs/superpowers/specs/2026-04-13-design-system-design.md`.
+
+## Colour Tokens — What Goes Where
+
+All colour is expressed via CSS custom properties. Never use raw hex values
+or Tailwind colour utilities (e.g. `bg-red-500`) in components — always use
+semantic token utilities.
+
+| Token utility | Use for |
+|---|---|
+| `bg-background` | Page background |
+| `bg-card` | Panel / card surfaces |
+| `bg-primary` | Interactive element backgrounds (buttons, active chips) |
+| `bg-muted` | Subtle backgrounds (empty drop zones, section backgrounds) |
+| `text-foreground` | All body and heading text |
+| `text-muted-foreground` | Section labels, group headings, captions, inactive items |
+| `text-primary-foreground` | Text on top of primary-coloured backgrounds only |
+| `border-border` | All panel and input borders |
+| `ring-ring` | Focus rings |
+| `bg-nav` | Top navigation bar background (custom token) |
+
+### Critical rule — never use `text-primary`
+
+`--primary` is reserved exclusively for interactive element **backgrounds**.
+It must never be used as a text colour on any surface. Text contrast on
+primary-coloured surfaces is handled by `text-primary-foreground` (`#ffffff`).
+
+```tsx
+// CORRECT — branded label text
+<span className="text-muted-foreground text-xs font-semibold uppercase">
+  Rows
+</span>
+
+// WRONG — primary as text colour, fails WCAG AA on light surfaces
+<span className="text-primary text-xs font-semibold uppercase">
+  Rows
+</span>
+```
+
+### Dark mode — secondary/inactive text
+
+Use `text-muted-foreground` for all secondary/inactive text. The token
+resolves to `s[800]` in light mode and `s[300]` in dark mode — both pass
+WCAG AA. Do not use `text-gray-500` (`#6b7280`) in dark mode; it fails AA
+on dark card surfaces (3.95:1).
+
+### Dark mode — no manual `dark:` overrides
+
+The CSS variable system handles light/dark automatically. Do not write
+`dark:text-*` or `dark:bg-*` overrides in component classes — add the
+token to `generateThemeCSS()` in `lib/theme.ts` instead.
+
+```tsx
+// CORRECT — token handles both modes
+<div className="bg-card text-card-foreground">...</div>
+
+// WRONG — manual dark mode override
+<div className="bg-white dark:bg-rose-950 text-rose-950 dark:text-rose-50">
+  ...
+</div>
+```
+
+## Typography
+
+Font: **Inter** (loaded via `next/font/google` in `layout.tsx`).
+
+| Role | Tailwind classes |
+|---|---|
+| Page title | `text-xl font-bold tracking-tight` |
+| Section heading | `text-base font-semibold tracking-tight` |
+| Panel title | `text-sm font-semibold` |
+| Body | `text-sm` (14px — default, no class needed if set on `body`) |
+| Secondary / captions | `text-xs text-muted-foreground` |
+| Section label | `text-[11px] font-semibold uppercase tracking-wide text-muted-foreground` |
+
+Do not use `text-2xl` or larger for in-app UI — those sizes are for
+marketing/landing pages only.
+
+## Spacing Conventions (Analytics UI)
+
+| Context | Class |
+|---|---|
+| Panel internal padding | `p-4` |
+| Panel gap (between panels) | `gap-2` |
+| Section gap (within a panel) | `gap-6` |
+| Inline element gap | `gap-2` |
+
+## Border Radius
+
+Use the semantic mapping — do not pass arbitrary values.
+
+| Context | Class |
+|---|---|
+| Chips, badges, table cells | `rounded` (4px) |
+| Buttons, inputs, selects | `rounded-md` (6px) |
+| Panels, cards, dropdowns | `rounded-lg` (8px) |
+| Modals, large surfaces | `rounded-xl` (12px) |
+| Avatars, toggle pills | `rounded-full` |
+
+## Components
+
+### Existing (hand-rolled, shadcn-compatible)
+
+These are already wired to the token system. Use them as-is.
+
+- `Button` — variants: `default`, `destructive`, `outline`, `secondary`,
+  `ghost`, `link`; sizes: `default`, `sm`, `lg`, `icon`
+- `Badge` — variants: `default`, `secondary`, `destructive`, `outline`
+- `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`,
+  `CardFooter`
+- `Input` — extended with `label` and `error` props. Do not overwrite with
+  `npx shadcn add input` — our version is intentionally richer.
+
+### Installed via shadcn
+
+Use `npx shadcn add <name>` to install. Do not hand-roll these.
+
+- `Select`, `Tabs`, `Separator`, `Skeleton`, `Tooltip`, `ToggleGroup`,
+  `DropdownMenu`, `Avatar`
+
+New components needed in future iterations: `Dialog`, `Popover`, `Toast`.
+
+## Theme Config
+
+The design system is driven by `apps/web/src/config/theme.config.ts`. To
+change the brand palette, edit `baseHue` and `baseChroma` — all scale steps
+and semantic tokens regenerate from those two values.
+
+```typescript
+export const themeConfig: ThemeConfig = {
+  palette: {
+    baseHue: 14,       // 0–360: hue angle (14 = crimson)
+    baseChroma: 0.223, // 0–0.37: saturation
+    hueShift: 14,      // hue rotation applied across the scale
+  },
+  brand: {
+    name: 'Eggscaliber',
+    logoUrl: null,
+  },
+  radius: '0.5rem',
+}
+```
+
+CSS tokens are generated by `lib/theme.ts` and injected at render time.
+`globals.css` contains only `@import "tailwindcss"` — do not add `:root`
+variable blocks there.
+
+## Accessibility
+
+Every component with a visual state (hover, focus, active, disabled, error)
+must pass WCAG AA contrast (4.5:1 for text, 3:1 for UI components).
+
+The token system is pre-verified for AA compliance. Violations only occur
+when tokens are misused (e.g. `text-primary` as body text) or when raw
+colour values bypass the token system.
+
+Storybook `addon-a11y` is configured — every story shows an accessibility
+panel. All stories must pass before merging. See `docs/testing.md` for the
+full Storybook a11y workflow.

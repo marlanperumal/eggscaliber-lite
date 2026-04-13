@@ -65,6 +65,7 @@ just audit          # pip-audit + pnpm audit
 
 - `apps/api/` — FastAPI backend. Strict 3-layer: `routes/` → `services/` → `repositories/`. See `docs/patterns/backend.md`.
 - `apps/web/` — Next.js frontend (App Router). See `docs/patterns/frontend.md`.
+- `apps/web/src/config/theme.config.ts` — Design system config. Edit `baseHue`/`baseChroma` to re-theme. See `docs/patterns/design-system.md`.
 - `packages/shared/api.d.ts` — **AUTO-GENERATED** TypeScript types from FastAPI OpenAPI spec. Never edit manually. Run `just generate-types`.
 - `docker/init/` — SQL bootstrap only (create DBs + extensions). All schema lives in `apps/api/migrations/`.
 
@@ -76,6 +77,7 @@ just audit          # pip-audit + pnpm audit
 - Never add SQLite-based tests — all tests run against the real Postgres test DB
 - Never mock the database or internal services — see `docs/testing.md`
 - Architecture rules are in `docs/patterns.md` — run `audit-patterns` skill periodically
+- Frontend styling uses a token-based design system — see `docs/patterns/design-system.md`. Never use raw hex values or `text-primary` as a text colour. Never write `dark:` overrides — tokens handle both modes. Every new component needs a Storybook story with a11y passing.
 
 ## Skills
 

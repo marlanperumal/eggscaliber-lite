@@ -66,6 +66,11 @@ See full detail: [docs/patterns/backend.md](patterns/backend.md)
 
 See [docs/patterns/frontend.md](patterns/frontend.md)
 
+## Design System
+
+Colour tokens, typography scale, component inventory, theme config, and
+accessibility rules. See [docs/patterns/design-system.md](patterns/design-system.md)
+
 ## Infrastructure
 
 See [docs/patterns/infrastructure.md](patterns/infrastructure.md)

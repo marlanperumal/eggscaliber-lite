@@ -52,6 +52,59 @@ def test_health_returns_ok(): ...
 def test_cross_tab_with_no_data_returns_empty_table(): ...
 ```
 
+## Storybook Accessibility (a11y)
+
+Every UI component must have a Storybook story. Every story must pass the
+`addon-a11y` accessibility checks before the component is considered done.
+
+### Running a11y checks
+
+```bash
+just storybook   # open Storybook at localhost:6006
+```
+
+Select a story, open the **Accessibility** panel at the bottom. All rules
+must show green. Violations block merging.
+
+### What counts as passing
+
+- Zero violations in the **Violations** tab
+- Incomplete checks (amber) must be manually reviewed and confirmed not
+  applicable — add a comment in the story if dismissing one
+
+### Writing stories for new components
+
+Every new shadcn component added to `src/components/ui/` requires a story:
+
+```typescript
+import type { Meta, StoryObj } from "@storybook/nextjs-vite"
+import { Select } from "./select"
+
+const meta = {
+  component: Select,
+  // Wrap in ThemeProvider so dark mode tokens resolve correctly
+  decorators: [(Story) => <Story />],
+} satisfies Meta<typeof Select>
+
+export default meta
+type Story = StoryObj<typeof meta>
+
+// Cover the states that are most likely to have contrast issues
+export const Default: Story = {}
+export const Disabled: Story = { args: { disabled: true } }
+```
+
+Cover at minimum: default state, disabled state, and any error/active states
+that change colour. These are the states most likely to introduce contrast
+violations.
+
+### Accessibility rule that always applies
+
+Do not use `text-primary` as a text colour — see
+`docs/patterns/design-system.md`. The a11y panel will catch this on light
+backgrounds but may not catch it on all surfaces. Follow the token rules
+proactively.
+
 ## Test Data
 
 Use fixtures for frequently reused test data. Define them in `conftest.py` with `scope="function"` so they are rolled back with the transaction.

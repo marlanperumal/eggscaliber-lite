@@ -85,6 +85,19 @@ export function UploadButton() {
 }
 ```
 
+## Design System
+
+Follow `docs/patterns/design-system.md` for all styling decisions. Key rules:
+
+- Use semantic token utilities (`bg-card`, `text-foreground`, `border-border`)
+  — never raw hex or Tailwind colour utilities like `bg-red-500`
+- Never use `text-primary` as a text colour — it is reserved for interactive
+  element backgrounds only
+- Never write `dark:` overrides in component classes — tokens handle both
+  modes automatically
+- Typography: `text-sm` is the body default; use the scale in
+  `design-system.md` for headings and labels
+
 ## State Management
 
 Prefer React Server Components and URL state (searchParams) for server-rendered data. Use `useState`/`useReducer` for local UI state. Avoid global client state (Redux, Zustand) unless genuinely needed.
