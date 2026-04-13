@@ -158,3 +158,37 @@ def test_aggregate_stacked_weighted():
     assert good["values"]["Female"] == pytest.approx(1.5)
     assert good["values"]["Male"] == pytest.approx(0.8)
     assert good["values"]["Total"] == pytest.approx(2.3)
+
+
+def test_aggregate_stacked_value_field_sum_measure_sums_values_per_level():
+    data = [
+        {"brand_rating": "Good", "nps": 8.0},
+        {"brand_rating": "Good", "nps": 6.0},
+        {"brand_rating": "Poor", "nps": 3.0},
+    ]
+    measure = {"type": "value_field", "field_key": "nps", "aggregation": "sum", "display": "n"}
+    row_fields = [_fm("brand_rating", FieldType.ordinal, ["Good", "Poor"])]
+    rows = aggregate_stacked(data, row_fields, [], measure)
+
+    good = next(r for r in rows if r["key"] == ["brand_rating", "Good"])
+    assert good["values"]["Total"] == pytest.approx(14.0)
+
+    poor = next(r for r in rows if r["key"] == ["brand_rating", "Poor"])
+    assert poor["values"]["Total"] == pytest.approx(3.0)
+
+
+def test_aggregate_stacked_value_field_mean_measure_averages_values_per_level():
+    data = [
+        {"brand_rating": "Good", "nps": 8.0},
+        {"brand_rating": "Good", "nps": 6.0},
+        {"brand_rating": "Poor", "nps": 3.0},
+    ]
+    measure = {"type": "value_field", "field_key": "nps", "aggregation": "mean", "display": "n"}
+    row_fields = [_fm("brand_rating", FieldType.ordinal, ["Good", "Poor"])]
+    rows = aggregate_stacked(data, row_fields, [], measure)
+
+    good = next(r for r in rows if r["key"] == ["brand_rating", "Good"])
+    assert good["values"]["Total"] == pytest.approx(7.0)
+
+    poor = next(r for r in rows if r["key"] == ["brand_rating", "Poor"])
+    assert poor["values"]["Total"] == pytest.approx(3.0)
