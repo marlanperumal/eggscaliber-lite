@@ -26,9 +26,9 @@ The fixtures in `apps/api/tests/conftest.py` implement this pattern. Use them â€
 
 | Fixture | Scope | Purpose |
 | --- | --- | --- |
-| `engine` | session | one engine for the whole test run |
-| `db` | function | transaction-wrapped session, rolled back after each test |
-| `client` | function | TestClient with `get_session` overridden to use `db` |
+| `async_engine` | session | one async engine for the whole test run |
+| `db` | function | transaction-wrapped `AsyncSession`, rolled back after each test |
+| `client` | function | `AsyncClient` with `get_session` overridden to use `db` |
 
 ## Migration Tests
 
@@ -43,13 +43,13 @@ These run in CI before any other tests (migrations are applied to `eggscaliber_t
 ## Naming Conventions
 
 ```python
-def test_<thing>_<condition>_<expected_outcome>():
+async def test_<thing>_<condition>_<expected_outcome>():
     ...
 
 # Examples:
-def test_create_dataset_with_duplicate_name_raises_409(): ...
-def test_health_returns_ok(): ...
-def test_cross_tab_with_no_data_returns_empty_table(): ...
+async def test_create_dataset_with_duplicate_name_raises_409(): ...
+async def test_health_returns_ok(): ...
+async def test_cross_tab_with_no_data_returns_empty_table(): ...
 ```
 
 ## Storybook Accessibility (a11y)
@@ -110,10 +110,10 @@ proactively.
 Use fixtures for frequently reused test data. Define them in `conftest.py` with `scope="function"` so they are rolled back with the transaction.
 
 ```python
-@pytest.fixture
-def sample_dataset(db):
+@pytest_asyncio.fixture
+async def sample_dataset(db):
     dataset = Dataset(name="test-dataset", description="For testing")
     db.add(dataset)
-    db.flush()  # assigns ID without committing
+    await db.flush()  # assigns ID without committing
     return dataset
 ```

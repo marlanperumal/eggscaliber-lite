@@ -19,17 +19,18 @@ Strict 3-layer architecture. **No layer may reach past its immediate neighbour.*
 @router.post("/datasets", status_code=201)
 async def create_dataset(
     payload: DatasetCreate,
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> DatasetRead:
     try:
-        return dataset_service.create(session, payload)
+        return await dataset_service.create(session, payload)
     except DatasetAlreadyExistsError:
         raise HTTPException(status_code=409, detail="Dataset already exists")
 
 # WRONG — business logic in route handler
 @router.post("/datasets")
-async def create_dataset(payload: DatasetCreate, session: Session = Depends(get_session)):
-    existing = session.exec(select(Dataset).where(Dataset.name == payload.name)).first()
+async def create_dataset(payload: DatasetCreate, session: AsyncSession = Depends(get_session)):
+    result = await session.execute(select(Dataset).where(Dataset.name == payload.name))
+    existing = result.scalars().first()
     if existing:
         raise HTTPException(...)
 ```
@@ -43,10 +44,10 @@ async def create_dataset(payload: DatasetCreate, session: Session = Depends(get_
 class DatasetAlreadyExistsError(Exception): ...
 
 class DatasetService:
-    def create(self, session: Session, payload: DatasetCreate) -> Dataset:
-        if dataset_repo.get_by_name(session, payload.name):
+    async def create(self, session: AsyncSession, payload: DatasetCreate) -> Dataset:
+        if await dataset_repo.get_by_name(session, payload.name):
             raise DatasetAlreadyExistsError(payload.name)
-        return dataset_repo.create(session, payload)
+        return await dataset_repo.create(session, payload)
 ```
 
 ### Repositories (`apps/api/src/repositories/`)
@@ -56,8 +57,9 @@ class DatasetService:
 
 ```python
 class DatasetRepository:
-    def get_by_name(self, session: Session, name: str) -> Dataset | None:
-        return session.exec(select(Dataset).where(Dataset.name == name)).first()
+    async def get_by_name(self, session: AsyncSession, name: str) -> Dataset | None:
+        result = await session.execute(select(Dataset).where(Dataset.name == name))
+        return result.scalars().first()
 ```
 
 See full detail: [docs/patterns/backend.md](patterns/backend.md)
