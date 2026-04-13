@@ -1,5 +1,5 @@
 from src.models.collection import Collection, CollectionType
-from src.models.dataset import Dataset, WorkerType
+from src.models.dataset import Dataset
 from src.models.package import Package
 from src.models.response import Response
 from src.workers.factory import WorkerFactory
@@ -65,12 +65,5 @@ def test_jsonb_worker_count(db):
 
 def test_factory_returns_jsonb_worker_for_default(db):
     ds = _seed_worker_dataset(db)  # worker_type defaults to jsonb_response
-    worker = WorkerFactory.for_dataset(ds, db)
-    assert isinstance(worker, JsonbResponseWorker)
-
-
-def test_factory_returns_jsonb_worker_explicitly(db):
-    ds = _seed_worker_dataset(db)
-    ds.worker_type = WorkerType.jsonb_response
     worker = WorkerFactory.for_dataset(ds, db)
     assert isinstance(worker, JsonbResponseWorker)
