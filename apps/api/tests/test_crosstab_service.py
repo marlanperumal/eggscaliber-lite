@@ -194,6 +194,49 @@ def test_aggregate_stacked_value_field_mean_measure_averages_values_per_level():
     assert poor["values"]["Total"] == pytest.approx(3.0)
 
 
+def test_aggregate_stacked_multi_col_fields_use_composite_key_format():
+    data = [
+        {"brand_rating": "Good", "gender": "Female", "region": "North"},
+        {"brand_rating": "Good", "gender": "Male", "region": "South"},
+        {"brand_rating": "Poor", "gender": "Female", "region": "North"},
+    ]
+    row_fields = [_fm("brand_rating", FieldType.ordinal, ["Good", "Poor"])]
+    col_fields = [
+        _fm("gender", FieldType.categorical, ["Female", "Male"]),
+        _fm("region", FieldType.categorical, ["North", "South"]),
+    ]
+    rows = aggregate_stacked(data, row_fields, col_fields, MEASURE_COUNT)
+
+    good = next(r for r in rows if r["key"] == ["brand_rating", "Good"])
+    # Two col fields → composite keys: "field_key|level"
+    assert "gender|Female" in good["values"]
+    assert "gender|Male" in good["values"]
+    assert "region|North" in good["values"]
+    assert "region|South" in good["values"]
+    assert good["values"]["gender|Female"] == 1.0
+    assert good["values"]["gender|Male"] == 1.0
+    assert good["values"]["Total"] == 2.0
+
+
+def test_aggregate_nested_with_fewer_than_two_row_fields_delegates_to_stacked():
+    from src.services.crosstab_service import aggregate_nested
+
+    data = [
+        {"brand_rating": "Good", "gender": "Female"},
+        {"brand_rating": "Poor", "gender": "Male"},
+    ]
+    row_fields = [_fm("brand_rating", FieldType.ordinal, ["Good", "Poor"])]
+    col_fields = [_fm("gender", FieldType.categorical, ["Female", "Male"])]
+
+    rows = aggregate_nested(data, row_fields, col_fields, MEASURE_COUNT)
+
+    # Delegates to stacked: keys are 2-element, not 4-element
+    assert all(len(r["key"]) == 2 for r in rows)
+    good = next(r for r in rows if r["key"] == ["brand_rating", "Good"])
+    assert good["values"]["Female"] == 1.0
+    assert good["values"]["Total"] == 1.0
+
+
 def test_apply_filters_multi_response_keeps_rows_containing_any_selected_level():
     data = [
         {"tags": ["fun", "reliable"], "brand_rating": "Good"},

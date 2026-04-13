@@ -72,12 +72,8 @@ async def test_scope_does_not_expose_internal_fields(client, db):
 
     resp = await client.get("/api/v1/scope")
     pkg_data = resp.json()[0]
-    assert "slug" not in pkg_data
-    assert "created_at" not in pkg_data
-    assert "description" not in pkg_data
+    assert set(pkg_data.keys()) == {"id", "name", "collections"}
     col_data = pkg_data["collections"][0]
-    assert "slug" not in col_data
-    assert "collection_type" not in col_data
+    assert set(col_data.keys()) == {"id", "name", "datasets"}
     ds_data = col_data["datasets"][0]
-    assert "slug" not in ds_data
-    assert "sort_order" not in ds_data
+    assert set(ds_data.keys()) == {"id", "name"}

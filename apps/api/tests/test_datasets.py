@@ -73,6 +73,29 @@ async def test_get_dataset_responses_paginated(client, db):
     assert data["page"] == 1
 
 
+async def test_get_dataset_responses_page_2_returns_correct_slice(client, db):
+    ds = await _seed_dataset(db)
+    # page_size=1 with 2 total responses: page 2 should return 1 item
+    response = await client.get(f"/api/v1/datasets/{ds.id}/responses?page=2&page_size=1")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 2
+    assert data["page"] == 2
+    assert data["page_size"] == 1
+    assert len(data["items"]) == 1
+
+
+async def test_get_dataset_responses_page_size_limits_items(client, db):
+    ds = await _seed_dataset(db)
+    response = await client.get(f"/api/v1/datasets/{ds.id}/responses?page=1&page_size=1")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 2
+    assert data["page"] == 1
+    assert data["page_size"] == 1
+    assert len(data["items"]) == 1
+
+
 async def test_get_dataset_responses_not_found(client):
     response = await client.get("/api/v1/datasets/99999/responses")
     assert response.status_code == 404

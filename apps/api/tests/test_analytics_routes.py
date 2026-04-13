@@ -187,7 +187,7 @@ async def test_crosstab_dataset_not_found(client):
     assert resp.status_code == 404
 
 
-async def test_crosstab_nested_row_limit_at_boundary_accepts(client):
+async def test_crosstab_nested_row_mode_at_limit_passes_validation(client):
     # Exactly 2 rows in nested mode is at the allowed limit — validation must pass.
     # Uses a nonexistent dataset so we get 404, not 422.
     resp = await client.post(
@@ -205,7 +205,7 @@ async def test_crosstab_nested_row_limit_at_boundary_accepts(client):
     assert resp.status_code == 404
 
 
-async def test_crosstab_stacked_row_limit_at_boundary_accepts(client):
+async def test_crosstab_stacked_row_mode_at_limit_passes_validation(client):
     # Exactly 5 rows in stacked mode is at the allowed limit — validation must pass.
     # Uses a nonexistent dataset so we get 404, not 422.
     resp = await client.post(
@@ -276,6 +276,24 @@ async def test_crosstab_stacked_row_limit_exceeded_returns_422(client):
         },
     )
     assert resp.status_code == 422
+
+
+async def test_crosstab_nested_col_mode_at_limit_passes_validation(client):
+    # Exactly 2 cols in nested mode is at the allowed limit — validation must pass.
+    # Uses a nonexistent dataset so we get 404, not 422.
+    resp = await client.post(
+        "/api/v1/analytics/crosstab",
+        json={
+            "dataset_id": 99999,
+            "rows": [{"field_key": "f1"}],
+            "row_mode": "stacked",
+            "columns": [{"field_key": "c1"}, {"field_key": "c2"}],
+            "col_mode": "nested",
+            "filters": [],
+            "measure": {"type": "count", "field_key": None, "aggregation": None, "display": "n"},
+        },
+    )
+    assert resp.status_code == 404
 
 
 async def test_crosstab_nested_col_limit_exceeded_returns_422(client, db):

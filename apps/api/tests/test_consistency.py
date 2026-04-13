@@ -45,6 +45,14 @@ async def _add_levels(db, field, values):
     await db.flush()
 
 
+async def test_single_dataset_collection_returns_empty(db):
+    col = await _make_collection(db)
+    await _add_dataset(db, col, "W1", "w1-single", 1)
+    # Only one dataset — early-return guard should produce no inconsistencies
+    result = await check_field_consistency(col.id, db)
+    assert result == []
+
+
 async def test_consistent_collection_returns_empty(db):
     col = await _make_collection(db)
     ds1 = await _add_dataset(db, col, "W1", "w1-con", 1)
@@ -122,5 +130,4 @@ async def test_consistency_endpoint(client, db):
     response = await client.get(f"/api/v1/collections/{col.id}/consistency")
     assert response.status_code == 200
     data = response.json()
-    assert len(data) > 0
     assert any(item["inconsistency_type"] == "type_mismatch" for item in data)
