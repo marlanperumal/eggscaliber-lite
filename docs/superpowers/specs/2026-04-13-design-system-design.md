@@ -54,10 +54,16 @@ Base: `oklch(0.533 0.223 14deg)` — a vivid crimson, hue angle 14°.
 | `--foreground` | s[950] | s[50] |
 | `--card` | `#ffffff` | s[900] |
 | `--card-foreground` | s[950] | s[50] |
-| `--primary` | s[600] | s[600] |
-| `--primary-foreground` | `#ffffff` | `#ffffff` |
+| `--primary` | s[600] | s[400] |
+| `--primary-foreground` | `#ffffff` | s[950] |
+| `--secondary` | s[100] | s[800] |
+| `--secondary-foreground` | s[900] | s[100] |
 | `--muted` | s[50] | s[900] |
 | `--muted-foreground` | s[800] | s[300] |
+| `--accent` | s[100] | s[800] |
+| `--accent-foreground` | s[900] | s[100] |
+| `--destructive` | `DestructiveConfig.light` | `DestructiveConfig.dark` |
+| `--destructive-foreground` | `#ffffff` | `DestructiveConfig.foregroundDark` |
 | `--border` | s[200] | s[800] |
 | `--input` | s[200] | s[800] |
 | `--ring` | s[600] | s[400] |
@@ -68,12 +74,16 @@ Base: `oklch(0.533 0.223 14deg)` — a vivid crimson, hue angle 14°.
 
 ### Critical accessibility rule
 
-**`--primary` (`s[600]`) must never be used as text colour on any surface.** It is reserved exclusively for interactive element backgrounds (buttons, active chips, focus rings, selected state indicators). Text contrast on these elements is achieved via `--primary-foreground` (`#ffffff`).
+**`--primary` (`s[600]` light / `s[400]` dark) must never be used as text colour on any surface.** It is reserved exclusively for interactive element backgrounds (buttons, active chips, focus rings, selected state indicators). Text contrast on these elements is achieved via `--primary-foreground`.
 
 For branded text labels (section headers, group labels), use `--muted-foreground` (`s[800]` light / `s[300]` dark), which passes WCAG AAA on all surfaces.
 
-**Why `--primary-foreground` is `#ffffff` in both modes:**  
-`--primary` does not change between light and dark mode — it is the brand colour and remains `s[600]` in both. White on `s[600]` gives 4.70:1 (WCAG AA ✓). A lighter primary (e.g. `s[500]`) would drop white text to 3.88:1 (WCAG AA ✗) and require black text, which looks wrong on crimson. The correct approach is to keep primary constant and let the surrounding surfaces shift between modes.
+**Why primary differs between modes:**  
+In light mode, `s[600]` is dark enough for white text (≥4.5:1 on white bg). In dark mode, `s[600]` becomes too dark — it would fail as outline-button text on dark surfaces. `s[400]` passes 4.5:1 as outline text on the dark background, and is paired with `s[950]` as foreground so filled buttons remain readable (≥6:1). The correct approach is to use different primary steps per mode rather than keeping primary constant.
+
+### Destructive colour
+
+The destructive token is palette-specific. It is configured via an optional `destructive` field in `ThemeConfig` (`DestructiveConfig`). If omitted, `DEFAULT_DESTRUCTIVE` (dark violet, visually distinct from warm primaries) is used. Cool-hue palettes (blue, teal, steel) should supply a conventional red instead.
 
 ### Neutral text for inactive/secondary items
 
@@ -144,22 +154,33 @@ apps/web/src/
 ### theme.config.ts
 
 The single file a deployer edits to re-brand the app. Fully typed.
+Named presets live in the `themes` object; changing the `themeConfig` export
+switches the entire palette at build time.
 
 ```typescript
 import type { ThemeConfig } from '@/lib/theme'
 
-export const themeConfig: ThemeConfig = {
-  palette: {
-    baseHue: 14,       // 0–360: hue angle of brand colour
-    baseChroma: 0.223, // 0–0.37: 0 = grey, 0.37 = maximum vibrant
-    hueShift: 14,      // degrees to rotate toward highlights / shadows
+export const themes = {
+  orange: {  // warm crimson/rose — default
+    palette: { baseHue: 14, baseChroma: 0.223, hueShift: 14 },
+    brand: { name: 'Eggscaliber', logoUrl: null },
+    radius: '0.5rem',
+    // destructive omitted → DEFAULT_DESTRUCTIVE (dark violet)
   },
-  brand: {
-    name: 'Eggscaliber',
-    logoUrl: null,     // null = text logo; '/logo.svg' for image
+  steel: {   // cool steel-blue
+    palette: { baseHue: 213, baseChroma: 0.16, hueShift: 12 },
+    brand: { name: 'Eggscaliber', logoUrl: null },
+    radius: '0.5rem',
+    destructive: {
+      light: 'oklch(0.44 0.22 27deg)',
+      dark: 'oklch(0.65 0.22 27deg)',
+      foregroundDark: 'oklch(0.12 0.08 27deg)',
+    },
   },
-  radius: '0.5rem',   // maps to --radius
-}
+} satisfies Record<string, ThemeConfig>
+
+// ← change "orange" to "steel" to switch palette
+export const themeConfig = themes.orange
 ```
 
 ### lib/theme.ts
@@ -271,9 +292,12 @@ All will automatically pick up the oklch token system via CSS variables.
 
 ## 9. White-Label (Option A — Config File)
 
-A deployer clones the repo, edits `apps/web/src/config/theme.config.ts`, and redeploys. Two values (`baseHue`, `baseChroma`) re-theme the entire app — all scale steps, semantic tokens, hover states, and shadows derive from them via `generateOklchScale()`.
+A deployer clones the repo, edits `apps/web/src/config/theme.config.ts`, and redeploys.
+They can either pick a named preset (`themes.orange`, `themes.steel`) or add their own entry
+to the `themes` object — two values (`baseHue`, `baseChroma`) re-theme the entire app.
+All scale steps, semantic tokens, hover states, and shadows derive from them via `generateOklchScale()`.
 
-Optional overrides: `brand.name`, `brand.logoUrl`, `radius`.
+Optional overrides per preset: `brand.name`, `brand.logoUrl`, `radius`, `destructive`.
 
 **Path to Option B (admin UI):** The `ThemeConfig` type and `generateThemeCSS()` function are designed to accept the same shape from any source. When Option B is needed, store the config in the database per tenant and serve it from an API route rather than importing from a static file.
 

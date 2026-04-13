@@ -48,4 +48,4 @@ export const themes = {
 } satisfies Record<string, ThemeConfig>
 
 // ← Change "orange" to "steel" (or any key above) to switch the active colour palette.
-export const themeConfig = themes.orange
+export const themeConfig = themes.steel
