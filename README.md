@@ -49,4 +49,5 @@ Pushes to `master` deploy automatically:
 | API (FastAPI) | Render | [eggscaliber-lite-api.onrender.com](https://eggscaliber-lite-api.onrender.com) |
 | Database | Neon (Postgres + pgvector) | — |
 
-Render runs `alembic upgrade head` and the seed script before each deploy. The seed is idempotent — it skips if demo data already exists.
+Render runs `alembic upgrade head` and the seed script before each deploy.
+The seed is idempotent — it skips if demo data already exists.
