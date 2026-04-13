@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
+import { Search } from "lucide-react"
 import { Button } from "./button"
 
 const meta = {
@@ -26,6 +27,14 @@ export const Ghost: Story = { args: { children: "Ghost", variant: "ghost" } }
 export const Small: Story = { args: { children: "Small", size: "sm" } }
 export const Large: Story = { args: { children: "Large", size: "lg" } }
 export const Disabled: Story = { args: { children: "Disabled", disabled: true } }
+// Icon button requires aria-label for accessibility
+export const Icon: Story = {
+  render: () => (
+    <Button variant="ghost" size="icon" aria-label="Search">
+      <Search className="h-4 w-4" />
+    </Button>
+  ),
+}
 
 export const AllVariants: Story = {
   render: () => (

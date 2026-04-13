@@ -6,30 +6,18 @@ const meta = {
   component: Input,
   parameters: { layout: "centered" },
   tags: ["autodocs"],
-  decorators: [
-    (Story) => (
-      <div className="w-80">
-        <Story />
-      </div>
-    ),
-  ],
 } satisfies Meta<typeof Input>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = { args: { placeholder: "Enter text..." } }
-export const WithLabel: Story = {
-  args: { label: "Email address", placeholder: "you@example.com", type: "email" },
-}
+export const Default: Story = { args: { label: "Email", placeholder: "you@example.com" } }
 export const WithError: Story = {
-  args: {
-    label: "Email address",
-    value: "notanemail",
-    error: "Please enter a valid email address.",
-    readOnly: true,
-  },
+  args: { label: "Email", placeholder: "you@example.com", error: "Invalid email address" },
 }
 export const Disabled: Story = {
-  args: { label: "Disabled field", placeholder: "Cannot edit", disabled: true },
+  args: { label: "Email", placeholder: "you@example.com", disabled: true },
+}
+export const WithoutLabel: Story = {
+  args: { placeholder: "Search...", "aria-label": "Search" },
 }
