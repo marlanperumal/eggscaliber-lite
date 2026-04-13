@@ -1,69 +1,47 @@
-from src.models.collection import Collection, CollectionType
-from src.models.dataset import Dataset
-from src.models.package import Package
+import pytest
 from src.models.response import Response
 from src.workers.factory import WorkerFactory
 from src.workers.jsonb_response import JsonbResponseWorker
 
 
-def _seed_worker_dataset(db):
-    """Create a minimal dataset with 3 responses."""
-    pkg = Package(name="P", slug="p-worker-test")
-    db.add(pkg)
-    db.flush()
-    db.refresh(pkg)
-    col = Collection(
-        name="C", slug="c-worker-test", package_id=pkg.id, collection_type=CollectionType.survey
-    )
-    db.add(col)
-    db.flush()
-    db.refresh(col)
-
-    ds = Dataset(name="W1", slug="w1", collection_id=col.id, sort_order=1)
-    db.add(ds)
-    db.flush()
-    db.refresh(ds)
-
+@pytest.fixture
+def worker_dataset(bare_dataset, db):
+    """bare_dataset + 3 responses for worker tests."""
     for payload in [
         {"gender": "Male", "age_group": "18-34"},
         {"gender": "Female", "age_group": "35-54"},
         {"gender": "Male", "age_group": "18-34"},
     ]:
-        db.add(Response(dataset_id=ds.id, payload=payload))
+        db.add(Response(dataset_id=bare_dataset.id, payload=payload))
     db.flush()
-    return ds
+    return bare_dataset
 
 
-def test_jsonb_worker_fetch_all_rows(db):
-    ds = _seed_worker_dataset(db)
+def test_jsonb_worker_fetch_all_rows(worker_dataset, db):
     worker = JsonbResponseWorker(db)
-    rows = list(worker.fetch(ds.id, field_keys=[], filters={}))
+    rows = list(worker.fetch(worker_dataset.id, field_keys=[], filters={}))
     assert len(rows) == 3
 
 
-def test_jsonb_worker_fetch_with_field_keys(db):
-    ds = _seed_worker_dataset(db)
+def test_jsonb_worker_fetch_with_field_keys(worker_dataset, db):
     worker = JsonbResponseWorker(db)
-    rows = list(worker.fetch(ds.id, field_keys=["gender"], filters={}))
+    rows = list(worker.fetch(worker_dataset.id, field_keys=["gender"], filters={}))
     assert all(set(r.keys()) == {"gender"} for r in rows)
 
 
-def test_jsonb_worker_fetch_with_filter(db):
-    ds = _seed_worker_dataset(db)
+def test_jsonb_worker_fetch_with_filter(worker_dataset, db):
     worker = JsonbResponseWorker(db)
-    rows = list(worker.fetch(ds.id, field_keys=[], filters={"gender": "Male"}))
+    rows = list(worker.fetch(worker_dataset.id, field_keys=[], filters={"gender": "Male"}))
     assert len(rows) == 2
     assert all(r["gender"] == "Male" for r in rows)
 
 
-def test_jsonb_worker_count(db):
-    ds = _seed_worker_dataset(db)
+def test_jsonb_worker_count(worker_dataset, db):
     worker = JsonbResponseWorker(db)
-    assert worker.count(ds.id, filters={}) == 3
-    assert worker.count(ds.id, filters={"gender": "Female"}) == 1
+    assert worker.count(worker_dataset.id, filters={}) == 3
+    assert worker.count(worker_dataset.id, filters={"gender": "Female"}) == 1
 
 
-def test_factory_returns_jsonb_worker_for_default(db):
-    ds = _seed_worker_dataset(db)  # worker_type defaults to jsonb_response
-    worker = WorkerFactory.for_dataset(ds, db)
+def test_factory_returns_jsonb_worker_for_default(worker_dataset, db):
+    worker = WorkerFactory.for_dataset(worker_dataset, db)
     assert isinstance(worker, JsonbResponseWorker)

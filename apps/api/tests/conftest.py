@@ -7,6 +7,9 @@ from sqlmodel import SQLModel
 from src.config import settings
 from src.database import get_session
 from src.main import app
+from src.models.collection import Collection, CollectionType
+from src.models.dataset import Dataset
+from src.models.package import Package
 
 
 @pytest.fixture(scope="session")
@@ -36,3 +39,28 @@ def client(db: Session):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def bare_dataset(db):
+    """Minimal Package → Collection → Dataset chain. Tests can add fields/responses on top."""
+    pkg = Package(name="Test Package", slug="test-pkg-fixture")
+    db.add(pkg)
+    db.flush()
+    db.refresh(pkg)
+
+    col = Collection(
+        name="Test Collection",
+        slug="test-col-fixture",
+        package_id=pkg.id,
+        collection_type=CollectionType.survey,
+    )
+    db.add(col)
+    db.flush()
+    db.refresh(col)
+
+    ds = Dataset(name="Test Dataset", slug="test-ds-fixture", collection_id=col.id, sort_order=0)
+    db.add(ds)
+    db.flush()
+    db.refresh(ds)
+    return ds
