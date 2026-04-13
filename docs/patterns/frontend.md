@@ -115,4 +115,22 @@ Follow `docs/patterns/design-system.md` for all styling decisions. Key rules:
 
 ## State Management
 
-Prefer React Server Components and URL state (searchParams) for server-rendered data. Use `useState`/`useReducer` for local UI state. Avoid global client state (Redux, Zustand) unless genuinely needed.
+Prefer React Server Components and URL state for server-rendered data. Use `useState`/`useReducer` for local UI state. Avoid global client state (Redux, Zustand) unless genuinely needed.
+
+### URL state — nuqs
+
+Use **nuqs** (`useQueryStates`) for any client state that should survive a page refresh or be shareable via URL. The `NuqsAdapter` is already in the root layout.
+
+```ts
+import { useQueryStates, parseAsStringLiteral, parseAsInteger } from 'nuqs'
+
+const [params, setParams] = useQueryStates(
+  {
+    mode: parseAsStringLiteral(['crosstab', 'trend'] as const).withDefault('crosstab'),
+    ds: parseAsInteger,
+  },
+  { history: 'replace', scroll: false },
+)
+```
+
+Keep domain types separate from URL params — wrap `useQueryStates` in a feature hook (e.g. `useAnalyticsState`) that converts between the two. Use short URL keys (`ds`, `col`, `bd`) for readability. Use `parseAsJson<T>()` for complex nested types that can't be flattened.

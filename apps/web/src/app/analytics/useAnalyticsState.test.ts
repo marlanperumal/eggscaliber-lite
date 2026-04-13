@@ -1,82 +1,109 @@
 import { act, renderHook } from "@testing-library/react"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useQueryStates } from "nuqs"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { DEFAULT_QUERY } from "./analytics-types"
 import { useAnalyticsState } from "./useAnalyticsState"
 
-vi.mock("next/navigation", () => ({
-  useRouter: vi.fn(),
-  usePathname: vi.fn(),
-  useSearchParams: vi.fn(),
-}))
+vi.mock("nuqs", async (importActual) => {
+  const actual = await importActual<typeof import("nuqs")>()
+  return { ...actual, useQueryStates: vi.fn() }
+})
 
-const mockReplace = vi.fn()
+const mockSetP = vi.fn()
+
+const defaultParams = {
+  mode: "crosstab" as const,
+  ds: null,
+  col: null,
+  rows: [],
+  row_mode: "stacked" as const,
+  cols: [],
+  col_mode: "stacked" as const,
+  bd: null,
+  filters: [],
+  mt: "count" as const,
+  md: "n" as const,
+  mf: null,
+  ma: null,
+}
 
 beforeEach(() => {
-  vi.mocked(useRouter).mockReturnValue({ replace: mockReplace } as ReturnType<typeof useRouter>)
-  vi.mocked(usePathname).mockReturnValue("/analytics")
-  vi.mocked(useSearchParams).mockReturnValue(
-    new URLSearchParams() as ReturnType<typeof useSearchParams>,
-  )
-  mockReplace.mockClear()
+  vi.mocked(useQueryStates).mockReturnValue([defaultParams, mockSetP])
+  mockSetP.mockClear()
 })
 
 describe("useAnalyticsState", () => {
-  it("returns DEFAULT_QUERY when no q param is present", () => {
+  it("returns DEFAULT_QUERY when all params are at defaults", () => {
     const { result } = renderHook(() => useAnalyticsState())
     expect(result.current.query).toEqual(DEFAULT_QUERY)
   })
 
-  it("parses valid JSON from q param and merges with DEFAULT_QUERY", () => {
-    const partial = { mode: "trend", dataset_id: 42 }
-    vi.mocked(useSearchParams).mockReturnValue(
-      new URLSearchParams({
-        q: encodeURIComponent(JSON.stringify(partial)),
-      }) as ReturnType<typeof useSearchParams>,
-    )
+  it("assembles QueryConfig correctly from URL params", () => {
+    vi.mocked(useQueryStates).mockReturnValue([
+      { ...defaultParams, mode: "trend" as const, ds: 42, rows: ["q_gender", "q_age"] },
+      mockSetP,
+    ])
     const { result } = renderHook(() => useAnalyticsState())
     expect(result.current.query.mode).toBe("trend")
     expect(result.current.query.dataset_id).toBe(42)
-    expect(result.current.query.rows).toEqual(DEFAULT_QUERY.rows)
+    expect(result.current.query.rows).toEqual([{ field_key: "q_gender" }, { field_key: "q_age" }])
   })
 
-  it("falls back to DEFAULT_QUERY when q param contains malformed JSON", () => {
-    vi.mocked(useSearchParams).mockReturnValue(
-      new URLSearchParams({
-        q: encodeURIComponent("not-json{{{"),
-      }) as ReturnType<typeof useSearchParams>,
-    )
-    const { result } = renderHook(() => useAnalyticsState())
-    expect(result.current.query).toEqual(DEFAULT_QUERY)
-  })
-
-  it("setQuery encodes the new state into the URL", () => {
+  it("setQuery encodes QueryConfig into flat URL params", () => {
     const { result } = renderHook(() => useAnalyticsState())
     act(() => {
-      result.current.setQuery({ ...DEFAULT_QUERY, dataset_id: 7 })
+      result.current.setQuery({ ...DEFAULT_QUERY, dataset_id: 7, mode: "trend" })
     })
-    expect(mockReplace).toHaveBeenCalledOnce()
-    const [url] = mockReplace.mock.calls[0] as [string]
-    const params = new URLSearchParams(url.split("?")[1])
-    const parsed = JSON.parse(decodeURIComponent(params.get("q")!))
-    expect(parsed.dataset_id).toBe(7)
+    expect(mockSetP).toHaveBeenCalledOnce()
+    const call = vi.mocked(mockSetP).mock.calls[0][0]
+    expect(call.ds).toBe(7)
+    expect(call.mode).toBe("trend")
+    expect(call.rows).toEqual([])
   })
 
-  it("setQuery accepts a function updater and receives the current query", () => {
-    const partial = { mode: "trend" }
-    vi.mocked(useSearchParams).mockReturnValue(
-      new URLSearchParams({
-        q: encodeURIComponent(JSON.stringify(partial)),
-      }) as ReturnType<typeof useSearchParams>,
-    )
+  it("setQuery maps FieldSelection arrays to field_key strings", () => {
+    const { result } = renderHook(() => useAnalyticsState())
+    act(() => {
+      result.current.setQuery({
+        ...DEFAULT_QUERY,
+        rows: [
+          { field_key: "q_education", display_name: "Education" },
+          { field_key: "q_income", display_name: "Income" },
+        ],
+        columns: [{ field_key: "q_gender", display_name: "Gender" }],
+      })
+    })
+    const call = vi.mocked(mockSetP).mock.calls[0][0]
+    expect(call.rows).toEqual(["q_education", "q_income"])
+    expect(call.cols).toEqual(["q_gender"])
+  })
+
+  it("setQuery accepts a function updater that receives the current query", () => {
+    vi.mocked(useQueryStates).mockReturnValue([
+      { ...defaultParams, mode: "trend" as const },
+      mockSetP,
+    ])
     const { result } = renderHook(() => useAnalyticsState())
     act(() => {
       result.current.setQuery((prev) => ({ ...prev, dataset_id: 5 }))
     })
-    const [url] = mockReplace.mock.calls[0] as [string]
-    const params = new URLSearchParams(url.split("?")[1])
-    const parsed = JSON.parse(decodeURIComponent(params.get("q")!))
-    expect(parsed.mode).toBe("trend")
-    expect(parsed.dataset_id).toBe(5)
+    const call = vi.mocked(mockSetP).mock.calls[0][0]
+    expect(call.mode).toBe("trend")
+    expect(call.ds).toBe(5)
+  })
+
+  it("setQuery maps breakdown and measure correctly", () => {
+    const { result } = renderHook(() => useAnalyticsState())
+    act(() => {
+      result.current.setQuery({
+        ...DEFAULT_QUERY,
+        breakdown: { field_key: "q_region", display_name: "Region" },
+        measure: { type: "weighted", field_key: null, aggregation: null, display: "pct_col" },
+      })
+    })
+    const call = vi.mocked(mockSetP).mock.calls[0][0]
+    expect(call.bd).toBe("q_region")
+    expect(call.mt).toBe("weighted")
+    expect(call.md).toBe("pct_col")
   })
 })

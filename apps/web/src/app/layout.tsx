@@ -2,6 +2,7 @@ import { PostHogPageView, PostHogProvider } from "@posthog/next"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "next-themes"
+import { NuqsAdapter } from "nuqs/adapters/next/app"
 import { themeConfig } from "@/config/theme.config"
 import { generateThemeCSS } from "@/lib/theme"
 import "./globals.css"
@@ -28,12 +29,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           enableSystem
           disableTransitionOnChange
         >
-          <PostHogProvider
-            clientOptions={{ api_host: "/ingest", debug: process.env.NODE_ENV === "development" }}
-          >
-            <PostHogPageView />
-            {children}
-          </PostHogProvider>
+          <NuqsAdapter>
+            <PostHogProvider
+              clientOptions={{ api_host: "/ingest", debug: process.env.NODE_ENV === "development" }}
+            >
+              <PostHogPageView />
+              {children}
+            </PostHogProvider>
+          </NuqsAdapter>
         </ThemeProvider>
       </body>
     </html>

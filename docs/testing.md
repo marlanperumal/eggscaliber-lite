@@ -52,6 +52,89 @@ async def test_health_returns_ok(): ...
 async def test_cross_tab_with_no_data_returns_empty_table(): ...
 ```
 
+---
+
+## Frontend Testing
+
+### Tools
+
+- **Vitest** — test runner for all frontend unit and hook tests
+- **@testing-library/react** — `render` and `renderHook` for components and hooks
+- Tests live alongside the code they test: `Button.tsx` + `Button.test.tsx` in the same directory
+
+### What to test
+
+Write tests that catch real bugs. Good targets:
+
+- **Pure logic** (e.g. `generateThemeCSS`, parsers, formatters) — test the outputs given known inputs
+- **Custom hooks** — test that the hook returns the right shape given controlled external state
+- **Component behaviour** — assert what the user sees (`screen.getByRole`) or what callbacks are called, not implementation details
+
+Avoid tests that only assert values you set up, or that verify internal functions were called with specific arguments.
+
+### Mocking
+
+Mock only at true external boundaries. For frontend code, the boundaries are:
+
+| Boundary | Mock approach |
+|----------|---------------|
+| URL state (nuqs) | `vi.mock('nuqs', ...)` — mock `useQueryStates`, keep real parsers |
+| Clerk auth | Use `AUTH_MODE=dev` where possible; mock `@clerk/nextjs` in unit tests |
+| API calls (`openapi-fetch`) | Mock the `api` client instance |
+| PostHog | Mock `@posthog/next` hooks |
+
+**Do not mock `next/navigation` directly.** URL state is managed through nuqs — mock `useQueryStates` instead. This keeps tests decoupled from Next.js router internals.
+
+### Hook tests with nuqs
+
+When testing a hook that wraps `useQueryStates`, mock only that hook and keep the real parsers:
+
+```typescript
+import { useQueryStates } from 'nuqs'
+import { vi, beforeEach } from 'vitest'
+
+vi.mock('nuqs', async (importActual) => {
+  const actual = await importActual<typeof import('nuqs')>()
+  return { ...actual, useQueryStates: vi.fn() }
+})
+
+const mockSetP = vi.fn()
+
+beforeEach(() => {
+  vi.mocked(useQueryStates).mockReturnValue([
+    { mode: 'crosstab', ds: null, /* ...rest of param defaults */ },
+    mockSetP,
+  ])
+  mockSetP.mockClear()
+})
+```
+
+Test that the hook assembles the right domain type from params, and that calling the setter passes the correct flat params back.
+
+### Component tests
+
+Use `@testing-library/react` and query by role or visible text — not by class names or test IDs:
+
+```typescript
+import { render, screen } from '@testing-library/react'
+
+it('renders the heading', () => {
+  render(<Page />)
+  expect(screen.getByRole('heading', { name: /eggscaliber-lite/i })).toBeInTheDocument()
+})
+```
+
+Components that use nuqs hooks will need those hooks mocked as above. Components that use `NuqsAdapter` context can be wrapped with it in the test render if needed.
+
+### Running tests
+
+```bash
+just test-web    # vitest only
+just test        # all tests (pytest + vitest)
+```
+
+---
+
 ## Storybook Accessibility (a11y)
 
 Every UI component must have a Storybook story. Every story must pass the
