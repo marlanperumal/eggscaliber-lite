@@ -59,7 +59,7 @@ def _seed_trend_fixture(db):
     return col
 
 
-def test_trend_returns_rows(client, db):
+def test_trend_count_measure_returns_per_wave_per_level_rows(client, db):
     col = _seed_trend_fixture(db)
     resp = client.post(
         "/api/v1/analytics/trend",
@@ -135,7 +135,7 @@ def _seed_crosstab_fixture(db):
     return ds
 
 
-def test_crosstab_returns_rows(client, db):
+def test_crosstab_count_measure_returns_cell_values_per_level(client, db):
     ds = _seed_crosstab_fixture(db)
     resp = client.post(
         "/api/v1/analytics/crosstab",

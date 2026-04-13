@@ -27,7 +27,7 @@ DATA = [
 MEASURE_COUNT = {"type": "count", "field_key": None, "aggregation": None, "display": "n"}
 
 
-def test_aggregate_stacked_count_single_row_single_col():
+def test_aggregate_stacked_single_row_and_col_computes_count_per_level_and_total():
     row_fields = [_fm("brand_rating", FieldType.ordinal, ["Good", "Poor"])]
     col_fields = [_fm("gender", FieldType.categorical, ["Female", "Male"])]
     rows = aggregate_stacked(DATA, row_fields, col_fields, MEASURE_COUNT)
