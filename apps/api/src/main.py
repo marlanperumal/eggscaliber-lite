@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
+from src.database import lifespan
 from src.routes import analytics, collections, datasets, health, packages, sentry
 
 if settings.sentry_dsn:
@@ -12,7 +13,7 @@ if settings.sentry_dsn:
         traces_sample_rate=0.1,
     )
 
-app = FastAPI(title="Eggscaliber-Lite API", version="0.1.0")
+app = FastAPI(title="Eggscaliber-Lite API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

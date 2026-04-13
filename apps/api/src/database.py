@@ -1,17 +1,24 @@
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from fastapi import FastAPI
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.config import settings
 
-engine = create_engine(settings.database_url)
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+engine = None
+SessionLocal = None
 
 
-def get_session() -> Generator[Session, None, None]:
-    session = SessionLocal()
-    try:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global engine, SessionLocal
+    engine = create_async_engine(settings.database_url)
+    SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+    yield
+    await engine.dispose()
+
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    async with SessionLocal() as session:
         yield session
-    finally:
-        session.close()
