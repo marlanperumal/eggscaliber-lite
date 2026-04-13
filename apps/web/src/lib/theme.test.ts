@@ -94,18 +94,27 @@ describe("generateThemeCSS", () => {
     }
   })
 
-  test("primary-foreground is #ffffff in both :root and .dark", () => {
+  test("primary-foreground is #ffffff in :root and a dark scale step in .dark", () => {
     const css = generateThemeCSS(testConfig)
-    const matches = css.match(/--primary-foreground:\s*#ffffff/g)
-    expect(matches).toHaveLength(2)
+    // Light mode: white text on dark primary (s[600])
+    expect(css).toContain("--primary-foreground: #ffffff")
+    // Dark mode: primary flips to a lighter step (s[400]), so foreground must be dark (s[950])
+    // to maintain contrast on both filled buttons and outline text on dark surfaces.
+    const scale = generateOklchScale(testConfig.palette)
+    const darkBlock = css.slice(css.indexOf(".dark {"))
+    expect(darkBlock).toContain(`--primary-foreground: ${scale[950]}`)
   })
 
-  test("primary is the same value in both :root and .dark", () => {
+  test("primary uses s[600] in :root and s[400] in .dark for accessible dark-mode outline buttons", () => {
     const css = generateThemeCSS(testConfig)
-    // Extract all --primary: lines (excluding --primary-foreground)
-    const matches = css.match(/--primary:\s*(oklch\([^)]+\))/g)
-    expect(matches).toHaveLength(2)
-    expect(matches?.[0]).toBe(matches?.[1])
+    const scale = generateOklchScale(testConfig.palette)
+    // Light mode: s[600] is dark enough for white text on filled buttons
+    const rootBlock = css.slice(0, css.indexOf(".dark {"))
+    expect(rootBlock).toContain(`--primary: ${scale[600]}`)
+    // Dark mode: s[400] is light enough to pass 4.5:1 as outline text on dark surfaces,
+    // while s[950] foreground keeps the filled button readable (6.9:1)
+    const darkBlock = css.slice(css.indexOf(".dark {"))
+    expect(darkBlock).toContain(`--primary: ${scale[400]}`)
   })
 
   test("radius is injected from config", () => {

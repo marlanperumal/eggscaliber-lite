@@ -43,10 +43,13 @@ export function generateOklchScale(palette: PaletteConfig): Scale {
   )
 }
 
-// Fixed destructive red — danger states are always red regardless of brand hue.
-// oklch(0.577 0.245 27deg) ≈ a standard crimson-red with WCAG AA on white (#fff at 4.8:1).
-const DESTRUCTIVE_LIGHT = "oklch(0.577 0.245 27deg)"
-const DESTRUCTIVE_DARK = "oklch(0.704 0.191 22deg)" // lighter red for dark surfaces
+// Fixed destructive violet — visually distinct from any red/orange brand primary.
+// Light: very dark violet (11.6:1 on white). Dark: lighter violet used as both filled-button
+// background and outline text on dark surfaces (4.7:1 on #1c1c1e). Paired with a near-black
+// violet foreground in dark mode so the filled button also passes (5.6:1).
+const DESTRUCTIVE_LIGHT = "oklch(0.37 0.2 295deg)"
+const DESTRUCTIVE_DARK = "oklch(0.64 0.2 295deg)"
+const DESTRUCTIVE_FOREGROUND_DARK = "oklch(0.12 0.08 295deg)"
 
 export function generateThemeCSS(config: ThemeConfig): string {
   const s = generateOklchScale(config.palette)
@@ -82,8 +85,8 @@ export function generateThemeCSS(config: ThemeConfig): string {
       --card-foreground: ${s[50]};
       --popover: ${s[900]};
       --popover-foreground: ${s[50]};
-      --primary: ${s[600]};
-      --primary-foreground: #ffffff;
+      --primary: ${s[400]};
+      --primary-foreground: ${s[950]};
       --secondary: ${s[800]};
       --secondary-foreground: ${s[100]};
       --muted: ${s[900]};
@@ -91,7 +94,7 @@ export function generateThemeCSS(config: ThemeConfig): string {
       --accent: ${s[800]};
       --accent-foreground: ${s[100]};
       --destructive: ${DESTRUCTIVE_DARK};
-      --destructive-foreground: #ffffff;
+      --destructive-foreground: ${DESTRUCTIVE_FOREGROUND_DARK};
       --border: ${s[800]};
       --input: ${s[800]};
       --ring: ${s[400]};
