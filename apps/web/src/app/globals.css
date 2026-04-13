@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @source "../**/*.{tsx,ts,jsx,js}";
 
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}
+
 /* Map shadcn CSS variables into Tailwind v4's color system.
    Without this, utilities like bg-primary / text-foreground are not generated
    because Tailwind v4 only emits color utilities for --color-* theme entries. */
