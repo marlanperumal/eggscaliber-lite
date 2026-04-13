@@ -4,6 +4,12 @@ export interface PaletteConfig {
   hueShift: number // stored for documentation; per-step hue offsets are fixed in SCALE_STEPS
 }
 
+export interface DestructiveConfig {
+  light: string // --destructive in :root (must contrast against #ffffff foreground)
+  dark: string // --destructive in .dark (used as both filled-button bg and outline text)
+  foregroundDark: string // --destructive-foreground in .dark (text on filled destructive button)
+}
+
 export interface ThemeConfig {
   palette: PaletteConfig
   brand: {
@@ -11,6 +17,12 @@ export interface ThemeConfig {
     logoUrl: string | null
   }
   radius: string
+  /**
+   * Override the destructive colour tokens. Omit to use the default dark-violet,
+   * which is visually distinct from any warm (red/orange/rose) brand primary.
+   * For cool-hue palettes (blue, teal, etc.) a conventional red is usually a better choice.
+   */
+  destructive?: DestructiveConfig
 }
 
 // Each entry: [step, lightness, chroma multiplier, hue offset]
@@ -43,16 +55,19 @@ export function generateOklchScale(palette: PaletteConfig): Scale {
   )
 }
 
-// Fixed destructive violet — visually distinct from any red/orange brand primary.
+// Default destructive — dark violet, visually distinct from any warm (red/orange/rose) brand primary.
 // Light: very dark violet (11.6:1 on white). Dark: lighter violet used as both filled-button
 // background and outline text on dark surfaces (4.7:1 on #1c1c1e). Paired with a near-black
 // violet foreground in dark mode so the filled button also passes (5.6:1).
-const DESTRUCTIVE_LIGHT = "oklch(0.37 0.2 295deg)"
-const DESTRUCTIVE_DARK = "oklch(0.64 0.2 295deg)"
-const DESTRUCTIVE_FOREGROUND_DARK = "oklch(0.12 0.08 295deg)"
+export const DEFAULT_DESTRUCTIVE: DestructiveConfig = {
+  light: "oklch(0.37 0.2 295deg)",
+  dark: "oklch(0.64 0.2 295deg)",
+  foregroundDark: "oklch(0.12 0.08 295deg)",
+}
 
 export function generateThemeCSS(config: ThemeConfig): string {
   const s = generateOklchScale(config.palette)
+  const d = config.destructive ?? DEFAULT_DESTRUCTIVE
 
   return `
     :root {
@@ -70,7 +85,7 @@ export function generateThemeCSS(config: ThemeConfig): string {
       --muted-foreground: ${s[800]};
       --accent: ${s[100]};
       --accent-foreground: ${s[900]};
-      --destructive: ${DESTRUCTIVE_LIGHT};
+      --destructive: ${d.light};
       --destructive-foreground: #ffffff;
       --border: ${s[200]};
       --input: ${s[200]};
@@ -93,8 +108,8 @@ export function generateThemeCSS(config: ThemeConfig): string {
       --muted-foreground: ${s[300]};
       --accent: ${s[800]};
       --accent-foreground: ${s[100]};
-      --destructive: ${DESTRUCTIVE_DARK};
-      --destructive-foreground: ${DESTRUCTIVE_FOREGROUND_DARK};
+      --destructive: ${d.dark};
+      --destructive-foreground: ${d.foregroundDark};
       --border: ${s[800]};
       --input: ${s[800]};
       --ring: ${s[400]};

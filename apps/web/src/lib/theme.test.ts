@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest"
 import type { ThemeConfig } from "./theme"
-import { generateOklchScale, generateThemeCSS } from "./theme"
+import { DEFAULT_DESTRUCTIVE, generateOklchScale, generateThemeCSS } from "./theme"
 
 const testConfig: ThemeConfig = {
   palette: { baseHue: 14, baseChroma: 0.223, hueShift: 14 },
@@ -121,5 +121,28 @@ describe("generateThemeCSS", () => {
     const css = generateThemeCSS({ ...testConfig, radius: "0.75rem" })
     const matches = css.match(/--radius:\s*0\.75rem/g)
     expect(matches).toHaveLength(2)
+  })
+
+  test("uses DEFAULT_DESTRUCTIVE violet when destructive is omitted", () => {
+    const css = generateThemeCSS(testConfig)
+    const rootBlock = css.slice(0, css.indexOf(".dark {"))
+    const darkBlock = css.slice(css.indexOf(".dark {"))
+    expect(rootBlock).toContain(`--destructive: ${DEFAULT_DESTRUCTIVE.light}`)
+    expect(darkBlock).toContain(`--destructive: ${DEFAULT_DESTRUCTIVE.dark}`)
+    expect(darkBlock).toContain(`--destructive-foreground: ${DEFAULT_DESTRUCTIVE.foregroundDark}`)
+  })
+
+  test("uses custom destructive colours when provided in config", () => {
+    const red = {
+      light: "oklch(0.44 0.22 27deg)",
+      dark: "oklch(0.65 0.22 27deg)",
+      foregroundDark: "oklch(0.12 0.08 27deg)",
+    }
+    const css = generateThemeCSS({ ...testConfig, destructive: red })
+    const rootBlock = css.slice(0, css.indexOf(".dark {"))
+    const darkBlock = css.slice(css.indexOf(".dark {"))
+    expect(rootBlock).toContain(`--destructive: ${red.light}`)
+    expect(darkBlock).toContain(`--destructive: ${red.dark}`)
+    expect(darkBlock).toContain(`--destructive-foreground: ${red.foregroundDark}`)
   })
 })

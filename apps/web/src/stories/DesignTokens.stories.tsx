@@ -1,4 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
+import { themes } from "@/config/theme.config"
+import type { ThemeConfig } from "@/lib/theme"
+import { DEFAULT_DESTRUCTIVE, generateOklchScale } from "@/lib/theme"
 
 const meta = {
   title: "Design System/Tokens",
@@ -102,6 +105,83 @@ export const ColourPalette: StoryObj = {
           </div>
         </div>
       ))}
+    </div>
+  ),
+}
+
+const SCALE_STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const
+
+export const ThemeComparison: StoryObj = {
+  parameters: { layout: "padded" },
+  render: () => (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-semibold mb-2">Theme Comparison</h2>
+        <p className="text-sm text-muted-foreground mb-3">
+          To switch the active palette, edit one line in{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+            src/config/theme.config.ts
+          </code>
+          :
+        </p>
+        <pre className="rounded-md bg-muted px-4 py-3 font-mono text-sm leading-relaxed">
+          {`// ← change "orange" to "steel" (or any key in the themes object)\nexport const themeConfig = themes.orange`}
+        </pre>
+      </div>
+
+      <div className="grid grid-cols-1 gap-10 sm:grid-cols-2">
+        {(Object.entries(themes) as [string, ThemeConfig][]).map(([name, config]) => {
+          const scale = generateOklchScale(config.palette)
+          const destructive = config.destructive ?? DEFAULT_DESTRUCTIVE
+          return (
+            <div key={name}>
+              <h3 className="mb-4 text-base font-semibold capitalize">{name}</h3>
+
+              {/* Colour scale */}
+              <div className="space-y-1.5 mb-6">
+                {SCALE_STEPS.map((step) => (
+                  <div key={step} className="flex items-center gap-3">
+                    <div
+                      className="h-7 w-14 shrink-0 rounded border"
+                      style={{ backgroundColor: scale[step] }}
+                    />
+                    <span className="w-8 shrink-0 font-mono text-xs text-right text-muted-foreground">
+                      {step}
+                    </span>
+                    <span className="font-mono text-xs text-muted-foreground truncate">
+                      {scale[step]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Destructive */}
+              <div className="border-t pt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Destructive
+                </p>
+                {(
+                  [
+                    ["Light mode", destructive.light],
+                    ["Dark mode", destructive.dark],
+                  ] as const
+                ).map(([label, value]) => (
+                  <div key={label} className="flex items-center gap-3 mb-2">
+                    <div
+                      className="h-7 w-14 shrink-0 rounded border"
+                      style={{ backgroundColor: value }}
+                    />
+                    <span className="w-20 shrink-0 text-xs text-muted-foreground">{label}</span>
+                    <span className="font-mono text-xs text-muted-foreground truncate">
+                      {value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   ),
 }
