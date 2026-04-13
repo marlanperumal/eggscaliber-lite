@@ -5,12 +5,14 @@ from src.models.analytics import (
     CrosstabMeta,
     CrosstabRequest,
     CrosstabResponse,
+    FieldTreeOut,
     MetaField,
     ResultRow,
     TrendMeta,
     TrendRequest,
     TrendResponse,
 )
+from src.models.dataset import FieldOut
 from src.repositories import analytics_repo, collection_repo
 from src.services import crosstab_service, trend_service
 from src.workers.factory import WorkerFactory
@@ -113,3 +115,19 @@ def run_trend(session: Session, request: TrendRequest) -> TrendResponse:
         collection_name=col.name,
     )
     return TrendResponse(meta=meta, rows=[ResultRow(**r) for r in result_rows])
+
+
+def get_field_tree(session: Session, dataset_id: int) -> FieldTreeOut:
+    """Raises DatasetNotFoundError if dataset_id does not exist."""
+    ds = analytics_repo.get_dataset(session, dataset_id)
+    if ds is None:
+        raise DatasetNotFoundError(dataset_id)
+    return analytics_repo.get_field_tree(session, dataset_id)
+
+
+def get_weight_fields(session: Session, dataset_id: int) -> list[FieldOut]:
+    """Raises DatasetNotFoundError if dataset_id does not exist."""
+    ds = analytics_repo.get_dataset(session, dataset_id)
+    if ds is None:
+        raise DatasetNotFoundError(dataset_id)
+    return analytics_repo.get_weight_fields(session, dataset_id)
