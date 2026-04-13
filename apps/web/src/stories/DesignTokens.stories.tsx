@@ -7,36 +7,101 @@ const meta = {
 
 export default meta
 
-const colours = [
-  { name: "Primary", var: "--primary" },
-  { name: "Primary Foreground", var: "--primary-foreground" },
-  { name: "Secondary", var: "--secondary" },
-  { name: "Secondary Foreground", var: "--secondary-foreground" },
-  { name: "Destructive", var: "--destructive" },
-  { name: "Muted", var: "--muted" },
-  { name: "Muted Foreground", var: "--muted-foreground" },
-  { name: "Accent", var: "--accent" },
-  { name: "Background", var: "--background" },
-  { name: "Foreground", var: "--foreground" },
-  { name: "Border", var: "--border" },
-  { name: "Card", var: "--card" },
+type TokenGroup = { heading: string; tokens: { name: string; var: string }[] }
+
+const tokenGroups: TokenGroup[] = [
+  {
+    heading: "Surface",
+    tokens: [
+      { name: "Background", var: "--background" },
+      { name: "Foreground", var: "--foreground" },
+    ],
+  },
+  {
+    heading: "Card",
+    tokens: [
+      { name: "Card", var: "--card" },
+      { name: "Card Foreground", var: "--card-foreground" },
+    ],
+  },
+  {
+    heading: "Popover",
+    tokens: [
+      { name: "Popover", var: "--popover" },
+      { name: "Popover Foreground", var: "--popover-foreground" },
+    ],
+  },
+  {
+    heading: "Primary",
+    tokens: [
+      { name: "Primary", var: "--primary" },
+      { name: "Primary Foreground", var: "--primary-foreground" },
+    ],
+  },
+  {
+    heading: "Secondary",
+    tokens: [
+      { name: "Secondary", var: "--secondary" },
+      { name: "Secondary Foreground", var: "--secondary-foreground" },
+    ],
+  },
+  {
+    heading: "Muted",
+    tokens: [
+      { name: "Muted", var: "--muted" },
+      { name: "Muted Foreground", var: "--muted-foreground" },
+    ],
+  },
+  {
+    heading: "Accent",
+    tokens: [
+      { name: "Accent", var: "--accent" },
+      { name: "Accent Foreground", var: "--accent-foreground" },
+    ],
+  },
+  {
+    heading: "Destructive",
+    tokens: [
+      { name: "Destructive", var: "--destructive" },
+      { name: "Destructive Foreground", var: "--destructive-foreground" },
+    ],
+  },
+  {
+    heading: "Chrome",
+    tokens: [
+      { name: "Border", var: "--border" },
+      { name: "Input", var: "--input" },
+      { name: "Ring", var: "--ring" },
+      { name: "Nav", var: "--nav" },
+    ],
+  },
 ]
 
 export const ColourPalette: StoryObj = {
   render: () => (
-    <div>
-      <h2 className="mb-4 text-xl font-semibold">Colour Palette</h2>
-      <div className="grid grid-cols-3 gap-4">
-        {colours.map(({ name, var: v }) => (
-          <div key={v} className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-md border" style={{ backgroundColor: `var(${v})` }} />
-            <div>
-              <p className="text-sm font-medium">{name}</p>
-              <p className="font-mono text-xs text-muted-foreground">{v}</p>
-            </div>
+    <div className="space-y-8">
+      <h2 className="text-xl font-semibold">Colour Palette</h2>
+      {tokenGroups.map(({ heading, tokens }) => (
+        <div key={heading}>
+          <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            {heading}
+          </h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {tokens.map(({ name, var: v }) => (
+              <div key={v} className="flex items-center gap-3">
+                <div
+                  className="h-10 w-10 shrink-0 rounded-md border"
+                  style={{ backgroundColor: `var(${v})` }}
+                />
+                <div>
+                  <p className="text-sm font-medium leading-none">{name}</p>
+                  <p className="mt-1 font-mono text-xs text-muted-foreground">{v}</p>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   ),
 }

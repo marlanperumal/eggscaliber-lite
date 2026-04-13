@@ -1,4 +1,5 @@
-import type { Preview } from "@storybook/nextjs-vite"
+import { withThemeByClassName } from "@storybook/addon-themes"
+import type { Preview, Renderer } from "@storybook/nextjs-vite"
 import "../src/app/globals.css"
 import { themeConfig } from "../src/config/theme.config"
 import { generateThemeCSS } from "../src/lib/theme"
@@ -16,6 +17,15 @@ if (typeof document !== "undefined") {
 }
 
 const preview: Preview = {
+  decorators: [
+    withThemeByClassName<Renderer>({
+      themes: {
+        light: "",
+        dark: "dark",
+      },
+      defaultTheme: "light",
+    }),
+  ],
   parameters: {
     controls: {
       matchers: {
