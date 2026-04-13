@@ -25,7 +25,7 @@ const analyticsParams = {
   cols: parseAsArrayOf(parseAsString).withDefault([]),
   col_mode: parseAsStringLiteral(ROW_COL_MODES).withDefault("stacked"),
   bd: parseAsString,
-  filters: parseAsJson<FilterSpec[]>().withDefault([]),
+  filters: parseAsJson<FilterSpec[]>((v) => v as FilterSpec[]).withDefault([]),
   mt: parseAsStringLiteral(MEASURE_TYPES).withDefault("count"),
   md: parseAsStringLiteral(DISPLAY_TYPES).withDefault("n"),
   mf: parseAsString,

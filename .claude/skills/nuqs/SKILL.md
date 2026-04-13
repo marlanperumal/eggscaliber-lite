@@ -59,7 +59,7 @@ setParams({ mode: 'trend' })
 | `parseAsBoolean` | `boolean \| null` | |
 | `parseAsStringLiteral(['a','b'] as const)` | `'a' \| 'b' \| null` | validates against list |
 | `parseAsArrayOf(parseAsString)` | `string[] \| null` | comma-separated by default |
-| `parseAsJson<T>()` | `T \| null` | JSON encode/decode; use for complex types |
+| `parseAsJson<T>((v) => v as T)` | `T \| null` | JSON encode/decode; requires a validator function (breaking change in newer nuqs) |
 | `parseAsIsoDateTime` | `Date \| null` | ISO 8601 |
 
 All parsers support `.withDefault(value)` to replace `null` with a default, and `.withOptions({...})` for per-param options.
@@ -81,7 +81,7 @@ This project wraps a `QueryConfig` domain type in a thin hook (`useAnalyticsStat
 
 **URL key shorthand** — use short keys (`ds`, `col`, `bd`, `mt`, `md`) via `useQueryStates` with the `urlKeys` option, or just name them directly. Short keys keep URLs legible.
 
-**Complex nested data** (e.g. filters with levels) — use `parseAsJson<T>()` rather than flattening.
+**Complex nested data** (e.g. filters with levels) — use `parseAsJson<T>((v) => v as T)` rather than flattening. The validator is required; a simple cast is fine if you trust the URL source.
 
 ## Testing
 
