@@ -1,0 +1,95 @@
+import { describe, expect, test } from "vitest"
+import type { ThemeConfig } from "./theme"
+import { generateOklchScale, generateThemeCSS } from "./theme"
+
+const testConfig: ThemeConfig = {
+  palette: { baseHue: 14, baseChroma: 0.223, hueShift: 14 },
+  brand: { name: "Test", logoUrl: null },
+  radius: "0.5rem",
+}
+
+describe("generateOklchScale", () => {
+  test("returns all 11 scale steps", () => {
+    const scale = generateOklchScale(testConfig.palette)
+    expect(
+      Object.keys(scale)
+        .map(Number)
+        .sort((a, b) => a - b),
+    ).toEqual([50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950])
+  })
+
+  test("s[600] uses base values with no hue offset", () => {
+    const scale = generateOklchScale(testConfig.palette)
+    expect(scale[600]).toBe("oklch(0.533 0.223 14deg)")
+  })
+
+  test("s[50] has higher hue than s[600] (highlight rotates toward orange)", () => {
+    const scale = generateOklchScale(testConfig.palette)
+    const hOf = (s: string) => parseFloat(s.match(/oklch\([\d.]+ [\d.]+ ([\d.]+)deg\)/)![1])
+    expect(hOf(scale[50])).toBeGreaterThan(hOf(scale[600]))
+  })
+
+  test("s[950] has lower hue than s[600] (shadow rotates toward magenta)", () => {
+    const scale = generateOklchScale(testConfig.palette)
+    const hOf = (s: string) => parseFloat(s.match(/oklch\([\d.]+ [\d.]+ ([\d.]+)deg\)/)![1])
+    expect(hOf(scale[950])).toBeLessThan(hOf(scale[600]))
+  })
+
+  test("s[50] has highest lightness, s[950] has lowest", () => {
+    const scale = generateOklchScale(testConfig.palette)
+    const lOf = (s: string) => parseFloat(s.match(/oklch\(([\d.]+)/)![1])
+    expect(lOf(scale[50])).toBeGreaterThan(lOf(scale[600]))
+    expect(lOf(scale[950])).toBeLessThan(lOf(scale[600]))
+  })
+})
+
+describe("generateThemeCSS", () => {
+  test("contains :root and .dark blocks", () => {
+    const css = generateThemeCSS(testConfig)
+    expect(css).toContain(":root {")
+    expect(css).toContain(".dark {")
+  })
+
+  test("contains all required custom properties in both blocks", () => {
+    const css = generateThemeCSS(testConfig)
+    const required = [
+      "--background",
+      "--foreground",
+      "--card",
+      "--card-foreground",
+      "--primary",
+      "--primary-foreground",
+      "--muted",
+      "--muted-foreground",
+      "--border",
+      "--input",
+      "--ring",
+      "--nav",
+      "--radius",
+    ]
+    for (const v of required) {
+      const count = (css.match(new RegExp(`${v}:`, "g")) ?? []).length
+      expect(count, `${v} should appear twice (once in :root, once in .dark)`).toBe(2)
+    }
+  })
+
+  test("primary-foreground is #ffffff in both :root and .dark", () => {
+    const css = generateThemeCSS(testConfig)
+    const matches = css.match(/--primary-foreground:\s*#ffffff/g)
+    expect(matches).toHaveLength(2)
+  })
+
+  test("primary is the same value in both :root and .dark", () => {
+    const css = generateThemeCSS(testConfig)
+    // Extract all --primary: lines (excluding --primary-foreground)
+    const matches = css.match(/--primary:\s*(oklch\([^)]+\))/g)
+    expect(matches).toHaveLength(2)
+    expect(matches![0]).toBe(matches![1])
+  })
+
+  test("radius is injected from config", () => {
+    const css = generateThemeCSS({ ...testConfig, radius: "0.75rem" })
+    const matches = css.match(/--radius:\s*0\.75rem/g)
+    expect(matches).toHaveLength(2)
+  })
+})
