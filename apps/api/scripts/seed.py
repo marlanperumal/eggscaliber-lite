@@ -20,10 +20,7 @@ random.seed(42)
 
 
 async def run():
-    db_url = settings.database_url.replace("postgresql://", "postgresql+asyncpg://", 1).replace(
-        "postgres://", "postgresql+asyncpg://", 1
-    )
-    engine = create_async_engine(db_url)
+    engine = create_async_engine(settings.async_database_url)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     async with session_factory() as session:
         try:

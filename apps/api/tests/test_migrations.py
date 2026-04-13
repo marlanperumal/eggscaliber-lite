@@ -21,7 +21,9 @@ def migrations_engine():
     Uses eggscaliber_migrations_test so the cycle does not disrupt the
     main test DB that other tests rely on being at head.
     """
-    sync_url = settings.migrations_test_database_url.replace("+asyncpg", "")
+    sync_url = settings.migrations_test_database_url.replace(
+        "postgresql://", "postgresql+psycopg2://", 1
+    )
     eng = create_engine(sync_url)
     yield eng
     eng.dispose()
@@ -60,7 +62,7 @@ def test_migration_upgrade_downgrade_cycle(alembic_config, migrations_engine):
         conn.execute(text("CREATE SCHEMA public"))
 
     cycle_config = Config(ALEMBIC_CFG_PATH)
-    cycle_config.set_main_option("sqlalchemy.url", settings.migrations_test_database_url)
+    cycle_config.set_main_option("sqlalchemy.url", settings.async_migrations_test_database_url)
 
     command.upgrade(cycle_config, "head")
     command.downgrade(cycle_config, "base")

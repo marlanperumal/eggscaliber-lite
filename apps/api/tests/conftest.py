@@ -24,7 +24,7 @@ def event_loop():
 
 @pytest_asyncio.fixture(scope="session")
 async def async_engine():
-    engine = create_async_engine(settings.test_database_url)
+    engine = create_async_engine(settings.async_test_database_url)
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.drop_all)
         await conn.run_sync(SQLModel.metadata.create_all)

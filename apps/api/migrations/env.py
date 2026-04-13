@@ -10,10 +10,7 @@ from src.config import settings
 config = context.config
 
 if not config.get_main_option("sqlalchemy.url", default=None):
-    db_url = settings.database_url.replace("postgresql://", "postgresql+asyncpg://", 1).replace(
-        "postgres://", "postgresql+asyncpg://", 1
-    )
-    config.set_main_option("sqlalchemy.url", db_url)
+    config.set_main_option("sqlalchemy.url", settings.async_database_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
