@@ -2,12 +2,17 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from src.config import settings
 
-engine = None
-SessionLocal = None
+engine: AsyncEngine | None = None
+SessionLocal: async_sessionmaker[AsyncSession] | None = None
 
 
 @asynccontextmanager
@@ -20,5 +25,6 @@ async def lifespan(app: FastAPI):
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    assert SessionLocal is not None
     async with SessionLocal() as session:
         yield session
