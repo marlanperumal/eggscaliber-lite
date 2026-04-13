@@ -8,6 +8,12 @@ const testConfig: ThemeConfig = {
   radius: "0.5rem",
 }
 
+const directionalConfig: ThemeConfig = {
+  palette: { baseHue: 200, baseChroma: 0.223, hueShift: 14 },
+  brand: { name: "Test", logoUrl: null },
+  radius: "0.5rem",
+}
+
 describe("generateOklchScale", () => {
   test("returns all 11 scale steps", () => {
     const scale = generateOklchScale(testConfig.palette)
@@ -24,15 +30,22 @@ describe("generateOklchScale", () => {
   })
 
   test("s[50] has higher hue than s[600] (highlight rotates toward orange)", () => {
-    const scale = generateOklchScale(testConfig.palette)
+    const scale = generateOklchScale(directionalConfig.palette)
     const hOf = (s: string) => parseFloat(s.match(/oklch\([\d.]+ [\d.]+ ([\d.]+)deg\)/)![1])
     expect(hOf(scale[50])).toBeGreaterThan(hOf(scale[600]))
   })
 
   test("s[950] has lower hue than s[600] (shadow rotates toward magenta)", () => {
-    const scale = generateOklchScale(testConfig.palette)
+    const scale = generateOklchScale(directionalConfig.palette)
     const hOf = (s: string) => parseFloat(s.match(/oklch\([\d.]+ [\d.]+ ([\d.]+)deg\)/)![1])
     expect(hOf(scale[950])).toBeLessThan(hOf(scale[600]))
+  })
+
+  test("hue wraps correctly for baseHue near 0 (does not clamp to 0)", () => {
+    const scale = generateOklchScale({ baseHue: 2, baseChroma: 0.2, hueShift: 14 })
+    const hOf = (s: string) => parseFloat(s.match(/oklch\([\d.]+ [\d.]+ ([\d.]+)deg\)/)![1])
+    // step 950: rawHue = 2 + (-16) = -14, should wrap to 346, not clamp to 0
+    expect(hOf(scale[950])).toBeCloseTo(346, 0)
   })
 
   test("s[50] has highest lightness, s[950] has lowest", () => {

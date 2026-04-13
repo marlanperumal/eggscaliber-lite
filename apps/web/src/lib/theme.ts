@@ -1,7 +1,7 @@
 export interface PaletteConfig {
   baseHue: number
   baseChroma: number
-  hueShift: number
+  hueShift: number // stored for documentation; per-step hue offsets are fixed in SCALE_STEPS
 }
 
 export interface ThemeConfig {
@@ -36,8 +36,8 @@ export function generateOklchScale(palette: PaletteConfig): Scale {
   return Object.fromEntries(
     SCALE_STEPS.map(([step, L, cMult, dH]) => {
       const rawHue = H + dH
-      // Clamp to [0, 360) keeping hue as non-negative for CSS compatibility
-      const hue = Math.max(0, rawHue % 360)
+      // Wrap to [0, 360) — JS % preserves sign, so add 360 before second modulo
+      const hue = ((rawHue % 360) + 360) % 360
       return [step, `oklch(${L} ${(C * cMult).toFixed(3)} ${hue}deg)`]
     }),
   )
