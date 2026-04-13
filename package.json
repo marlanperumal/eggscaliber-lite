@@ -7,7 +7,15 @@
   "pnpm": {
     "overrides": {
       "axios": ">=1.15.0"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@clerk/shared",
+      "@sentry/cli",
+      "@posthog/cli",
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
+    ]
   },
   "devDependencies": {
     "@commitlint/cli": "^20.5.0",
