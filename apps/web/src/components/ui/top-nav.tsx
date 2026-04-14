@@ -50,6 +50,9 @@ export function TopNav() {
               aria-label="Toggle colour scheme"
               className="text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
             >
+              {/* Exception: dark: classes here are transform utilities (rotate/scale) for icon
+                  animation — not colour overrides. The "no dark: overrides" rule targets
+                  dark:text-* and dark:bg-* only. */}
               <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             </Button>
