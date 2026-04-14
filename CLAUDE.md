@@ -97,6 +97,7 @@ just audit          # pip-audit + pnpm audit
 - Never mock the database or internal services — see `docs/testing.md`
 - Architecture rules are in `docs/patterns.md` — run `audit-patterns` skill periodically
 - Frontend styling uses a token-based design system — see `docs/patterns/design-system.md`. Never use raw hex values or `text-primary` as a text colour. Never write `dark:` overrides — tokens handle both modes. Every new component needs a Storybook story with a11y passing.
+- Test locators: use `data-testid` on structural containers (chip wrappers, list rows, panel regions); use `getByRole`/`getByText` for assertions about interactive elements and visible content. Never locate by CSS class. See `docs/testing.md`.
 
 ## Skills
 

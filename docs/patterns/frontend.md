@@ -42,6 +42,42 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = { args: { children: "Click me" } }
 ```
 
+## Testable Components
+
+Add `data-testid` to structural containers — elements that hold interactive children but have no meaningful accessible role of their own. Do not add testids to interactive elements (buttons, inputs, selects) or to elements whose text content is the thing being asserted.
+
+**Naming convention:** `{component}-{identifier}`, e.g. `field-chip`, `field-row-brand_awareness`, `results-panel`.
+
+```tsx
+// ✅ Structural container — no role, identified by content
+<div data-testid={`field-row-${f.field_key}`} className="group flex ...">
+  <button>+R</button>
+  <button>+C</button>
+</div>
+
+// ✅ Chip wrapper — wraps content but is not itself interactive
+<div data-testid="field-chip" className="flex items-center ...">
+  <span>{f.display_name}</span>
+  <button><X /></button>
+</div>
+
+// ❌ Don't add testid to interactive elements — use getByRole instead
+<button data-testid="run-button">Run</button>
+```
+
+In tests, locate containers by testid and interactive elements within them by role:
+
+```typescript
+// Unit tests
+within(screen.getByTestId("field-row-gender")).getByRole("button", { name: "+C" })
+
+// E2E
+page.getByTestId("field-row-gender").getByRole("button", { name: "+C" })
+page.getByTestId("field-chip").filter({ hasText: "Brand Awareness" })
+```
+
+Never locate elements by CSS class names — they couple tests to Tailwind implementation details and break silently when styles change.
+
 ## Feature Flags
 
 Use PostHog via `@posthog/next` — do not import from `posthog-js/react` directly.
@@ -68,6 +104,22 @@ export default async function Page() {
   const flags = await posthog.getAllFlags()
 }
 ```
+
+**`useFeatureFlag` returns `undefined` while PostHog resolves flags** — always handle this loading state explicitly, otherwise the component will render nothing (or the wrong branch) until flags arrive:
+
+```typescript
+'use client'
+import { useFeatureFlag } from "@posthog/next"
+
+function AnalyticsPage() {
+  const enabled = useFeatureFlag("analytics-engine")
+  if (enabled === undefined) return <LoadingSpinner />  // flags still loading
+  if (!enabled) return <NotFound />
+  return <AnalyticsApp />
+}
+```
+
+In E2E tests, the `e2e/fixtures.ts` fixture intercepts PostHog's `/flags` endpoint and returns all flags as enabled so tests never block on this loading state. Always import from `./fixtures` not `@playwright/test` directly.
 
 Event capture in client components:
 

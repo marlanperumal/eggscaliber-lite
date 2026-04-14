@@ -81,7 +81,8 @@ Mock only at true external boundaries. For frontend code, the boundaries are:
 | URL state (nuqs) | `vi.mock('nuqs', ...)` — mock `useQueryStates`, keep real parsers |
 | Clerk auth | Use `AUTH_MODE=dev` where possible; mock `@clerk/nextjs` in unit tests |
 | API calls (`openapi-fetch`) | Mock the `api` client instance |
-| PostHog | Mock `@posthog/next` hooks |
+| PostHog (E2E) | Playwright network interception in `e2e/fixtures.ts` — intercepts `/flags` endpoint at network level |
+| PostHog (unit) | Not needed — analytics components don't call PostHog hooks directly; the flag gate lives at the page level |
 
 **Do not mock `next/navigation` directly.** URL state is managed through nuqs — mock `useQueryStates` instead. This keeps tests decoupled from Next.js router internals.
 
@@ -113,16 +114,31 @@ Test that the hook assembles the right domain type from params, and that calling
 
 ### Component tests
 
-Use `@testing-library/react` and query by role or visible text — not by class names or test IDs:
+Use `@testing-library/react` with a consistent locator strategy:
+
+- **`getByTestId`** to find structural containers (chip wrappers, list rows, panel regions)
+- **`getByRole`** / **`getByText`** to find interactive elements within those containers, and for content assertions
+- **Never locate by CSS class** — Tailwind class names are implementation details
 
 ```typescript
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 
 it('renders the heading', () => {
   render(<Page />)
+  // Content assertion — getByRole is appropriate here
   expect(screen.getByRole('heading', { name: /eggscaliber-lite/i })).toBeInTheDocument()
 })
+
+it('removes a chip when × is clicked', async () => {
+  render(<Zone fields={[{ field_key: 'gender', display_name: 'Gender' }]} ... />)
+  // Locate the container by testid, then the button by role within it
+  const chip = screen.getByTestId('field-chip-gender')
+  await userEvent.click(within(chip).getByRole('button'))
+  expect(onRemove).toHaveBeenCalledWith('gender')
+})
 ```
+
+See `docs/patterns/frontend.md` for the full testid naming convention and which elements should carry a testid.
 
 Components that use nuqs hooks will need those hooks mocked as above. Components that use `NuqsAdapter` context can be wrapped with it in the test render if needed.
 
@@ -208,7 +224,7 @@ playwright.config.ts  # Config: servers, retries, reporter
 
 ### Feature flag mocking
 
-The analytics page is gated by a PostHog feature flag. The `e2e/fixtures.ts` fixture intercepts PostHog's `/decide` endpoint and returns all flags as enabled — no real PostHog account or configured flag required.
+The analytics page is gated by a PostHog feature flag. The `e2e/fixtures.ts` fixture intercepts PostHog's `/flags` endpoint at the network level and returns all flags as enabled — no real PostHog account or configured flag required. It also swallows PostHog's capture/ingestion calls so tests don't depend on external network access.
 
 Always import from `./fixtures` rather than `@playwright/test` directly so the PostHog mock is active:
 
@@ -220,7 +236,9 @@ import { expect, test } from "@playwright/test"  // ❌ flag gate not bypassed
 ### Writing new E2E tests
 
 - Test the happy path of a user flow, not implementation details
-- Use `page.getByRole` and `page.getByText` — not CSS selectors
+- Use `page.getByTestId` for structural containers, `getByRole`/`getByText` for interactive elements and content assertions — never CSS class selectors
+- Scope clicks on repeated elements (e.g. multiple `+R` buttons) through their row's testid: `page.getByTestId("field-row-gender").getByRole("button", { name: "+R" })`
+- When asserting on text that also appears in hidden `<option>` elements, prefer `getByRole("cell", ...)` or scope to the results container via testid to avoid strict mode violations
 - Assert on what the user would actually see (displayed labels, n counts) — not raw API values
 - Keep tests independent: each test navigates to the page fresh
 - Seed data names are stable (`Brand Tracker`, `Wave 1`, `Brand Awareness`, etc.) — reference them directly
