@@ -59,11 +59,8 @@ export function AnalyticsLayout() {
   )
 
   return (
-    <div className="flex h-screen flex-col">
-      <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <h1 className="text-xl font-bold tracking-tight">Analytics</h1>
-      </div>
-      <Group orientation="horizontal" className="flex-1">
+    <div className="flex h-full flex-col bg-muted">
+      <Group orientation="horizontal" className="flex-1 p-2">
         <Panel
           panelRef={treeRef}
           defaultSize={20}
@@ -72,17 +69,19 @@ export function AnalyticsLayout() {
           collapsedSize={COLLAPSED_SIZE}
           onResize={onTreeResize}
         >
-          {treeCollapsed ? (
-            <CollapsedStrip label="Fields" onClick={toggleTree} />
-          ) : (
-            <FieldTreePanel
-              onCollapse={toggleTree}
-              query={query}
-              onQueryChange={handleQueryChange}
-            />
-          )}
+          <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
+            {treeCollapsed ? (
+              <CollapsedStrip label="Fields" onClick={toggleTree} />
+            ) : (
+              <FieldTreePanel
+                onCollapse={toggleTree}
+                query={query}
+                onQueryChange={handleQueryChange}
+              />
+            )}
+          </div>
         </Panel>
-        <Separator className="w-1 bg-border transition-colors hover:bg-primary/30" />
+        <Separator className="w-2 cursor-col-resize bg-muted transition-colors hover:bg-primary/20" />
         <Panel
           panelRef={builderRef}
           defaultSize={25}
@@ -91,20 +90,24 @@ export function AnalyticsLayout() {
           collapsedSize={COLLAPSED_SIZE}
           onResize={onBuilderResize}
         >
-          {builderCollapsed ? (
-            <CollapsedStrip label="Query" onClick={toggleBuilder} />
-          ) : (
-            <QueryBuilderPanel
-              onCollapse={toggleBuilder}
-              query={query}
-              onQueryChange={handleQueryChange}
-              onResult={setResult}
-            />
-          )}
+          <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
+            {builderCollapsed ? (
+              <CollapsedStrip label="Query" onClick={toggleBuilder} />
+            ) : (
+              <QueryBuilderPanel
+                onCollapse={toggleBuilder}
+                query={query}
+                onQueryChange={handleQueryChange}
+                onResult={setResult}
+              />
+            )}
+          </div>
         </Panel>
-        <Separator className="w-1 bg-border transition-colors hover:bg-primary/30" />
+        <Separator className="w-2 cursor-col-resize bg-muted transition-colors hover:bg-primary/20" />
         <Panel defaultSize={55} minSize={20}>
-          <ResultsPanel result={result} query={query} />
+          <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
+            <ResultsPanel result={result} query={query} />
+          </div>
         </Panel>
       </Group>
     </div>
@@ -116,7 +119,7 @@ function CollapsedStrip({ label, onClick }: { label: string; onClick: () => void
     <button
       type="button"
       onClick={onClick}
-      className="flex h-full w-full cursor-pointer items-center justify-center bg-muted/30 transition-colors hover:bg-muted/60"
+      className="flex h-full w-full cursor-pointer items-center justify-center transition-colors hover:bg-muted/60"
     >
       <span
         className="text-xs font-medium tracking-widest text-muted-foreground"
