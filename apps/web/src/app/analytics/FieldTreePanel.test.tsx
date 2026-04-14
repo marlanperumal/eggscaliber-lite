@@ -195,17 +195,16 @@ describe("FieldTreePanel", () => {
 
     // onQueryChange should have been called to enrich the display_name
     await waitFor(() => expect(onQueryChange).toHaveBeenCalled())
-    const updater = onQueryChange.mock.calls.find(([arg]) => typeof arg === "function")?.[0] as (
-      prev: QueryConfig,
-    ) => QueryConfig
+    const updater = onQueryChange.mock.calls.find(([arg]) => typeof arg === "function")?.[0] as
+      | ((prev: QueryConfig) => QueryConfig)
+      | undefined
 
-    if (updater) {
-      const prev = makeQuery({
-        dataset_id: 1,
-        rows: [{ field_key: "brand_awareness" }],
-      })
-      const result = updater(prev)
-      expect(result.rows[0].display_name).toBe("Brand Awareness")
-    }
+    expect(updater).toBeDefined()
+    const prev = makeQuery({
+      dataset_id: 1,
+      rows: [{ field_key: "brand_awareness" }],
+    })
+    const enriched = updater!(prev)
+    expect(enriched.rows[0].display_name).toBe("Brand Awareness")
   })
 })

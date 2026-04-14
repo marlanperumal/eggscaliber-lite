@@ -331,6 +331,92 @@ async def test_trend_with_nonexistent_collection_returns_404(client):
     assert resp.status_code == 404
 
 
+async def test_crosstab_nested_row_mode_returns_four_part_key(client, db):
+    ds = await _seed_crosstab_fixture(db)
+    resp = await client.post(
+        "/api/v1/analytics/crosstab",
+        json={
+            "dataset_id": ds.id,
+            "rows": [{"field_key": "brand_rating"}, {"field_key": "gender"}],
+            "row_mode": "nested",
+            "columns": [],
+            "col_mode": "stacked",
+            "filters": [],
+            "measure": {
+                "type": "count",
+                "field_key": None,
+                "aggregation": None,
+                "display": "n",
+            },
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    keys = [r["key"] for r in data["rows"]]
+    # Nested mode produces 4-part keys: [field1, level1, field2, level2]
+    assert all(len(k) == 4 for k in keys)
+    assert ["brand_rating", "Good", "gender", "Female"] in keys
+    assert ["brand_rating", "Good", "gender", "Male"] in keys
+
+
+async def test_crosstab_with_filters_reduces_base_n_and_row_counts(client, db):
+    ds = await _seed_crosstab_fixture(db)
+    # Seed has 3 responses: 2 Female, 1 Male. Filter to Female-only → base_n should be 2.
+    resp = await client.post(
+        "/api/v1/analytics/crosstab",
+        json={
+            "dataset_id": ds.id,
+            "rows": [{"field_key": "brand_rating"}],
+            "row_mode": "stacked",
+            "columns": [],
+            "col_mode": "stacked",
+            "filters": [{"field_key": "gender", "levels": ["Female"], "value_range": None}],
+            "measure": {
+                "type": "count",
+                "field_key": None,
+                "aggregation": None,
+                "display": "n",
+            },
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["meta"]["base_n"] == 2
+    good = next(r for r in data["rows"] if r["key"] == ["brand_rating", "Good"])
+    poor = next(r for r in data["rows"] if r["key"] == ["brand_rating", "Poor"])
+    assert good["values"]["Total"] == 1.0
+    assert poor["values"]["Total"] == 1.0
+
+
+async def test_trend_with_filters_reduces_results(client, db):
+    col = await _seed_trend_fixture(db)
+    # Seed has 3 responses per wave: 2 Aware, 1 Not Aware.
+    # Filter to Aware-only → only Aware rows survive; Not Aware rows have 0 count.
+    resp = await client.post(
+        "/api/v1/analytics/trend",
+        json={
+            "collection_id": col.id,
+            "fields": [{"field_key": "brand_awareness"}],
+            "breakdown": None,
+            "filters": [{"field_key": "brand_awareness", "levels": ["Aware"], "value_range": None}],
+            "measure": {
+                "type": "count",
+                "field_key": None,
+                "aggregation": None,
+                "display": "n",
+            },
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    aware_rows = [r for r in data["rows"] if r["key"][2] == "Aware"]
+    not_aware_rows = [r for r in data["rows"] if r["key"][2] == "Not Aware"]
+    # All Aware rows should have count 2 (only Aware responses survive the filter)
+    assert all(r["values"]["Total"] == 2.0 for r in aware_rows)
+    # Not Aware rows are still emitted (level exists in metadata) but have count 0
+    assert all(r["values"]["Total"] == 0.0 for r in not_aware_rows)
+
+
 async def test_trend_with_breakdown_returns_breakdown_level_columns(client, db):
     col = await _seed_trend_fixture(db)
     resp = await client.post(

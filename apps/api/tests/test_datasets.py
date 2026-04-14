@@ -96,6 +96,12 @@ async def test_get_dataset_responses_page_size_limits_items(client, db):
     assert len(data["items"]) == 1
 
 
+async def test_get_dataset_responses_page_size_above_maximum_returns_422(client, db):
+    ds = await _seed_dataset(db)
+    response = await client.get(f"/api/v1/datasets/{ds.id}/responses?page_size=600")
+    assert response.status_code == 422
+
+
 async def test_get_dataset_responses_not_found(client):
     response = await client.get("/api/v1/datasets/99999/responses")
     assert response.status_code == 404

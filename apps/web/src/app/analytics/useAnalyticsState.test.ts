@@ -103,6 +103,21 @@ describe("useAnalyticsState", () => {
     expect(call.ds).toBe(5)
   })
 
+  it("assembles collection_id from col URL param", () => {
+    vi.mocked(useQueryStates).mockReturnValue([{ ...defaultParams, col: 99 }, mockSetP])
+    const { result } = renderHook(() => useAnalyticsState())
+    expect(result.current.query.collection_id).toBe(99)
+  })
+
+  it("setQuery encodes collection_id to col URL param", () => {
+    const { result } = renderHook(() => useAnalyticsState())
+    act(() => {
+      result.current.setQuery({ ...DEFAULT_QUERY, collection_id: 12 })
+    })
+    const call = vi.mocked(mockSetP).mock.calls[0][0]
+    expect(call.col).toBe(12)
+  })
+
   it("setQuery maps breakdown and measure correctly", () => {
     const { result } = renderHook(() => useAnalyticsState())
     act(() => {
