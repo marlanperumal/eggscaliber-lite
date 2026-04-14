@@ -66,26 +66,21 @@ function renderPanel(
 
 beforeEach(() => {
   vi.clearAllMocks()
-  // Default: scope loads successfully with no packages
   mockGet.mockResolvedValue({ data: SCOPE_RESPONSE } as never)
 })
 
 describe("QueryBuilderPanel", () => {
-  it("renders mode tabs and defaults to cross-tab", () => {
+  it("renders mode cards and defaults to cross-tab", () => {
     renderPanel()
-    expect(screen.getByRole("button", { name: "Cross-tab" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Trending" })).toBeInTheDocument()
-    // Cross-tab shows Dataset scope picker
+    expect(screen.getByRole("button", { name: /cross-tab/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /trending/i })).toBeInTheDocument()
     expect(screen.getByText("Dataset")).toBeInTheDocument()
   })
 
   it("switching to Trending shows Collection scope picker", async () => {
     const user = userEvent.setup()
     renderPanel()
-    await user.click(screen.getByRole("button", { name: "Trending" }))
-    // onQueryChange is called with mode: 'trend'
-    // But since query is controlled from outside, we also test the label change
-    // Re-render with trend mode to simulate the controlled update
+    await user.click(screen.getByRole("button", { name: /trending/i }))
     renderPanel(makeQuery({ mode: "trend" }))
     expect(screen.getByText("Collection")).toBeInTheDocument()
   })
@@ -93,7 +88,7 @@ describe("QueryBuilderPanel", () => {
   it("shows error when Run clicked without a dataset in crosstab mode", async () => {
     const user = userEvent.setup()
     renderPanel(makeQuery({ dataset_id: null }))
-    await user.click(screen.getByRole("button", { name: "Run" }))
+    await user.click(screen.getByRole("button", { name: /run query/i }))
     expect(screen.getByText("Select a dataset first")).toBeInTheDocument()
     expect(mockPost).not.toHaveBeenCalled()
   })
@@ -101,7 +96,7 @@ describe("QueryBuilderPanel", () => {
   it("shows error when Run clicked without a collection in trend mode", async () => {
     const user = userEvent.setup()
     renderPanel(makeQuery({ mode: "trend", collection_id: null }))
-    await user.click(screen.getByRole("button", { name: "Run" }))
+    await user.click(screen.getByRole("button", { name: /run query/i }))
     expect(screen.getByText("Select a collection first")).toBeInTheDocument()
     expect(mockPost).not.toHaveBeenCalled()
   })
@@ -116,7 +111,7 @@ describe("QueryBuilderPanel", () => {
       }),
     )
 
-    await user.click(screen.getByRole("button", { name: "Run" }))
+    await user.click(screen.getByRole("button", { name: /run query/i }))
 
     await waitFor(() => expect(mockPost).toHaveBeenCalledOnce())
     expect(mockPost).toHaveBeenCalledWith(
@@ -130,12 +125,11 @@ describe("QueryBuilderPanel", () => {
 
   it("shows loading state while API call is in flight", async () => {
     const user = userEvent.setup()
-    // Never-resolving promise to keep loading state visible
     mockPost.mockReturnValueOnce(new Promise(() => {}) as never)
     renderPanel(makeQuery({ dataset_id: 1 }))
 
-    await user.click(screen.getByRole("button", { name: "Run" }))
-    expect(screen.getByRole("button", { name: "Running…" })).toBeDisabled()
+    await user.click(screen.getByRole("button", { name: /run query/i }))
+    expect(screen.getByRole("button", { name: /running/i })).toBeDisabled()
   })
 
   it("shows error message when API call fails", async () => {
@@ -143,7 +137,7 @@ describe("QueryBuilderPanel", () => {
     mockPost.mockResolvedValueOnce({ error: { detail: "Internal Server Error" } } as never)
     renderPanel(makeQuery({ dataset_id: 1 }))
 
-    await user.click(screen.getByRole("button", { name: "Run" }))
+    await user.click(screen.getByRole("button", { name: /run query/i }))
 
     await waitFor(() => expect(screen.getByText(/internal server error/i)).toBeInTheDocument())
   })
@@ -190,23 +184,46 @@ describe("QueryBuilderPanel", () => {
     expect(updatedQuery.filters).toHaveLength(0)
   })
 
-  it("measure type selection calls onQueryChange with updated measure", async () => {
+  it("measure matrix: clicking a cell sets type and display together", async () => {
     const user = userEvent.setup()
     const { onQueryChange } = renderPanel(makeQuery({ dataset_id: 1 }))
 
-    await user.click(screen.getByRole("button", { name: "Weighted" }))
+    await user.click(screen.getByRole("button", { name: "Weighted, N" }))
     expect(onQueryChange).toHaveBeenCalled()
     const updatedQuery = onQueryChange.mock.calls[0][0] as QueryConfig
     expect(updatedQuery.measure.type).toBe("weighted")
+    expect(updatedQuery.measure.display).toBe("n")
   })
 
-  it("display type selection calls onQueryChange with updated display", async () => {
+  it("measure matrix: clicking a display row sets the correct display", async () => {
     const user = userEvent.setup()
     const { onQueryChange } = renderPanel(makeQuery({ dataset_id: 1 }))
 
-    await user.click(screen.getByRole("button", { name: "% Col" }))
+    await user.click(screen.getByRole("button", { name: "Count, % Col" }))
     expect(onQueryChange).toHaveBeenCalled()
     const updatedQuery = onQueryChange.mock.calls[0][0] as QueryConfig
     expect(updatedQuery.measure.display).toBe("pct_col")
+  })
+
+  it("shows stacked/nested toggle inside zone when 2+ fields are present", () => {
+    renderPanel(
+      makeQuery({
+        rows: [
+          { field_key: "gender", display_name: "Gender" },
+          { field_key: "age_group", display_name: "Age Group" },
+        ],
+      }),
+    )
+    expect(screen.getByRole("button", { name: "Stacked ↕" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Nested →" })).toBeInTheDocument()
+  })
+
+  it("does not show stacked/nested toggle with fewer than 2 fields", () => {
+    renderPanel(
+      makeQuery({
+        rows: [{ field_key: "gender", display_name: "Gender" }],
+      }),
+    )
+    expect(screen.queryByRole("button", { name: "Stacked ↕" })).not.toBeInTheDocument()
   })
 })
