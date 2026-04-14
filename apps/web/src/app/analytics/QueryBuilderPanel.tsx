@@ -1,15 +1,59 @@
 "use client"
-import { Trash2, X } from "lucide-react"
+import { Play, X } from "lucide-react"
 import { useEffect, useState } from "react"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { api } from "@/lib/api"
+import { cn } from "@/lib/utils"
 import type {
   AnalyticsResult,
   DisplayType,
   FieldSelection,
+  FilterSpec,
+  MeasureSpec,
   MeasureType,
   QueryConfig,
 } from "./analytics-types"
 import { DEFAULT_QUERY } from "./analytics-types"
+
+// ── Field type display config ──────────────────────────────────────────────
+
+const FIELD_TYPE_CONFIG: Record<string, { color: string; icon: string }> = {
+  single_response: { color: "#6366f1", icon: "◯" },
+  multi_response: { color: "#0ea5e9", icon: "⊕" },
+  ordinal: { color: "#f59e0b", icon: "≡" },
+  numeric: { color: "#10b981", icon: "#" },
+}
+
+// ── Measure matrix config ──────────────────────────────────────────────────
+
+const MEASURE_TYPES: { value: MeasureType; label: string; ariaLabel: string }[] = [
+  { value: "count", label: "Count", ariaLabel: "Count" },
+  { value: "weighted", label: "Wtd", ariaLabel: "Weighted" },
+  { value: "value_field", label: "Value", ariaLabel: "Value" },
+]
+
+const DISPLAY_TYPES: { value: DisplayType; label: string }[] = [
+  { value: "n", label: "N" },
+  { value: "pct_col", label: "% Col" },
+  { value: "pct_row", label: "% Row" },
+]
+
+// ── Mode config ────────────────────────────────────────────────────────────
+
+const MODE_CONFIG = [
+  { value: "crosstab" as const, icon: "⊞", label: "Cross-tab", desc: "Compare groups" },
+  { value: "trend" as const, icon: "📈", label: "Trending", desc: "Track over time" },
+]
+
+// ── Props ──────────────────────────────────────────────────────────────────
 
 interface Props {
   onCollapse: () => void
@@ -17,6 +61,8 @@ interface Props {
   onQueryChange: (q: QueryConfig | ((prev: QueryConfig | null) => QueryConfig)) => void
   onResult: (r: AnalyticsResult, q: QueryConfig) => void
 }
+
+// ── Main component ─────────────────────────────────────────────────────────
 
 export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }: Props) {
   const [loading, setLoading] = useState(false)
@@ -81,6 +127,7 @@ export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }
 
   return (
     <div className="flex h-full flex-col">
+      {/* Panel header */}
       <div className="flex items-center justify-between border-b border-border bg-muted/50 px-3 py-2">
         <span className="text-sm font-medium">Query Builder</span>
         <button
@@ -92,19 +139,24 @@ export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }
         </button>
       </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto p-3">
-        {/* Mode tabs */}
-        <div className="flex gap-1 rounded border p-0.5">
-          {(["crosstab", "trend"] as const).map((m) => (
+      <div className="flex-1 space-y-3 overflow-y-auto p-3">
+        {/* Mode mini-cards */}
+        <div className="grid grid-cols-2 gap-1.5">
+          {MODE_CONFIG.map(({ value, icon, label, desc }) => (
             <button
+              key={value}
               type="button"
-              key={m}
-              onClick={() => set({ mode: m })}
-              className={`flex-1 rounded px-2 py-1 text-xs font-medium transition-colors ${
-                q.mode === m ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-              }`}
+              onClick={() => set({ mode: value })}
+              className={cn(
+                "flex flex-col items-center rounded-lg border-2 p-2 text-center transition-colors",
+                q.mode === value
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-border text-muted-foreground hover:border-border/80 hover:bg-muted/50",
+              )}
             >
-              {m === "crosstab" ? "Cross-tab" : "Trending"}
+              <span className="mb-0.5 text-lg leading-none">{icon}</span>
+              <span className="text-xs font-semibold">{label}</span>
+              <span className="mt-0.5 text-[9px] leading-tight text-muted-foreground">{desc}</span>
             </button>
           ))}
         </div>
@@ -137,20 +189,25 @@ export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }
         {/* Breakdown (trend only) */}
         {q.mode === "trend" && (
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Break down by
             </p>
             {q.breakdown ? (
-              <div className="mt-1 flex items-center gap-1 rounded border px-2 py-1">
-                <span className="flex-1 text-sm">
-                  {q.breakdown.display_name ?? q.breakdown.field_key}
-                </span>
-                <button type="button" onClick={() => set({ breakdown: null })}>
-                  <Trash2 className="h-3 w-3" />
+              <div
+                data-testid={`field-chip-${q.breakdown.field_key}`}
+                className="flex w-fit items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+              >
+                <span>{q.breakdown.display_name ?? q.breakdown.field_key}</span>
+                <button
+                  type="button"
+                  onClick={() => set({ breakdown: null })}
+                  className="text-primary/60 hover:text-primary"
+                >
+                  <X className="h-2.5 w-2.5" />
                 </button>
               </div>
             ) : (
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="text-[10px] text-muted-foreground">
                 Click a field in the field tree to add it here.
               </p>
             )}
@@ -160,81 +217,91 @@ export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }
         {/* Filters */}
         {q.filters.length > 0 && (
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Filters
             </p>
-            <div className="mt-1 space-y-1">
+            <div className="flex flex-wrap gap-1">
               {q.filters.map((f) => (
-                <div
-                  key={f.field_key}
-                  data-testid={`field-chip-${f.field_key}`}
-                  className="flex items-center gap-1 rounded border px-2 py-1"
-                >
-                  <span className="flex-1 text-sm">{f.display_name ?? f.field_key}</span>
-                  {f.levels && (
-                    <span className="text-xs text-muted-foreground">{f.levels.join(", ")}</span>
-                  )}
-                  <button type="button" onClick={() => removeFilter(f.field_key)}>
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                </div>
+                <FilterChip key={f.field_key} filter={f} onRemove={removeFilter} />
               ))}
             </div>
           </div>
         )}
 
-        {/* Measure */}
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Measure
-          </p>
-          <div className="mt-1 flex gap-1 rounded border p-0.5">
-            {(["count", "weighted", "value_field"] as MeasureType[]).map((t) => (
-              <button
-                type="button"
-                key={t}
-                onClick={() => set({ measure: { ...q.measure, type: t } })}
-                className={`flex-1 rounded px-2 py-1 text-xs transition-colors ${
-                  q.measure.type === t ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                }`}
-              >
-                {t === "count" ? "Count" : t === "weighted" ? "Weighted" : "Value"}
-              </button>
-            ))}
-          </div>
-          <div className="mt-2 flex gap-1 rounded border p-0.5">
-            {(["n", "pct_col", "pct_row"] as DisplayType[]).map((d) => (
-              <button
-                type="button"
-                key={d}
-                onClick={() => set({ measure: { ...q.measure, display: d } })}
-                className={`flex-1 rounded px-2 py-1 text-xs transition-colors ${
-                  q.measure.display === d
-                    ? "bg-secondary text-secondary-foreground"
-                    : "hover:bg-muted"
-                }`}
-              >
-                {d === "n" ? "N" : d === "pct_col" ? "% Col" : "% Row"}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Measure matrix */}
+        <MeasureMatrix measure={q.measure} onSet={set} />
       </div>
 
+      {/* Run button */}
       <div className="border-t border-border p-3">
         {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
         <button
           type="button"
           onClick={run}
           disabled={loading}
-          className="w-full rounded bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
-          {loading ? "Running…" : "Run"}
+          <Play className="h-3 w-3" aria-hidden />
+          {loading ? "Running…" : "Run Query"}
         </button>
       </div>
     </div>
   )
 }
+
+// ── FieldChip ──────────────────────────────────────────────────────────────
+
+function FieldChip({ field, onRemove }: { field: FieldSelection; onRemove: (fk: string) => void }) {
+  const typeConfig = field.field_type ? FIELD_TYPE_CONFIG[field.field_type] : null
+  return (
+    <div
+      data-testid={`field-chip-${field.field_key}`}
+      className="flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+    >
+      {typeConfig ? (
+        <span
+          className="flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-full text-[8px] font-black text-white"
+          style={{ background: typeConfig.color }}
+        >
+          {typeConfig.icon}
+        </span>
+      ) : (
+        <span className="h-[18px] w-[18px] flex-shrink-0 rounded-full bg-muted" />
+      )}
+      <span>{field.display_name ?? field.field_key}</span>
+      <button
+        type="button"
+        onClick={() => onRemove(field.field_key)}
+        className="ml-0.5 text-primary/60 hover:text-primary"
+      >
+        <X className="h-2.5 w-2.5" />
+      </button>
+    </div>
+  )
+}
+
+// ── FilterChip ─────────────────────────────────────────────────────────────
+
+function FilterChip({ filter, onRemove }: { filter: FilterSpec; onRemove: (fk: string) => void }) {
+  return (
+    <div
+      data-testid={`field-chip-${filter.field_key}`}
+      className="flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+    >
+      <span>{filter.display_name ?? filter.field_key}</span>
+      {filter.levels && <span className="text-primary/60">{filter.levels.join(", ")}</span>}
+      <button
+        type="button"
+        onClick={() => onRemove(filter.field_key)}
+        className="ml-0.5 text-primary/60 hover:text-primary"
+      >
+        <X className="h-2.5 w-2.5" />
+      </button>
+    </div>
+  )
+}
+
+// ── Zone ───────────────────────────────────────────────────────────────────
 
 function Zone({
   label,
@@ -251,46 +318,127 @@ function Zone({
   onModeChange: (m: "stacked" | "nested") => void
   showModeSelector: boolean
 }) {
+  const isEmpty = fields.length === 0
   return (
     <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <div className="mt-1 min-h-[40px] space-y-1 rounded border p-1">
-        {fields.length === 0 && (
-          <p className="px-1 py-1 text-xs text-muted-foreground">
-            Click fields in the field tree to add them here.
-          </p>
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <div
+        className={cn(
+          "min-h-[52px] rounded-lg border p-1.5",
+          isEmpty ? "border-dashed border-border bg-muted/30" : "border-border bg-card",
         )}
-        {fields.map((f) => (
+      >
+        {showModeSelector && (
+          <div className="mb-1.5 flex justify-end border-b border-border/50 pb-1.5">
+            <div className="flex overflow-hidden rounded-full border border-border">
+              {(["stacked", "nested"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => onModeChange(m)}
+                  className={cn(
+                    "px-2 py-0.5 text-[10px] font-semibold transition-colors",
+                    mode === m
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-muted/50",
+                  )}
+                >
+                  {m === "stacked" ? "Stacked ↕" : "Nested →"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {isEmpty ? (
+          <p className="py-2 text-center text-[10px] text-muted-foreground">
+            Click fields to add here
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-1">
+            {fields.map((f) => (
+              <FieldChip key={f.field_key} field={f} onRemove={onRemove} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── MeasureMatrix ──────────────────────────────────────────────────────────
+
+function MeasureMatrix({
+  measure,
+  onSet,
+}: {
+  measure: MeasureSpec
+  onSet: (patch: Partial<QueryConfig>) => void
+}) {
+  return (
+    <div>
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Measure
+      </p>
+      <div className="overflow-hidden rounded-md border border-border text-[10px]">
+        {/* Column headers */}
+        <div className="grid grid-cols-[44px_1fr_1fr_1fr] border-b border-border bg-muted/50">
+          <div className="border-r border-border" />
+          {MEASURE_TYPES.map(({ value, label }) => (
+            <div
+              key={value}
+              className="border-r border-border py-1 text-center text-[9px] font-semibold text-muted-foreground last:border-r-0"
+            >
+              {label}
+            </div>
+          ))}
+        </div>
+        {/* Data rows */}
+        {DISPLAY_TYPES.map(({ value: display, label: displayLabel }) => (
           <div
-            key={f.field_key}
-            data-testid={`field-chip-${f.field_key}`}
-            className="flex items-center gap-1 rounded bg-muted/50 px-2 py-1"
+            key={display}
+            className="grid grid-cols-[44px_1fr_1fr_1fr] border-b border-border last:border-b-0"
           >
-            <span className="flex-1 text-xs">{f.display_name ?? f.field_key}</span>
-            <button type="button" onClick={() => onRemove(f.field_key)}>
-              <X className="h-3 w-3" />
-            </button>
+            <div className="flex items-center border-r border-border bg-muted/50 px-1.5 py-1 text-[9px] font-semibold text-muted-foreground">
+              {displayLabel}
+            </div>
+            {MEASURE_TYPES.map(({ value: type, ariaLabel: typeAriaLabel }) => {
+              const isActive = measure.type === type && measure.display === display
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  aria-label={`${typeAriaLabel}, ${displayLabel}`}
+                  onClick={() => onSet({ measure: { ...measure, type, display } })}
+                  className={cn(
+                    "border-r border-border py-1 text-center transition-colors last:border-r-0",
+                    isActive
+                      ? "bg-primary/10 font-semibold text-primary"
+                      : "text-muted-foreground hover:bg-muted/50",
+                  )}
+                >
+                  {isActive ? "✓" : "·"}
+                </button>
+              )
+            })}
           </div>
         ))}
       </div>
-      {showModeSelector && (
-        <div className="mt-1 flex gap-1">
-          {(["stacked", "nested"] as const).map((m) => (
-            <button
-              type="button"
-              key={m}
-              onClick={() => onModeChange(m)}
-              className={`rounded border px-2 py-0.5 text-xs transition-colors ${
-                mode === m ? "bg-muted font-medium" : "hover:bg-muted/50"
-              }`}
-            >
-              {m === "stacked" ? "Stacked ↕" : "Nested →"}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   )
+}
+
+// ── ScopePicker ────────────────────────────────────────────────────────────
+
+type ScopePackage = {
+  id: number
+  name: string
+  collections: {
+    id: number
+    name: string
+    datasets: { id: number; name: string }[]
+  }[]
 }
 
 function ScopePicker({
@@ -300,65 +448,70 @@ function ScopePicker({
   query: QueryConfig
   onSet: (patch: Partial<QueryConfig>) => void
 }) {
-  const [packages, setPackages] = useState<
-    {
-      id: number
-      name: string
-      collections: { id: number; name: string; datasets: { id: number; name: string }[] }[]
-    }[]
-  >([])
+  const [packages, setPackages] = useState<ScopePackage[]>([])
 
   useEffect(() => {
     api.GET("/api/v1/scope").then(({ data }) => {
-      if (data) setPackages(data)
+      if (data) setPackages(data as ScopePackage[])
     })
   }, [])
 
   if (query.mode === "crosstab") {
     return (
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dataset</p>
-        <select
-          aria-label="Select dataset"
-          className="mt-1 w-full rounded border bg-background px-2 py-1 text-sm"
-          value={query.dataset_id ?? ""}
-          onChange={(e) => onSet({ dataset_id: Number(e.target.value) || null })}
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Dataset
+        </p>
+        <Select
+          value={query.dataset_id?.toString() ?? ""}
+          onValueChange={(v) => onSet({ dataset_id: Number(v) || null })}
         >
-          <option value="">Select dataset…</option>
-          {packages.map((pkg) =>
-            pkg.collections.map((col) =>
-              col.datasets.map((ds) => (
-                <option key={ds.id} value={ds.id}>
-                  {pkg.name} › {col.name} › {ds.name}
-                </option>
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue placeholder="Select dataset…" />
+          </SelectTrigger>
+          <SelectContent>
+            {packages.map((pkg) =>
+              pkg.collections.map((col) => (
+                <SelectGroup key={col.id}>
+                  <SelectLabel>
+                    {pkg.name} › {col.name}
+                  </SelectLabel>
+                  {col.datasets.map((ds) => (
+                    <SelectItem key={ds.id} value={ds.id.toString()}>
+                      {pkg.name} › {col.name} › {ds.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               )),
-            ),
-          )}
-        </select>
+            )}
+          </SelectContent>
+        </Select>
       </div>
     )
   }
 
   return (
     <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
         Collection
       </p>
-      <select
-        aria-label="Select collection"
-        className="mt-1 w-full rounded border bg-background px-2 py-1 text-sm"
-        value={query.collection_id ?? ""}
-        onChange={(e) => onSet({ collection_id: Number(e.target.value) || null })}
+      <Select
+        value={query.collection_id?.toString() ?? ""}
+        onValueChange={(v) => onSet({ collection_id: Number(v) || null })}
       >
-        <option value="">Select collection…</option>
-        {packages.map((pkg) =>
-          pkg.collections.map((col) => (
-            <option key={col.id} value={col.id}>
-              {pkg.name} › {col.name}
-            </option>
-          )),
-        )}
-      </select>
+        <SelectTrigger className="h-8 text-xs">
+          <SelectValue placeholder="Select collection…" />
+        </SelectTrigger>
+        <SelectContent>
+          {packages.map((pkg) =>
+            pkg.collections.map((col) => (
+              <SelectItem key={col.id} value={col.id.toString()}>
+                {pkg.name} › {col.name}
+              </SelectItem>
+            )),
+          )}
+        </SelectContent>
+      </Select>
     </div>
   )
 }

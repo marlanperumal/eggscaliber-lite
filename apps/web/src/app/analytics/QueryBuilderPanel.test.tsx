@@ -57,8 +57,12 @@ function renderPanel(
     <QueryBuilderPanel
       onCollapse={vi.fn()}
       query={query}
-      onQueryChange={onQueryChange}
-      onResult={onResult}
+      onQueryChange={
+        onQueryChange as unknown as (
+          q: QueryConfig | ((prev: QueryConfig | null) => QueryConfig),
+        ) => void
+      }
+      onResult={onResult as unknown as (r: AnalyticsResult, q: QueryConfig) => void}
     />,
   )
   return { onQueryChange, onResult }
