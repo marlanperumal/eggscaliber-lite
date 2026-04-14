@@ -8,6 +8,7 @@ export type ViewMode = "chart_only" | "table_only" | "stacked" | "side_by_side"
 export interface FieldSelection {
   field_key: string
   display_name?: string
+  field_type?: string
 }
 
 export interface FilterSpec {

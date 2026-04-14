@@ -142,7 +142,14 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
         if (base.rows.some((r) => r.field_key === field.field_key)) return base
         return {
           ...base,
-          rows: [...base.rows, { field_key: field.field_key, display_name: field.display_name }],
+          rows: [
+            ...base.rows,
+            {
+              field_key: field.field_key,
+              display_name: field.display_name,
+              field_type: field.field_type,
+            },
+          ],
         }
       })
     },
@@ -158,7 +165,11 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
           ...base,
           columns: [
             ...base.columns,
-            { field_key: field.field_key, display_name: field.display_name },
+            {
+              field_key: field.field_key,
+              display_name: field.display_name,
+              field_type: field.field_type,
+            },
           ],
         }
       })
