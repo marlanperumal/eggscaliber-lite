@@ -77,6 +77,20 @@ storybook:
 notebook:
     uv run marimo edit notebooks/
 
+# Start brainstorming visual companion server (run in your terminal so it survives suspends)
+brainstorm:
+    scripts/brainstorm/start-server.sh --project-dir {{justfile_directory()}}
+
+# Update the brainstorm server from a newer superpowers plugin install
+# Usage: just brainstorm-update <path-to-superpowers-scripts-dir>
+# e.g.   just brainstorm-update ~/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts
+brainstorm-update src:
+    cp {{src}}/server.cjs scripts/brainstorm/server.cjs
+    cp {{src}}/start-server.sh scripts/brainstorm/start-server.sh
+    cp {{src}}/stop-server.sh scripts/brainstorm/stop-server.sh
+    cp {{src}}/frame-template.html scripts/brainstorm/frame-template.html
+    cp {{src}}/helper.js scripts/brainstorm/helper.js
+
 # ===== Database =====
 
 # Start Docker containers
