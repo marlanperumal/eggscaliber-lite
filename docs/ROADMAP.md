@@ -33,7 +33,7 @@ Bringing the frontend from unstyled prototype to a polished, usable product:
 
 - **Iteration 0 — Design system** ✅ — Brand palette, typography scale, spacing/radius tokens defined in CSS variables; shadcn components installed and wired to tokens
 - **Iteration 1 — App shell & panel chrome** ✅ — Top nav bar (logo, links, user avatar), visible panel borders/backgrounds/headers, page frame
-- **Iteration 2 — Query builder controls** — Styled tabs (Crosstab/Trending), proper dataset Select, pill/toggle button groups for measures
+- **Iteration 2 — Query builder controls** ✅ — Mode mini-cards, shadcn Select with breadcrumb hierarchy, type-circle field chips, zone empty/populated states, stacked/nested toggle, measure matrix
 - **Iteration 3 — Empty & loading states** — Icon + instructional copy for field tree, query zones, and results panel; loading skeletons
 - **Iteration 4 — Home page** — Minimal landing with CTA or redirect to `/analytics`
 
