@@ -4,8 +4,10 @@ import { defineConfig, devices } from "@playwright/test"
  * E2E tests — not part of pre-commit or CI by default.
  * Run manually during development: just test-e2e
  *
- * Both dev servers must be reachable on their default ports, or Playwright will
- * start them automatically using the webServer config below.
+ * Both dev servers must be running before you invoke this:
+ *   just dev          # starts API on :8000 and web on :3000
+ *   just db-seed      # seeds demo-data if not already present
+ *   just test-e2e     # then run this
  */
 export default defineConfig({
   testDir: "./e2e",
@@ -25,21 +27,6 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-    },
-  ],
-
-  webServer: [
-    {
-      command: "just api",
-      url: "http://localhost:8000/health",
-      reuseExistingServer: true,
-      timeout: 30_000,
-    },
-    {
-      command: "just web",
-      url: "http://localhost:3000",
-      reuseExistingServer: true,
-      timeout: 120_000,
     },
   ],
 })

@@ -132,8 +132,7 @@ test-api *args:
 test-web:
     cd apps/web && pnpm vitest run
 
-# Run E2E tests against running dev servers (not in pre-commit or CI by default)
-# Requires: just dev (or both servers already running) + just db-seed
+# Run E2E tests — requires dev servers already running (`just dev`) and seed data (`just db-seed`)
 # Optional args passed to playwright: e.g. just test-e2e --headed, just test-e2e analytics
 test-e2e *args:
     pnpm exec playwright test {{args}}
