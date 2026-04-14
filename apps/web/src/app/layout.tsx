@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "next-themes"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
+import { TopNav } from "@/components/ui/top-nav"
 import { themeConfig } from "@/config/theme.config"
 import { generateThemeCSS } from "@/lib/theme"
 import "./globals.css"
@@ -22,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: CSS-only content, no user input */}
         <style dangerouslySetInnerHTML={{ __html: generateThemeCSS(themeConfig) }} />
       </head>
-      <body className={inter.className}>
+      <body className={`${inter.className} flex min-h-screen flex-col`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -34,7 +35,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               clientOptions={{ api_host: "/ingest", debug: process.env.NODE_ENV === "development" }}
             >
               <PostHogPageView />
-              {children}
+              <TopNav />
+              <main className="flex-1 overflow-hidden">{children}</main>
             </PostHogProvider>
           </NuqsAdapter>
         </ThemeProvider>
