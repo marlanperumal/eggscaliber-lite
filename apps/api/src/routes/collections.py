@@ -25,14 +25,6 @@ async def get_collection_consistency(
     collection_id: int, session: AsyncSession = Depends(get_session)
 ):
     try:
-        issues = await collection_service.get_consistency(session, collection_id)
+        return await collection_service.get_consistency(session, collection_id)
     except CollectionNotFoundError:
         raise HTTPException(status_code=404, detail="Collection not found") from None
-    return [
-        InconsistencyOut(
-            field_key=i.field_key,
-            inconsistency_type=i.inconsistency_type.value,
-            detail=i.detail,
-        )
-        for i in issues
-    ]

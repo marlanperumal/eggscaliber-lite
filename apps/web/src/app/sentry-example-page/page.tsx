@@ -1,3 +1,6 @@
+// Exception: raw hex values in this file are from Sentry's auto-generated example page template.
+// This is a diagnostic/testing page, not part of the application UI — the design token system
+// does not apply here. Do not apply our design system patterns to this file.
 "use client"
 
 import * as Sentry from "@sentry/nextjs"

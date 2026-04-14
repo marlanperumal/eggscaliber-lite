@@ -13,6 +13,9 @@ const buttonVariants = cva(
         outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
+        // Exception: text-primary is intentional here — the link variant renders as a
+        // hyperlink-style button where the primary colour signals clickability, not body text.
+        // WCAG AA passes because link text appears on bg-background, not a primary surface.
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

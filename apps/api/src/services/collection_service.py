@@ -1,10 +1,9 @@
-from dataclasses import dataclass
 from enum import StrEnum
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.errors import CollectionNotFoundError
-from src.models.collection import CollectionWithDatasets
+from src.models.collection import CollectionWithDatasets, InconsistencyOut
 from src.models.field import FieldType
 from src.repositories import collection_repo, dataset_repo
 
@@ -16,13 +15,6 @@ class InconsistencyType(StrEnum):
     missing_field = "missing_field"
 
 
-@dataclass
-class FieldInconsistency:
-    field_key: str
-    inconsistency_type: InconsistencyType
-    detail: str
-
-
 async def get_with_datasets(session: AsyncSession, collection_id: int) -> CollectionWithDatasets:
     """Raises CollectionNotFoundError if collection_id does not exist."""
     col = await collection_repo.get_by_id(session, collection_id)
@@ -32,18 +24,18 @@ async def get_with_datasets(session: AsyncSession, collection_id: int) -> Collec
     return CollectionWithDatasets(**col.model_dump(), datasets=datasets)
 
 
-async def get_consistency(session: AsyncSession, collection_id: int) -> list[FieldInconsistency]:
+async def get_consistency(session: AsyncSession, collection_id: int) -> list[InconsistencyOut]:
     """Raises CollectionNotFoundError if collection_id does not exist.
     Wraps check_field_consistency with the existence check."""
     col = await collection_repo.get_by_id(session, collection_id)
     if col is None:
         raise CollectionNotFoundError(collection_id)
-    return await check_field_consistency(collection_id, session)
+    return await check_field_consistency(session, collection_id)
 
 
 async def check_field_consistency(
-    collection_id: int, session: AsyncSession
-) -> list[FieldInconsistency]:
+    session: AsyncSession, collection_id: int
+) -> list[InconsistencyOut]:
     datasets = await collection_repo.get_datasets_for_collection(session, collection_id)
 
     if len(datasets) <= 1:
@@ -63,14 +55,14 @@ async def check_field_consistency(
         field_map.setdefault(f.field_key, {})[f.dataset_id] = (f.field_type, level_values)
 
     dataset_ids = [ds.id for ds in datasets]
-    result: list[FieldInconsistency] = []
+    result: list[InconsistencyOut] = []
 
     for field_key, by_dataset in field_map.items():
         # Missing field
         for did in dataset_ids:
             if did not in by_dataset:
                 result.append(
-                    FieldInconsistency(
+                    InconsistencyOut(
                         field_key=field_key,
                         inconsistency_type=InconsistencyType.missing_field,
                         detail=f"Field '{field_key}' absent from dataset {did}",
@@ -85,7 +77,7 @@ async def check_field_consistency(
         types = {ft for ft, _ in present}
         if len(types) > 1:
             result.append(
-                FieldInconsistency(
+                InconsistencyOut(
                     field_key=field_key,
                     inconsistency_type=InconsistencyType.type_mismatch,
                     detail=(
@@ -102,7 +94,7 @@ async def check_field_consistency(
             removed = prev - later
             for val in added:
                 result.append(
-                    FieldInconsistency(
+                    InconsistencyOut(
                         field_key=field_key,
                         inconsistency_type=InconsistencyType.level_added,
                         detail=(f"Level '{val}' added in a later dataset for field '{field_key}'"),
@@ -110,7 +102,7 @@ async def check_field_consistency(
                 )
             for val in removed:
                 result.append(
-                    FieldInconsistency(
+                    InconsistencyOut(
                         field_key=field_key,
                         inconsistency_type=InconsistencyType.level_removed,
                         detail=(

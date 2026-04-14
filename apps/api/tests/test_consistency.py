@@ -49,7 +49,7 @@ async def test_single_dataset_collection_returns_empty(db):
     col = await _make_collection(db)
     await _add_dataset(db, col, "W1", "w1-single", 1)
     # Only one dataset — early-return guard should produce no inconsistencies
-    result = await check_field_consistency(col.id, db)
+    result = await check_field_consistency(db, col.id)
     assert result == []
 
 
@@ -61,7 +61,7 @@ async def test_consistent_collection_returns_empty(db):
         f = await _add_field(db, ds, "gender", FieldType.categorical)
         await _add_levels(db, f, ["male", "female"])
 
-    result = await check_field_consistency(col.id, db)
+    result = await check_field_consistency(db, col.id)
     assert result == []
 
 
@@ -72,7 +72,7 @@ async def test_detects_type_mismatch(db):
     await _add_field(db, ds1, "score", FieldType.numeric)
     await _add_field(db, ds2, "score", FieldType.ordinal)
 
-    result = await check_field_consistency(col.id, db)
+    result = await check_field_consistency(db, col.id)
     types = {r.inconsistency_type for r in result}
     assert InconsistencyType.type_mismatch in types
     assert all(r.field_key == "score" for r in result)
@@ -85,7 +85,7 @@ async def test_detects_missing_field(db):
     await _add_field(db, ds1, "brand_awareness", FieldType.categorical)
     # ds2 intentionally has no brand_awareness field
 
-    result = await check_field_consistency(col.id, db)
+    result = await check_field_consistency(db, col.id)
     types = {r.inconsistency_type for r in result}
     assert InconsistencyType.missing_field in types
 
@@ -99,7 +99,7 @@ async def test_detects_level_inconsistency(db):
     await _add_levels(db, f1, ["tv", "radio"])
     await _add_levels(db, f2, ["tv", "radio", "podcast"])  # podcast added in wave 2
 
-    result = await check_field_consistency(col.id, db)
+    result = await check_field_consistency(db, col.id)
     types = {r.inconsistency_type for r in result}
     assert InconsistencyType.level_added in types
 
@@ -113,7 +113,7 @@ async def test_detects_level_removed(db):
     await _add_levels(db, f1, ["tv", "radio", "podcast"])
     await _add_levels(db, f2, ["tv", "radio"])  # podcast dropped in wave 2
 
-    result = await check_field_consistency(col.id, db)
+    result = await check_field_consistency(db, col.id)
     types = {r.inconsistency_type for r in result}
     assert InconsistencyType.level_removed in types
     removed = [r for r in result if r.inconsistency_type == InconsistencyType.level_removed]
