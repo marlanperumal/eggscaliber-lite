@@ -289,6 +289,15 @@ export interface components {
             dataset_name: string;
             /** Base N */
             base_n: number;
+            /**
+             * Level Labels
+             * @default {}
+             */
+            level_labels: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
         };
         /** CrosstabRequest */
         CrosstabRequest: {
@@ -644,6 +653,17 @@ export interface components {
             measure: components["schemas"]["MeasureSpec"];
             /** Collection Name */
             collection_name: string;
+            /** Base N */
+            base_n?: number | null;
+            /**
+             * Level Labels
+             * @default {}
+             */
+            level_labels: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
         };
         /** TrendRequest */
         TrendRequest: {

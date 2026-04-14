@@ -4,6 +4,37 @@ interface Props {
   result: AnalyticsResult
 }
 
+function levelLabel(
+  fieldKey: string,
+  levelCode: string,
+  levelLabels: Record<string, Record<string, string>> | undefined,
+): string {
+  return levelLabels?.[fieldKey]?.[levelCode] ?? levelCode
+}
+
+function fieldLabel(
+  fieldKey: string,
+  fields: { field_key: string; display_name: string }[] | undefined,
+): string {
+  return fields?.find((f) => f.field_key === fieldKey)?.display_name ?? fieldKey
+}
+
+function colHeader(
+  key: string,
+  colFields: { field_key: string; display_name: string }[] | undefined,
+  levelLabels: Record<string, Record<string, string>> | undefined,
+): string {
+  if (key === "Total") return "Total"
+  // Search col_fields in order; first match wins
+  if (colFields) {
+    for (const cf of colFields) {
+      const label = levelLabels?.[cf.field_key]?.[key]
+      if (label !== undefined) return label
+    }
+  }
+  return key
+}
+
 export function AnalyticsTable({ result }: Props) {
   const { meta, rows } = result
   if (rows.length === 0) return <p className="p-4 text-sm text-muted-foreground">No data.</p>
@@ -11,6 +42,16 @@ export function AnalyticsTable({ result }: Props) {
   const colKeys = Object.keys(rows[0].values)
   const isTrend = meta.mode === "trend"
   const isNested = !isTrend && rows[0]?.key.length === 4
+  const { level_labels } = meta
+
+  // Stacked multi-field header: show all row field names
+  const rowHeader = isTrend
+    ? null
+    : isNested
+      ? null
+      : meta.row_fields && meta.row_fields.length > 1
+        ? meta.row_fields.map((f) => f.display_name).join(" / ")
+        : (meta.row_fields?.[0]?.display_name ?? "")
 
   return (
     <div className="overflow-auto">
@@ -33,13 +74,11 @@ export function AnalyticsTable({ result }: Props) {
                 <th className="px-3 py-2 text-left font-medium">Level</th>
               </>
             ) : (
-              <th className="px-3 py-2 text-left font-medium">
-                {meta.row_fields?.[0]?.display_name ?? ""}
-              </th>
+              <th className="px-3 py-2 text-left font-medium">{rowHeader}</th>
             )}
             {colKeys.map((k) => (
               <th key={k} className="px-3 py-2 text-right font-medium">
-                {k}
+                {colHeader(k, meta.col_fields, level_labels)}
               </th>
             ))}
           </tr>
@@ -54,17 +93,23 @@ export function AnalyticsTable({ result }: Props) {
               >
                 {isNested ? (
                   <>
-                    <td className="px-3 py-1">{row.key[1]}</td>
-                    <td className="px-3 py-1">{row.key[3]}</td>
+                    <td className="px-3 py-1">
+                      {levelLabel(row.key[0], row.key[1], level_labels)}
+                    </td>
+                    <td className="px-3 py-1">
+                      {levelLabel(row.key[2], row.key[3], level_labels)}
+                    </td>
                   </>
                 ) : isTrend ? (
                   <>
                     <td className="px-3 py-1">{row.key[0]}</td>
-                    <td className="px-3 py-1">{row.key[1]}</td>
-                    <td className="px-3 py-1">{row.key[2]}</td>
+                    <td className="px-3 py-1">{fieldLabel(row.key[1], meta.fields)}</td>
+                    <td className="px-3 py-1">
+                      {levelLabel(row.key[1], row.key[2], level_labels)}
+                    </td>
                   </>
                 ) : (
-                  <td className="px-3 py-1">{row.key[1]}</td>
+                  <td className="px-3 py-1">{levelLabel(row.key[0], row.key[1], level_labels)}</td>
                 )}
                 {colKeys.map((k) => (
                   <td key={k} className="px-3 py-1 text-right tabular-nums">

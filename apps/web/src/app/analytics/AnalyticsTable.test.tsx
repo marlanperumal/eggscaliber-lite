@@ -83,8 +83,7 @@ describe("AnalyticsTable", () => {
       rows: [{ key: ["region", "North"], values: { Total: 5 } }],
     })
     render(<AnalyticsTable result={result} />)
-    // Only first row_field header shown in stacked mode
-    expect(screen.getByRole("columnheader", { name: "Region" })).toBeInTheDocument()
-    expect(screen.queryByRole("columnheader", { name: "Channel" })).not.toBeInTheDocument()
+    // Stacked mode: all row_field names shown joined with " / "
+    expect(screen.getByRole("columnheader", { name: "Region / Channel" })).toBeInTheDocument()
   })
 })

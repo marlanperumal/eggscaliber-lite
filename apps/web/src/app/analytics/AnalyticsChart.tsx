@@ -26,6 +26,29 @@ function useChartColors(): string[] {
   }, [])
 }
 
+function resolveLevel(
+  fieldKey: string,
+  levelCode: string,
+  levelLabels: Record<string, Record<string, string>> | undefined,
+): string {
+  return levelLabels?.[fieldKey]?.[levelCode] ?? levelCode
+}
+
+function resolveColLabel(
+  key: string,
+  colFields: { field_key: string; display_name: string }[] | undefined,
+  levelLabels: Record<string, Record<string, string>> | undefined,
+): string {
+  if (key === "Total") return "Total"
+  if (colFields) {
+    for (const cf of colFields) {
+      const label = levelLabels?.[cf.field_key]?.[key]
+      if (label !== undefined) return label
+    }
+  }
+  return key
+}
+
 interface Props {
   result: AnalyticsResult
   chartType: ChartType
@@ -33,26 +56,39 @@ interface Props {
 
 export function AnalyticsChart({ result, chartType }: Props) {
   const colors = useChartColors()
-  const { rows } = result
+  const { rows, meta } = result
   if (rows.length === 0) return null
 
+  const { level_labels } = meta
   const allValueKeys = Object.keys(rows[0].values)
   const nonTotalKeys = allValueKeys.filter((k) => k !== "Total")
   // When no column variable is set, "Total" is the only key — use it as the single series
   const seriesKeys = nonTotalKeys.length > 0 ? nonTotalKeys : ["Total"]
-  const isTrend = result.meta.mode === "trend"
+  const isTrend = meta.mode === "trend"
 
   if (isTrend) {
     const datasets = [...new Set(rows.map((r) => r.key[0]))]
-    const series = [...new Set(rows.map((r) => `${r.key[1]} — ${r.key[2]}`))]
+    // Build human-readable series keys: "Field display — Level display"
+    const rawSeries = [...new Set(rows.map((r) => `${r.key[1]}__${r.key[2]}`))]
+    const seriesLabels: Record<string, string> = {}
+    for (const raw of rawSeries) {
+      const [fk, lv] = raw.split("__")
+      const fieldName = meta.fields?.find((f) => f.field_key === fk)?.display_name ?? fk
+      const levelName = resolveLevel(fk, lv, level_labels)
+      seriesLabels[raw] = `${fieldName} — ${levelName}`
+    }
+
     const chartData = datasets.map((ds) => {
       const entry: Record<string, string | number> = { name: ds }
-      series.forEach((s) => {
-        const row = rows.find((r) => r.key[0] === ds && `${r.key[1]} — ${r.key[2]}` === s)
-        entry[s] = row?.values.Total ?? 0
-      })
+      for (const raw of rawSeries) {
+        const [fk, lv] = raw.split("__")
+        const row = rows.find((r) => r.key[0] === ds && r.key[1] === fk && r.key[2] === lv)
+        entry[seriesLabels[raw]] = row?.values.Total ?? 0
+      }
       return entry
     })
+
+    const labeledSeries = rawSeries.map((r) => seriesLabels[r])
     return (
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={chartData}>
@@ -61,7 +97,7 @@ export function AnalyticsChart({ result, chartType }: Props) {
           <YAxis />
           <Tooltip />
           <Legend />
-          {series.map((s, i) => (
+          {labeledSeries.map((s, i) => (
             <Line
               key={s}
               type="monotone"
@@ -75,15 +111,23 @@ export function AnalyticsChart({ result, chartType }: Props) {
     )
   }
 
+  // Crosstab: key[0] = row field key, key[1] = row level code
+  const rowFieldKey = meta.row_fields?.[0]?.field_key ?? ""
   const xKeys = [...new Set(rows.map((r) => r.key[1]))]
   const chartData = xKeys.map((xk) => {
-    const entry: Record<string, string | number> = { name: xk }
     const row = rows.find((r) => r.key[1] === xk)
-    seriesKeys.forEach((sk) => {
-      entry[sk] = row?.values[sk] ?? 0
-    })
+    const entry: Record<string, string | number> = {
+      name: resolveLevel(rowFieldKey, xk, level_labels),
+    }
+    for (const sk of seriesKeys) {
+      const label = resolveColLabel(sk, meta.col_fields, level_labels)
+      entry[label] = row?.values[sk] ?? 0
+    }
     return entry
   })
+  const labeledSeriesKeys = seriesKeys.map((sk) =>
+    resolveColLabel(sk, meta.col_fields, level_labels),
+  )
 
   const stacked = chartType !== "grouped_bar"
   const stackId = stacked ? "stack" : undefined
@@ -97,7 +141,7 @@ export function AnalyticsChart({ result, chartType }: Props) {
         <YAxis domain={normalized ? [0, 100] : undefined} />
         <Tooltip />
         <Legend />
-        {seriesKeys.map((sk, i) => (
+        {labeledSeriesKeys.map((sk, i) => (
           <Bar key={sk} dataKey={sk} stackId={stackId} fill={colors[i % colors.length]} />
         ))}
       </BarChart>

@@ -64,6 +64,7 @@ class CrosstabMeta(SQLModel):
     measure: MeasureSpec
     dataset_name: str
     base_n: int
+    level_labels: dict[str, dict[str, str]] = {}
 
 
 class CrosstabResponse(SQLModel):
@@ -77,6 +78,8 @@ class TrendMeta(SQLModel):
     breakdown: MetaField | None = None
     measure: MeasureSpec
     collection_name: str
+    base_n: int | None = None
+    level_labels: dict[str, dict[str, str]] = {}
 
 
 class TrendResponse(SQLModel):

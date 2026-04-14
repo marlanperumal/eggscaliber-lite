@@ -68,6 +68,7 @@ export interface AnalyticsResult {
     dataset_name?: string
     collection_name?: string
     base_n?: number
+    level_labels?: Record<string, Record<string, string>>
   }
   rows: ResultRow[]
 }

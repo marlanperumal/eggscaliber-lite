@@ -55,6 +55,13 @@ async def run_crosstab(session: AsyncSession, request: CrosstabRequest) -> Cross
 
     result_rows = crosstab_service.apply_display(raw_rows, request.measure.display)
 
+    # Merge level_labels from all fields used in this query
+    level_labels: dict[str, dict[str, str]] = {
+        k: field_metas[k]["level_labels"]
+        for k in (row_keys + col_keys)
+        if k in field_metas and field_metas[k].get("level_labels")
+    }
+
     meta = CrosstabMeta(
         row_fields=[
             MetaField(field_key=m["field_key"], display_name=m["display_name"]) for m in row_metas
@@ -67,6 +74,7 @@ async def run_crosstab(session: AsyncSession, request: CrosstabRequest) -> Cross
         measure=request.measure,
         dataset_name=dataset.name,
         base_n=base_n,
+        level_labels=level_labels,
     )
     return CrosstabResponse(meta=meta, rows=[ResultRow(**r) for r in result_rows])
 
@@ -103,6 +111,16 @@ async def run_trend(session: AsyncSession, request: TrendRequest) -> TrendRespon
     )
     result_rows = crosstab_service.apply_display(raw_rows, request.measure.display)
 
+    # base_n: total respondents across all datasets after filters applied
+    total_n = sum(len(d["data"]) for d in datasets_data)
+
+    # Merge level_labels from all fields used in this query
+    trend_level_labels: dict[str, dict[str, str]] = {
+        k: field_metas[k]["level_labels"]
+        for k in field_keys + ([breakdown_key] if breakdown_key else [])
+        if k in field_metas and field_metas[k].get("level_labels")
+    }
+
     meta = TrendMeta(
         fields=[
             MetaField(field_key=k, display_name=field_metas[k]["display_name"])
@@ -117,6 +135,8 @@ async def run_trend(session: AsyncSession, request: TrendRequest) -> TrendRespon
         else None,
         measure=request.measure,
         collection_name=col.name,
+        base_n=total_n,
+        level_labels=trend_level_labels,
     )
     return TrendResponse(meta=meta, rows=[ResultRow(**r) for r in result_rows])
 

@@ -19,6 +19,7 @@ const COLLAPSED_SIZE = 3
 export function AnalyticsLayout() {
   const { query, setQuery } = useAnalyticsState()
   const [result, setResult] = useState<AnalyticsResult | null>(null)
+  const [lastRunQuery, setLastRunQuery] = useState<QueryConfig | null>(null)
   const [treeCollapsed, setTreeCollapsed] = useState(false)
   const [builderCollapsed, setBuilderCollapsed] = useState(false)
 
@@ -98,7 +99,10 @@ export function AnalyticsLayout() {
                 onCollapse={toggleBuilder}
                 query={query}
                 onQueryChange={handleQueryChange}
-                onResult={setResult}
+                onResult={(r, q) => {
+                  setResult(r)
+                  setLastRunQuery(q)
+                }}
               />
             )}
           </div>
@@ -106,7 +110,7 @@ export function AnalyticsLayout() {
         <Separator className="w-2 cursor-col-resize bg-muted transition-colors hover:bg-primary/20" />
         <Panel defaultSize={55} minSize={20}>
           <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
-            <ResultsPanel result={result} query={query} />
+            <ResultsPanel result={result} query={query} lastRunQuery={lastRunQuery} />
           </div>
         </Panel>
       </Group>

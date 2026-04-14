@@ -15,7 +15,7 @@ interface Props {
   onCollapse: () => void
   query: QueryConfig | null
   onQueryChange: (q: QueryConfig | ((prev: QueryConfig | null) => QueryConfig)) => void
-  onResult: (r: AnalyticsResult) => void
+  onResult: (r: AnalyticsResult, q: QueryConfig) => void
 }
 
 export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }: Props) {
@@ -56,7 +56,7 @@ export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }
           },
         })
         if (apiError) throw new Error(JSON.stringify(apiError))
-        onResult(data as AnalyticsResult)
+        onResult(data as AnalyticsResult, q)
       } else {
         const { data, error: apiError } = await api.POST("/api/v1/analytics/trend", {
           body: {
@@ -70,7 +70,7 @@ export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }
           },
         })
         if (apiError) throw new Error(JSON.stringify(apiError))
-        onResult(data as AnalyticsResult)
+        onResult(data as AnalyticsResult, q)
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Request failed")
@@ -142,7 +142,9 @@ export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }
             </p>
             {q.breakdown ? (
               <div className="mt-1 flex items-center gap-1 rounded border px-2 py-1">
-                <span className="flex-1 text-sm">{q.breakdown.field_key}</span>
+                <span className="flex-1 text-sm">
+                  {q.breakdown.display_name ?? q.breakdown.field_key}
+                </span>
                 <button type="button" onClick={() => set({ breakdown: null })}>
                   <Trash2 className="h-3 w-3" />
                 </button>

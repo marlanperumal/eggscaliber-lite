@@ -53,9 +53,40 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
           const t = data as FieldTree
           setTree(t)
           setExpanded(new Set(t.groups.map((g) => g.id)))
+
+          // Enrich display_names for any chips restored from URL (display_name not stored in URL)
+          const allFields: FieldNode[] = []
+          const collectFields = (g: GroupNode) => {
+            allFields.push(...g.fields)
+            g.children.forEach(collectFields)
+          }
+          t.groups.forEach(collectFields)
+          allFields.push(...t.ungrouped_fields)
+          const byKey = Object.fromEntries(allFields.map((f) => [f.field_key, f]))
+
+          onQueryChange((prev) => {
+            if (!prev) return prev as unknown as QueryConfig
+            const needsEnrich =
+              prev.rows.some((r) => !r.display_name && byKey[r.field_key]) ||
+              prev.columns.some((c) => !c.display_name && byKey[c.field_key])
+            if (!needsEnrich) return prev
+            return {
+              ...prev,
+              rows: prev.rows.map((r) =>
+                !r.display_name && byKey[r.field_key]
+                  ? { ...r, display_name: byKey[r.field_key].display_name }
+                  : r,
+              ),
+              columns: prev.columns.map((c) =>
+                !c.display_name && byKey[c.field_key]
+                  ? { ...c, display_name: byKey[c.field_key].display_name }
+                  : c,
+              ),
+            }
+          })
         }
       })
-  }, [query?.dataset_id])
+  }, [query?.dataset_id, onQueryChange])
 
   const toggleGroup = (id: number) =>
     setExpanded((prev) => {
@@ -78,23 +109,61 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
     [onQueryChange],
   )
 
+  const addToColumns = useCallback(
+    (field: FieldNode) => {
+      onQueryChange((prev) => {
+        const base = prev ?? DEFAULT_QUERY
+        if (base.columns.some((c) => c.field_key === field.field_key)) return base
+        return {
+          ...base,
+          columns: [
+            ...base.columns,
+            { field_key: field.field_key, display_name: field.display_name },
+          ],
+        }
+      })
+    },
+    [onQueryChange],
+  )
+
   const q = search.toLowerCase()
   const matchesSearch = (text: string) => !q || text.toLowerCase().includes(q)
+
+  const isCrosstab = (query?.mode ?? "crosstab") === "crosstab"
 
   const renderField = (f: FieldNode) => {
     if (!matchesSearch(f.display_name)) return null
     return (
-      <button
-        type="button"
+      <div
         key={f.field_key}
-        className="group flex w-full cursor-pointer items-center gap-1 rounded py-0.5 pl-4 text-left hover:bg-muted/50"
-        onClick={() => addToRows(f)}
+        className="group flex w-full items-center gap-1 rounded py-0.5 pl-4 hover:bg-muted/50"
       >
-        <span className="flex-1 text-sm">{f.display_name}</span>
-        <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100">
-          + rows
-        </span>
-      </button>
+        <button
+          type="button"
+          className="flex-1 cursor-pointer text-left text-sm"
+          onClick={() => addToRows(f)}
+        >
+          {f.display_name}
+        </button>
+        <div className="flex shrink-0 gap-1 opacity-0 group-hover:opacity-100">
+          <button
+            type="button"
+            className="rounded px-1 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => addToRows(f)}
+          >
+            +R
+          </button>
+          {isCrosstab && (
+            <button
+              type="button"
+              className="rounded px-1 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => addToColumns(f)}
+            >
+              +C
+            </button>
+          )}
+        </div>
+      </div>
     )
   }
 

@@ -4,16 +4,32 @@ import { AnalyticsChart } from "./AnalyticsChart"
 import { AnalyticsTable } from "./AnalyticsTable"
 import type { AnalyticsResult, ChartType, QueryConfig, ViewMode } from "./analytics-types"
 
+const MEASURE_TYPE_LABELS: Record<string, string> = {
+  count: "Count",
+  weighted: "Weighted",
+  value_field: "Value",
+}
+
+const DISPLAY_LABELS: Record<string, string> = {
+  n: "N",
+  pct_col: "% of column",
+  pct_row: "% of row",
+}
+
 interface Props {
   result: AnalyticsResult | null
   query: QueryConfig | null
+  lastRunQuery: QueryConfig | null
 }
 
-export function ResultsPanel({ result, query }: Props) {
+export function ResultsPanel({ result, query, lastRunQuery }: Props) {
   const [chartType, setChartType] = useState<ChartType>("grouped_bar")
   const [viewMode, setViewMode] = useState<ViewMode>("stacked")
 
   const isTrend = query?.mode === "trend"
+
+  const isStale =
+    !!result && !!query && !!lastRunQuery && JSON.stringify(query) !== JSON.stringify(lastRunQuery)
 
   if (!result) {
     return (
@@ -25,6 +41,8 @@ export function ResultsPanel({ result, query }: Props) {
 
   const showChart = viewMode !== "table_only"
   const showTable = viewMode !== "chart_only"
+  const measureLabel = MEASURE_TYPE_LABELS[result.meta.measure.type] ?? result.meta.measure.type
+  const displayLabel = DISPLAY_LABELS[result.meta.measure.display] ?? result.meta.measure.display
 
   return (
     <div className="flex h-full flex-col">
@@ -32,10 +50,14 @@ export function ResultsPanel({ result, query }: Props) {
         <div>
           <p className="text-sm font-medium">
             {result.meta.dataset_name ?? result.meta.collection_name}
+            {isStale && (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                (stale — re-run to update)
+              </span>
+            )}
           </p>
           <p className="text-xs text-muted-foreground">
-            n = {result.meta.base_n ?? "—"} · {result.meta.measure.type} ·{" "}
-            {result.meta.measure.display}
+            n = {result.meta.base_n ?? "—"} · {measureLabel} · {displayLabel}
           </p>
         </div>
         <div className="flex items-center gap-3">

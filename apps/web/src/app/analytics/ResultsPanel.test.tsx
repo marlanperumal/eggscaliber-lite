@@ -46,22 +46,26 @@ const trendQuery: QueryConfig = {
 
 describe("ResultsPanel", () => {
   it("shows placeholder when result is null", () => {
-    render(<ResultsPanel result={null} query={null} />)
+    render(<ResultsPanel result={null} query={null} lastRunQuery={null} />)
     expect(screen.getByText("Configure a query and press Run.")).toBeInTheDocument()
   })
 
   it("Line button is disabled for a crosstab result", () => {
-    render(<ResultsPanel result={crosstabResult} query={crosstabQuery} />)
+    render(
+      <ResultsPanel result={crosstabResult} query={crosstabQuery} lastRunQuery={crosstabQuery} />,
+    )
     expect(screen.getByRole("button", { name: "Line" })).toBeDisabled()
   })
 
   it("Line button is enabled for a trend result", () => {
-    render(<ResultsPanel result={trendResult} query={trendQuery} />)
+    render(<ResultsPanel result={trendResult} query={trendQuery} lastRunQuery={trendQuery} />)
     expect(screen.getByRole("button", { name: "Line" })).not.toBeDisabled()
   })
 
   it("shows chart and table by default (stacked view mode)", () => {
-    render(<ResultsPanel result={crosstabResult} query={crosstabQuery} />)
+    render(
+      <ResultsPanel result={crosstabResult} query={crosstabQuery} lastRunQuery={crosstabQuery} />,
+    )
     expect(screen.getByTestId("analytics-chart")).toBeInTheDocument()
     expect(screen.getByRole("table")).toBeInTheDocument()
   })
