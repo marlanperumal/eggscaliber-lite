@@ -80,8 +80,8 @@ export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }
   }
 
   return (
-    <div className="flex h-full flex-col border-r border-border">
-      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b border-border bg-muted/50 px-3 py-2">
         <span className="text-sm font-medium">Query Builder</span>
         <button
           type="button"
