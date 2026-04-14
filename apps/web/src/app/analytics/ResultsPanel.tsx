@@ -45,7 +45,7 @@ export function ResultsPanel({ result, query, lastRunQuery }: Props) {
   const displayLabel = DISPLAY_LABELS[result.meta.measure.display] ?? result.meta.measure.display
 
   return (
-    <div className="flex h-full flex-col">
+    <div data-testid="results-panel" className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border bg-muted/50 px-4 py-2">
         <div>
           <p className="text-sm font-medium">

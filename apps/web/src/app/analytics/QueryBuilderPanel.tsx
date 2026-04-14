@@ -165,7 +165,11 @@ export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }
             </p>
             <div className="mt-1 space-y-1">
               {q.filters.map((f) => (
-                <div key={f.field_key} className="flex items-center gap-1 rounded border px-2 py-1">
+                <div
+                  key={f.field_key}
+                  data-testid={`field-chip-${f.field_key}`}
+                  className="flex items-center gap-1 rounded border px-2 py-1"
+                >
                   <span className="flex-1 text-sm">{f.display_name ?? f.field_key}</span>
                   {f.levels && (
                     <span className="text-xs text-muted-foreground">{f.levels.join(", ")}</span>
@@ -257,7 +261,11 @@ function Zone({
           </p>
         )}
         {fields.map((f) => (
-          <div key={f.field_key} className="flex items-center gap-1 rounded bg-muted/50 px-2 py-1">
+          <div
+            key={f.field_key}
+            data-testid={`field-chip-${f.field_key}`}
+            className="flex items-center gap-1 rounded bg-muted/50 px-2 py-1"
+          >
             <span className="flex-1 text-xs">{f.display_name ?? f.field_key}</span>
             <button type="button" onClick={() => onRemove(f.field_key)}>
               <X className="h-3 w-3" />

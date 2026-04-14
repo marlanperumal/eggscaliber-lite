@@ -166,8 +166,7 @@ describe("QueryBuilderPanel", () => {
       }),
     )
 
-    // Find the chip containing "Gender" and click its remove button
-    const chip = screen.getByText("Gender").closest("div") as HTMLElement
+    const chip = screen.getByTestId("field-chip-gender")
     await user.click(within(chip).getByRole("button"))
 
     expect(onQueryChange).toHaveBeenCalled()
@@ -184,8 +183,7 @@ describe("QueryBuilderPanel", () => {
     )
 
     expect(screen.getByText("Age Group")).toBeInTheDocument()
-    // Remove filter: the chip containing "Age Group" has a single button (trash icon)
-    const chip = screen.getByText("Age Group").closest("div") as HTMLElement
+    const chip = screen.getByTestId("field-chip-age_group")
     await user.click(within(chip).getByRole("button"))
     expect(onQueryChange).toHaveBeenCalled()
     const updatedQuery = onQueryChange.mock.calls[0][0] as QueryConfig

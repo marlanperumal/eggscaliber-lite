@@ -33,22 +33,23 @@ test.describe("Analytics page", () => {
     })
 
     // Wait for the field tree to populate
-    await expect(page.getByText("Brand Awareness")).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId("field-row-brand_awareness")).toBeVisible({ timeout: 10_000 })
 
     // Add "Brand Awareness" to rows via the +R button
-    await page.getByText("Brand Awareness").hover()
-    await page.getByRole("button", { name: "+R" }).first().click()
+    await page.getByTestId("field-row-brand_awareness").hover()
+    await page.getByTestId("field-row-brand_awareness").getByRole("button", { name: "+R" }).click()
 
-    // Confirm chip appeared in Rows zone (chip span has text-xs class)
-    await expect(page.locator("span.text-xs", { hasText: "Brand Awareness" })).toBeVisible()
+    // Confirm chip appeared in Rows zone
+    await expect(page.getByTestId("field-chip-brand_awareness")).toBeVisible()
 
     // Run the query
     await page.getByRole("button", { name: "Run" }).click()
 
     // Results panel should show the dataset name and data
-    await expect(page.locator("p", { hasText: /^Wave 1$/ })).toBeVisible({ timeout: 15_000 })
+    const results = page.getByTestId("results-panel")
+    await expect(results.getByText("Wave 1")).toBeVisible({ timeout: 15_000 })
     // n should be a real number, not "—"
-    await expect(page.getByText(/n = \d+/)).toBeVisible()
+    await expect(results.getByText(/n = \d+/)).toBeVisible()
     // Level labels should appear (not raw codes)
     await expect(page.getByRole("cell", { name: "Aware", exact: true })).toBeVisible()
     await expect(page.getByRole("cell", { name: "Not Aware", exact: true })).toBeVisible()
@@ -63,19 +64,18 @@ test.describe("Analytics page", () => {
     await page.getByRole("combobox", { name: /select dataset/i }).selectOption({
       label: "Demo Data › Brand Tracker › Wave 1",
     })
-    await expect(page.getByText("Brand Awareness")).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId("field-row-brand_awareness")).toBeVisible({ timeout: 10_000 })
 
     // Add Brand Awareness to rows
-    await page.getByText("Brand Awareness").hover()
-    await page.getByRole("button", { name: "+R" }).first().click()
+    await page.getByTestId("field-row-brand_awareness").hover()
+    await page.getByTestId("field-row-brand_awareness").getByRole("button", { name: "+R" }).click()
 
-    // Add Gender to columns — scope the +C click to the Gender row to avoid hitting wrong field
-    const genderRow = page.locator("div.group", { has: page.getByText("Gender") }).first()
-    await genderRow.hover()
-    await genderRow.getByRole("button", { name: "+C" }).click()
+    // Add Gender to columns
+    await page.getByTestId("field-row-gender").hover()
+    await page.getByTestId("field-row-gender").getByRole("button", { name: "+C" }).click()
 
     // Gender chip should appear in the Columns zone
-    await expect(page.locator("span.text-xs", { hasText: "Gender" })).toBeVisible()
+    await expect(page.getByTestId("field-chip-gender")).toBeVisible()
 
     await page.getByRole("button", { name: "Run" }).click()
 
@@ -97,17 +97,18 @@ test.describe("Analytics page", () => {
     await page.getByRole("combobox", { name: /select collection/i }).selectOption({
       label: "Demo Data › Brand Tracker",
     })
-    await expect(page.getByText("Brand Awareness")).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId("field-row-brand_awareness")).toBeVisible({ timeout: 10_000 })
 
     // Add Brand Awareness to fields
-    await page.getByText("Brand Awareness").hover()
-    await page.getByRole("button", { name: "+R" }).first().click()
+    await page.getByTestId("field-row-brand_awareness").hover()
+    await page.getByTestId("field-row-brand_awareness").getByRole("button", { name: "+R" }).click()
 
     await page.getByRole("button", { name: "Run" }).click()
 
-    // Results should show wave names and n count
-    await expect(page.locator("p", { hasText: /^Brand Tracker$/ })).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByText(/n = \d+/)).toBeVisible()
+    // Results panel should show the collection name and n count
+    const results = page.getByTestId("results-panel")
+    await expect(results.getByText("Brand Tracker")).toBeVisible({ timeout: 15_000 })
+    await expect(results.getByText(/n = \d+/)).toBeVisible()
     // Trend table has Wave column with dataset names
     await expect(page.getByRole("columnheader", { name: "Wave" })).toBeVisible()
   })
@@ -121,16 +122,15 @@ test.describe("Analytics page", () => {
     await page.getByRole("combobox", { name: /select dataset/i }).selectOption({
       label: "Demo Data › Brand Tracker › Wave 1",
     })
-    await expect(page.getByText("Brand Awareness")).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId("field-row-brand_awareness")).toBeVisible({ timeout: 10_000 })
 
-    await page.getByText("Brand Awareness").hover()
-    await page.getByRole("button", { name: "+R" }).first().click()
+    await page.getByTestId("field-row-brand_awareness").hover()
+    await page.getByTestId("field-row-brand_awareness").getByRole("button", { name: "+R" }).click()
     await page.getByRole("button", { name: "Run" }).click()
-    await expect(page.getByText(/n = \d+/)).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId("results-panel").getByText(/n = \d+/)).toBeVisible({ timeout: 15_000 })
 
     // Remove the field via the × button inside the chip — query now differs from what was run
-    const rowChip = page.locator("span.text-xs", { hasText: "Brand Awareness" }).locator("..")
-    await rowChip.getByRole("button").click()
+    await page.getByTestId("field-chip-brand_awareness").getByRole("button").click()
 
     // Stale indicator should appear
     await expect(page.getByText(/stale/i)).toBeVisible()

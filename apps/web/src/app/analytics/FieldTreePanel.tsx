@@ -176,6 +176,7 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
     return (
       <div
         key={f.field_key}
+        data-testid={`field-row-${f.field_key}`}
         className="group flex w-full items-center gap-1 rounded py-0.5 pl-4 hover:bg-muted/50"
       >
         <button

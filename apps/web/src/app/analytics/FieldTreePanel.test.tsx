@@ -108,8 +108,7 @@ describe("FieldTreePanel", () => {
     const { onQueryChange } = renderPanel()
     await waitFor(() => expect(screen.getByText("Brand Awareness")).toBeInTheDocument())
 
-    // Scope the button query to the specific field's container div
-    const fieldContainer = screen.getByText("Brand Awareness").closest("div") as HTMLElement
+    const fieldContainer = screen.getByTestId("field-row-brand_awareness")
     await user.hover(fieldContainer)
     await user.click(within(fieldContainer).getByRole("button", { name: "+R" }))
 
@@ -126,7 +125,7 @@ describe("FieldTreePanel", () => {
     const { onQueryChange } = renderPanel(makeQuery({ dataset_id: 1, mode: "crosstab" }))
     await waitFor(() => expect(screen.getByText("Gender")).toBeInTheDocument())
 
-    const fieldContainer = screen.getByText("Gender").closest("div") as HTMLElement
+    const fieldContainer = screen.getByTestId("field-row-gender")
     await user.hover(fieldContainer)
     await user.click(within(fieldContainer).getByRole("button", { name: "+C" }))
 
@@ -156,8 +155,7 @@ describe("FieldTreePanel", () => {
     )
     await waitFor(() => expect(screen.getByText("Brand Awareness")).toBeInTheDocument())
 
-    // "Brand Awareness" text appears in both the field tree and the chip list — use the field tree button
-    const fieldContainer = screen.getAllByText("Brand Awareness")[0].closest("div") as HTMLElement
+    const fieldContainer = screen.getByTestId("field-row-brand_awareness")
     await user.hover(fieldContainer)
     await user.click(within(fieldContainer).getByRole("button", { name: "+R" }))
 
