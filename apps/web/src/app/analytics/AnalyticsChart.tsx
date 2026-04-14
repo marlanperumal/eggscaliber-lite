@@ -36,7 +36,10 @@ export function AnalyticsChart({ result, chartType }: Props) {
   const { rows } = result
   if (rows.length === 0) return null
 
-  const seriesKeys = Object.keys(rows[0].values).filter((k) => k !== "Total")
+  const allValueKeys = Object.keys(rows[0].values)
+  const nonTotalKeys = allValueKeys.filter((k) => k !== "Total")
+  // When no column variable is set, "Total" is the only key — use it as the single series
+  const seriesKeys = nonTotalKeys.length > 0 ? nonTotalKeys : ["Total"]
   const isTrend = result.meta.mode === "trend"
 
   if (isTrend) {
