@@ -39,21 +39,19 @@ test.describe("Analytics page", () => {
     await page.getByText("Brand Awareness").hover()
     await page.getByRole("button", { name: "+R" }).first().click()
 
-    // Confirm it appeared in the Rows zone
-    await expect(
-      page.locator("[class*=bg-muted]").filter({ hasText: "Brand Awareness" }),
-    ).toBeVisible()
+    // Confirm chip appeared in Rows zone (chip span has text-xs class)
+    await expect(page.locator("span.text-xs", { hasText: "Brand Awareness" })).toBeVisible()
 
     // Run the query
     await page.getByRole("button", { name: "Run" }).click()
 
     // Results panel should show the dataset name and data
-    await expect(page.getByText("Wave 1")).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator("p", { hasText: /^Wave 1$/ })).toBeVisible({ timeout: 15_000 })
     // n should be a real number, not "—"
     await expect(page.getByText(/n = \d+/)).toBeVisible()
     // Level labels should appear (not raw codes)
-    await expect(page.getByText("Aware")).toBeVisible()
-    await expect(page.getByText("Not Aware")).toBeVisible()
+    await expect(page.getByRole("cell", { name: "Aware", exact: true })).toBeVisible()
+    await expect(page.getByRole("cell", { name: "Not Aware", exact: true })).toBeVisible()
   })
 
   test("cross-tab: add column variable, results show column breakdown", async ({ page }) => {
@@ -71,21 +69,19 @@ test.describe("Analytics page", () => {
     await page.getByText("Brand Awareness").hover()
     await page.getByRole("button", { name: "+R" }).first().click()
 
-    // Add Gender to columns
-    await page.getByText("Gender").hover()
-    const colButtons = page.getByRole("button", { name: "+C" })
-    await colButtons.first().click()
+    // Add Gender to columns — scope the +C click to the Gender row to avoid hitting wrong field
+    const genderRow = page.locator("div.group", { has: page.getByText("Gender") }).first()
+    await genderRow.hover()
+    await genderRow.getByRole("button", { name: "+C" }).click()
 
-    // Gender should appear in the Columns zone
-    await expect(
-      page.locator("[class*=bg-muted]").filter({ hasText: "Gender" }),
-    ).toBeVisible()
+    // Gender chip should appear in the Columns zone
+    await expect(page.locator("span.text-xs", { hasText: "Gender" })).toBeVisible()
 
     await page.getByRole("button", { name: "Run" }).click()
 
     // Column headers should show gender display labels, not codes
-    await expect(page.getByRole("columnheader", { name: "Male" })).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByRole("columnheader", { name: "Female" })).toBeVisible()
+    await expect(page.getByRole("columnheader", { name: "Male", exact: true })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole("columnheader", { name: "Female", exact: true })).toBeVisible()
   })
 
   test("trending: select collection, add field, run query, see trend results", async ({ page }) => {
@@ -110,7 +106,7 @@ test.describe("Analytics page", () => {
     await page.getByRole("button", { name: "Run" }).click()
 
     // Results should show wave names and n count
-    await expect(page.getByText("Brand Tracker")).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator("p", { hasText: /^Brand Tracker$/ })).toBeVisible({ timeout: 15_000 })
     await expect(page.getByText(/n = \d+/)).toBeVisible()
     // Trend table has Wave column with dataset names
     await expect(page.getByRole("columnheader", { name: "Wave" })).toBeVisible()
@@ -132,10 +128,8 @@ test.describe("Analytics page", () => {
     await page.getByRole("button", { name: "Run" }).click()
     await expect(page.getByText(/n = \d+/)).toBeVisible({ timeout: 15_000 })
 
-    // Remove the field — query now differs from what was run
-    await page.getByRole("button", { name: "" }).filter({ hasText: "" }).first().click()
-    // X button inside the rows chip
-    const rowChip = page.locator("[class*=bg-muted]").filter({ hasText: "Brand Awareness" })
+    // Remove the field via the × button inside the chip — query now differs from what was run
+    const rowChip = page.locator("span.text-xs", { hasText: "Brand Awareness" }).locator("..")
     await rowChip.getByRole("button").click()
 
     // Stale indicator should appear

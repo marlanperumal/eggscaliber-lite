@@ -38,6 +38,35 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
   const [tree, setTree] = useState<FieldTree | null>(null)
   const [search, setSearch] = useState("")
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
+  // In trending mode, resolve the first dataset in the collection to use for
+  // the field tree (the collection shares a common field schema across datasets)
+  const [effectiveDatasetId, setEffectiveDatasetId] = useState<number | null>(null)
+
+  useEffect(() => {
+    const dsId = query?.dataset_id
+    const colId = query?.collection_id
+    if (dsId) {
+      setEffectiveDatasetId(dsId)
+    } else if (colId) {
+      api.GET("/api/v1/scope").then(({ data }) => {
+        if (!data) return
+        for (const pkg of data as {
+          id: number
+          name: string
+          collections: { id: number; datasets: { id: number }[] }[]
+        }[]) {
+          for (const col of pkg.collections) {
+            if (col.id === colId && col.datasets.length > 0) {
+              setEffectiveDatasetId(col.datasets[0].id)
+              return
+            }
+          }
+        }
+      })
+    } else {
+      setEffectiveDatasetId(null)
+    }
+  }, [query?.dataset_id, query?.collection_id])
 
   // Ref so the tree-load effect can read the current query without re-subscribing
   const queryRef = useRef(query)
@@ -46,13 +75,13 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
   })
 
   useEffect(() => {
-    if (!query?.dataset_id) {
+    if (!effectiveDatasetId) {
       setTree(null)
       return
     }
     api
       .GET("/api/v1/datasets/{dataset_id}/field-tree", {
-        params: { path: { dataset_id: query.dataset_id } },
+        params: { path: { dataset_id: effectiveDatasetId } },
       })
       .then(({ data }) => {
         if (data) {
@@ -97,7 +126,7 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
           }
         }
       })
-  }, [query?.dataset_id, onQueryChange])
+  }, [effectiveDatasetId, onQueryChange])
 
   const toggleGroup = (id: number) =>
     setExpanded((prev) => {
@@ -232,7 +261,7 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
         />
       </div>
       <div className="flex-1 overflow-y-auto px-1">
-        {!query?.dataset_id && (
+        {!effectiveDatasetId && (
           <p className="px-3 py-4 text-sm text-muted-foreground">Select a dataset to see fields.</p>
         )}
         {tree && (

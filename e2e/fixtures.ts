@@ -1,28 +1,38 @@
 import { test as base } from "@playwright/test"
 
 /**
- * PostHog's decide endpoint controls feature flag resolution.
- * We intercept it in every E2E test so pages behind feature flags render
- * correctly without needing a live PostHog account or configured flags.
+ * PostHog v1.359+ uses the /flags v2 endpoint (not /decide) for feature flag
+ * resolution. The v2 response format represents each flag as an object with an
+ * explicit `enabled` field — not a plain boolean. We intercept at the network
+ * level so pages behind feature flags render correctly without a live PostHog
+ * account.
  */
-const POSTHOG_DECIDE_MOCK = {
-  featureFlags: {
-    "analytics-engine": true,
+const POSTHOG_FLAGS_MOCK = {
+  flags: {
+    "analytics-engine": {
+      key: "analytics-engine",
+      enabled: true,
+      variant: null,
+      reason: {},
+      metadata: {},
+    },
   },
-  featureFlagPayloads: {},
   errorsWhileComputingFlags: false,
-  capturePerformance: false,
-  autocaptureExceptions: false,
+  requestId: "e2e-mock",
 }
 
 export const test = base.extend<object>({
   page: async ({ page }, use) => {
-    // Intercept PostHog decide calls before any navigation
-    await page.route("**/decide**", (route) =>
+    const flagsMockBody = JSON.stringify(POSTHOG_FLAGS_MOCK)
+
+    // Intercept PostHog flags endpoint. PostHog posts to /ingest/flags/ (with
+    // trailing slash) which would normally redirect. Use a regex to match both
+    // /flags/ and /flags? forms so the mock is returned immediately.
+    await page.route(/\/flags[\/?]/, (route) =>
       route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify(POSTHOG_DECIDE_MOCK),
+        body: flagsMockBody,
       }),
     )
     // Swallow PostHog capture/ingestion calls so tests don't depend on network

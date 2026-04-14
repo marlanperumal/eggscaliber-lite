@@ -40,13 +40,21 @@ describe("useAnalyticsState", () => {
 
   it("assembles QueryConfig correctly from URL params", () => {
     vi.mocked(useQueryStates).mockReturnValue([
-      { ...defaultParams, mode: "trend" as const, ds: 42, rows: ["q_gender", "q_age"] },
+      {
+        ...defaultParams,
+        mode: "trend" as const,
+        ds: 42,
+        rows: [{ field_key: "q_gender", display_name: "Gender" }, { field_key: "q_age" }],
+      },
       mockSetP,
     ])
     const { result } = renderHook(() => useAnalyticsState())
     expect(result.current.query.mode).toBe("trend")
     expect(result.current.query.dataset_id).toBe(42)
-    expect(result.current.query.rows).toEqual([{ field_key: "q_gender" }, { field_key: "q_age" }])
+    expect(result.current.query.rows).toEqual([
+      { field_key: "q_gender", display_name: "Gender" },
+      { field_key: "q_age" },
+    ])
   })
 
   it("setQuery encodes QueryConfig into flat URL params", () => {
@@ -61,7 +69,7 @@ describe("useAnalyticsState", () => {
     expect(call.rows).toEqual([])
   })
 
-  it("setQuery maps FieldSelection arrays to field_key strings", () => {
+  it("setQuery preserves display_names for FieldSelection arrays", () => {
     const { result } = renderHook(() => useAnalyticsState())
     act(() => {
       result.current.setQuery({
@@ -74,8 +82,11 @@ describe("useAnalyticsState", () => {
       })
     })
     const call = vi.mocked(mockSetP).mock.calls[0][0]
-    expect(call.rows).toEqual(["q_education", "q_income"])
-    expect(call.cols).toEqual(["q_gender"])
+    expect(call.rows).toEqual([
+      { field_key: "q_education", display_name: "Education" },
+      { field_key: "q_income", display_name: "Income" },
+    ])
+    expect(call.cols).toEqual([{ field_key: "q_gender", display_name: "Gender" }])
   })
 
   it("setQuery accepts a function updater that receives the current query", () => {

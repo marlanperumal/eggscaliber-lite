@@ -311,6 +311,7 @@ function ScopePicker({
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dataset</p>
         <select
+          aria-label="Select dataset"
           className="mt-1 w-full rounded border bg-background px-2 py-1 text-sm"
           value={query.dataset_id ?? ""}
           onChange={(e) => onSet({ dataset_id: Number(e.target.value) || null })}
@@ -336,6 +337,7 @@ function ScopePicker({
         Collection
       </p>
       <select
+        aria-label="Select collection"
         className="mt-1 w-full rounded border bg-background px-2 py-1 text-sm"
         value={query.collection_id ?? ""}
         onChange={(e) => onSet({ collection_id: Number(e.target.value) || null })}
