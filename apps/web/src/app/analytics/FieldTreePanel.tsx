@@ -1,6 +1,6 @@
 "use client"
 import { ChevronDown, ChevronRight, X } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { api } from "@/lib/api"
 import type { QueryConfig } from "./analytics-types"
 import { DEFAULT_QUERY } from "./analytics-types"
@@ -39,6 +39,12 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
   const [search, setSearch] = useState("")
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
 
+  // Ref so the tree-load effect can read the current query without re-subscribing
+  const queryRef = useRef(query)
+  useEffect(() => {
+    queryRef.current = query
+  })
+
   useEffect(() => {
     if (!query?.dataset_id) {
       setTree(null)
@@ -64,26 +70,31 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
           allFields.push(...t.ungrouped_fields)
           const byKey = Object.fromEntries(allFields.map((f) => [f.field_key, f]))
 
-          onQueryChange((prev) => {
-            if (!prev) return prev as unknown as QueryConfig
-            const needsEnrich =
-              prev.rows.some((r) => !r.display_name && byKey[r.field_key]) ||
-              prev.columns.some((c) => !c.display_name && byKey[c.field_key])
-            if (!needsEnrich) return prev
-            return {
-              ...prev,
-              rows: prev.rows.map((r) =>
-                !r.display_name && byKey[r.field_key]
-                  ? { ...r, display_name: byKey[r.field_key].display_name }
-                  : r,
-              ),
-              columns: prev.columns.map((c) =>
-                !c.display_name && byKey[c.field_key]
-                  ? { ...c, display_name: byKey[c.field_key].display_name }
-                  : c,
-              ),
-            }
-          })
+          // Only call onQueryChange if there are actually chips that need enriching
+          // (avoids spurious calls when query was freshly built from the UI)
+          // Read via ref so the effect doesn't re-run on every query field change
+          const currentQuery = queryRef.current
+          const needsEnrich =
+            currentQuery?.rows.some((r) => !r.display_name && byKey[r.field_key]) ||
+            currentQuery?.columns.some((c) => !c.display_name && byKey[c.field_key])
+          if (needsEnrich) {
+            onQueryChange((prev) => {
+              if (!prev) return prev as unknown as QueryConfig
+              return {
+                ...prev,
+                rows: prev.rows.map((r) =>
+                  !r.display_name && byKey[r.field_key]
+                    ? { ...r, display_name: byKey[r.field_key].display_name }
+                    : r,
+                ),
+                columns: prev.columns.map((c) =>
+                  !c.display_name && byKey[c.field_key]
+                    ? { ...c, display_name: byKey[c.field_key].display_name }
+                    : c,
+                ),
+              }
+            })
+          }
         }
       })
   }, [query?.dataset_id, onQueryChange])

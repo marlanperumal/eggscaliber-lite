@@ -126,12 +126,104 @@ it('renders the heading', () => {
 
 Components that use nuqs hooks will need those hooks mocked as above. Components that use `NuqsAdapter` context can be wrapped with it in the test render if needed.
 
+### Integration tests for feature panels
+
+The integration-test layer is the most cost-effective for catching real bugs. When a feature panel (like `QueryBuilderPanel` or `FieldTreePanel`) has user-interaction logic, write a test that:
+
+1. Renders the full parent component with real child components
+2. Mocks only the true external boundary — the API client (`@/lib/api`)
+3. Uses `userEvent` to interact, `screen` queries to assert visible output
+
+```typescript
+vi.mock("@/lib/api", () => ({
+  api: { GET: vi.fn(), POST: vi.fn() },
+}))
+
+it("calls crosstab API on Run", async () => {
+  const user = userEvent.setup()
+  vi.mocked(api.POST).mockResolvedValueOnce({ data: mockResult } as never)
+  render(<QueryBuilderPanel ... />)
+  await user.click(screen.getByRole("button", { name: "Run" }))
+  await waitFor(() => expect(api.POST).toHaveBeenCalled())
+})
+```
+
+When a rendered page has multiple identical-name elements (e.g., many `+R` buttons), scope queries with `within`:
+
+```typescript
+import { within } from "@testing-library/react"
+
+const chip = screen.getByText("Gender").closest("div")!
+await user.click(within(chip).getByRole("button"))
+```
+
 ### Running tests
 
 ```bash
 just test-web    # vitest only
 just test        # all tests (pytest + vitest)
 ```
+
+---
+
+## E2E Tests (Playwright)
+
+E2E tests live in `e2e/` at the repo root. They run against **real running dev servers** and the **real local database** — the full stack end-to-end.
+
+### When to run
+
+These are **not** part of the pre-commit hook or CI by default. Run them:
+- Before deploying a significant feature to staging/production
+- After changes that touch multiple layers (API + frontend wiring)
+- When manual testing finds a regression you want to guard against permanently
+
+### Setup
+
+```bash
+# One-time: install browsers
+just install-browsers
+
+# Make sure dev servers and seed data are in place
+just db-up
+just db-seed   # seeds demo-data package if not already present
+
+# Run all E2E tests
+just test-e2e
+
+# Run with visible browser (useful when writing new tests)
+just test-e2e --headed
+
+# Run a specific spec file
+just test-e2e e2e/analytics.spec.ts
+```
+
+### Structure
+
+```
+e2e/
+  fixtures.ts         # Extended test fixture — mocks PostHog feature flags
+  analytics.spec.ts   # Analytics feature smoke tests
+playwright.config.ts  # Config: servers, retries, reporter
+```
+
+### Feature flag mocking
+
+The analytics page is gated by a PostHog feature flag. The `e2e/fixtures.ts` fixture intercepts PostHog's `/decide` endpoint and returns all flags as enabled — no real PostHog account or configured flag required.
+
+Always import from `./fixtures` rather than `@playwright/test` directly so the PostHog mock is active:
+
+```typescript
+import { expect, test } from "./fixtures"   // ✅ PostHog mocked
+import { expect, test } from "@playwright/test"  // ❌ flag gate not bypassed
+```
+
+### Writing new E2E tests
+
+- Test the happy path of a user flow, not implementation details
+- Use `page.getByRole` and `page.getByText` — not CSS selectors
+- Assert on what the user would actually see (displayed labels, n counts) — not raw API values
+- Keep tests independent: each test navigates to the page fresh
+- Seed data names are stable (`Brand Tracker`, `Wave 1`, `Brand Awareness`, etc.) — reference them directly
 
 ---
 

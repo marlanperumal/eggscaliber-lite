@@ -132,6 +132,16 @@ test-api *args:
 test-web:
     cd apps/web && pnpm vitest run
 
+# Run E2E tests against running dev servers (not in pre-commit or CI by default)
+# Requires: just dev (or both servers already running) + just db-seed
+# Optional args passed to playwright: e.g. just test-e2e --headed, just test-e2e analytics
+test-e2e *args:
+    pnpm exec playwright test {{args}}
+
+# Install Playwright browsers (run once after cloning, or after updating @playwright/test)
+install-browsers:
+    pnpm exec playwright install --with-deps chromium
+
 # Lint Python (ruff) + TypeScript (biome)
 lint:
     cd apps/api && uv run ruff check .

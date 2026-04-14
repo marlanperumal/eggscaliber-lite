@@ -242,3 +242,8 @@ storybook-static/
 # Playwright MCP snapshots
 .playwright-mcp/
 .worktrees/
+
+# Playwright E2E test artifacts
+playwright-report/
+test-results/
+e2e/.auth/
