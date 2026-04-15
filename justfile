@@ -77,9 +77,9 @@ storybook:
 notebook:
     uv run marimo edit notebooks/
 
-# Start brainstorming visual companion server (run in your terminal so it survives suspends)
+# Start brainstorming visual companion server (runs in foreground — open a second terminal for Claude)
 brainstorm:
-    scripts/brainstorm/start-server.sh --project-dir {{justfile_directory()}}
+    scripts/brainstorm/start-server.sh --project-dir {{justfile_directory()}} --foreground
 
 # Update the brainstorm server from a newer superpowers plugin install
 # Usage: just brainstorm-update <path-to-superpowers-scripts-dir>
