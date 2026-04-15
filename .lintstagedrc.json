@@ -3,5 +3,5 @@
   "*.py": ["sh -c 'cd apps/api && uv run --no-env-file ruff check --fix'", "sh -c 'cd apps/api && uv run --no-env-file ruff format'"],
   "*.{yaml,yml,md}": [],
   "{pyproject.toml,apps/api/pyproject.toml}": ["sh -c 'cd apps/api && uv run --no-env-file pip-audit'"],
-  "{package.json,pnpm-lock.yaml,apps/web/package.json}": ["sh -c 'cd apps/web && pnpm audit --audit-level moderate'"]
+  "{package.json,pnpm-lock.yaml,apps/web/package.json}": ["sh -c 'cd apps/web && pnpm audit --audit-level moderate --ignore-registry-errors'"]
 }

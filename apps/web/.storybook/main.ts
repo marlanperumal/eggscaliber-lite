@@ -12,6 +12,13 @@ const config: StorybookConfig = {
   framework: "@storybook/nextjs-vite",
   viteFinal: async (config) => {
     config.plugins = [...(config.plugins ?? []), tailwindcss()]
+    config.build = {
+      ...config.build,
+      rolldownOptions: {
+        ...(config.build as any)?.rolldownOptions,
+        treeshake: false,
+      },
+    }
     return config
   },
 }

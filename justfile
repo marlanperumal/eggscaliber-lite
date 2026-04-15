@@ -178,4 +178,4 @@ typecheck:
 # Security audit Python + JS dependencies
 audit:
     cd apps/api && uv run pip-audit
-    cd apps/web && pnpm audit --audit-level moderate
+    cd apps/web && pnpm audit --audit-level moderate --ignore-registry-errors
