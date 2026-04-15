@@ -83,6 +83,29 @@ This project wraps a `QueryConfig` domain type in a thin hook (`useAnalyticsStat
 
 **Complex nested data** (e.g. filters with levels) — use `parseAsJson<T>((v) => v as T)` rather than flattening. The validator is required; a simple cast is fine if you trust the URL source.
 
+## Storybook
+
+Use `NuqsTestingAdapter` from `nuqs/adapters/testing` — **not** the `next/app` adapter.
+The `next/app` adapter calls `useRouter()` internally and throws
+`invariant expected app router to be mounted` because Storybook doesn't mount the
+Next.js App Router. `NuqsTestingAdapter` is a self-contained in-memory URL store
+that works in any non-router environment.
+
+```tsx
+// AnalyticsPage.stories.tsx
+import { NuqsTestingAdapter } from "nuqs/adapters/testing"
+
+const meta = {
+  decorators: [
+    (Story) => (
+      <NuqsTestingAdapter>
+        <Story />
+      </NuqsTestingAdapter>
+    ),
+  ],
+} satisfies Meta<typeof MyComponent>
+```
+
 ## Testing
 
 Mock only `useQueryStates`, let real parsers run (they're pure functions):
