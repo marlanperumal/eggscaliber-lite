@@ -24,7 +24,6 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/eggscaliber_dev
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/eggscaliber_test
       MIGRATIONS_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/eggscaliber_migrations_test
 
@@ -54,20 +53,15 @@ jobs:
 
       - name: Create test databases and extensions
         run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE eggscaliber_dev;"
           PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE eggscaliber_test;"
           PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE eggscaliber_migrations_test;"
-          PGPASSWORD=postgres psql -h localhost -U postgres -d eggscaliber_dev -c "CREATE EXTENSION IF NOT EXISTS vector;"
           PGPASSWORD=postgres psql -h localhost -U postgres -d eggscaliber_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
           PGPASSWORD=postgres psql -h localhost -U postgres -d eggscaliber_migrations_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
 
-      - name: Run migrations (dev DB)
-        run: cd apps/api && uv run alembic upgrade head
-
-      - name: Run migrations (test DB)
+      - name: Run migrations (migrations test DB)
         run: cd apps/api && uv run alembic upgrade head
         env:
-          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+          DATABASE_URL: ${{ env.MIGRATIONS_TEST_DATABASE_URL }}
 
       - name: Lint
         run: just lint

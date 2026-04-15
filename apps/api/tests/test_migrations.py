@@ -40,13 +40,12 @@ def test_single_migration_head(alembic_config):
     )
 
 
-def test_no_pending_model_changes(alembic_config):
-    """All SQLModel model changes must have a corresponding Alembic migration.
-
-    Checks the dev DB (eggscaliber_dev) is at head. Run 'just db-migrate' if this fails.
-    """
+def test_no_pending_model_changes():
+    """All SQLModel model changes must have a corresponding Alembic migration."""
+    check_config = Config(ALEMBIC_CFG_PATH)
+    check_config.set_main_option("sqlalchemy.url", settings.async_migrations_test_database_url)
     try:
-        command.check(alembic_config)
+        command.check(check_config)
     except SystemExit as exc:
         pytest.fail(
             f"Models have changes not reflected in migrations. "
