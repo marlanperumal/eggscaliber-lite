@@ -66,7 +66,7 @@ function renderPanel(
       }
       onResult={onResult as unknown as (r: AnalyticsResult, q: QueryConfig) => void}
       isLoading={false}
-      onLoadingChange={onLoadingChange}
+      onLoadingChange={onLoadingChange as (loading: boolean) => void}
     />,
   )
   return { onQueryChange, onResult, onLoadingChange }

@@ -30,6 +30,8 @@ const meta = {
     onCollapse: fn(),
     onQueryChange: fn(),
     onResult: fn(),
+    isLoading: false,
+    onLoadingChange: fn(),
   },
 } satisfies Meta<typeof QueryBuilderPanel>
 

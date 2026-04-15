@@ -215,6 +215,6 @@ describe("FieldTreePanel", () => {
       rows: [{ field_key: "brand_awareness" }],
     })
     const enriched = updater?.(prev)
-    expect(enriched.rows[0].display_name).toBe("Brand Awareness")
+    expect(enriched?.rows[0].display_name).toBe("Brand Awareness")
   })
 })
