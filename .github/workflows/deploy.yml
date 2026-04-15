@@ -104,4 +104,4 @@ jobs:
       - name: Deploy to Chromatic
         run: |
           ulimit -s unlimited
-          cd apps/web && pnpm chromatic --project-token=${{ secrets.CHROMATIC_PROJECT_TOKEN }} --only-changed
+          cd apps/web && pnpm chromatic --project-token=${{ secrets.CHROMATIC_PROJECT_TOKEN }} --only-changed --auto-accept-changes
