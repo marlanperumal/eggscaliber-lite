@@ -45,26 +45,51 @@ const trendQuery: QueryConfig = {
 }
 
 describe("ResultsPanel", () => {
-  it("shows placeholder when result is null", () => {
-    render(<ResultsPanel result={null} query={null} lastRunQuery={null} />)
-    expect(screen.getByText("Configure a query and press Run.")).toBeInTheDocument()
+  it("shows illustrated empty state when result is null", () => {
+    render(<ResultsPanel result={null} query={null} lastRunQuery={null} isLoading={false} />)
+    expect(screen.getByText("No results yet")).toBeInTheDocument()
+    expect(screen.getByText("Configure a query and press Run")).toBeInTheDocument()
+  })
+
+  it("shows skeleton and spinner when isLoading is true", () => {
+    render(<ResultsPanel result={null} query={null} lastRunQuery={null} isLoading={true} />)
+    const skeletons = document.querySelectorAll(".animate-pulse")
+    expect(skeletons.length).toBeGreaterThan(0)
+    expect(screen.getByRole("status", { name: "Loading" })).toBeInTheDocument()
   })
 
   it("Line button is disabled for a crosstab result", () => {
     render(
-      <ResultsPanel result={crosstabResult} query={crosstabQuery} lastRunQuery={crosstabQuery} />,
+      <ResultsPanel
+        result={crosstabResult}
+        query={crosstabQuery}
+        lastRunQuery={crosstabQuery}
+        isLoading={false}
+      />,
     )
     expect(screen.getByRole("button", { name: "Line" })).toBeDisabled()
   })
 
   it("Line button is enabled for a trend result", () => {
-    render(<ResultsPanel result={trendResult} query={trendQuery} lastRunQuery={trendQuery} />)
+    render(
+      <ResultsPanel
+        result={trendResult}
+        query={trendQuery}
+        lastRunQuery={trendQuery}
+        isLoading={false}
+      />,
+    )
     expect(screen.getByRole("button", { name: "Line" })).not.toBeDisabled()
   })
 
   it("shows chart and table by default (stacked view mode)", () => {
     render(
-      <ResultsPanel result={crosstabResult} query={crosstabQuery} lastRunQuery={crosstabQuery} />,
+      <ResultsPanel
+        result={crosstabResult}
+        query={crosstabQuery}
+        lastRunQuery={crosstabQuery}
+        isLoading={false}
+      />,
     )
     expect(screen.getByTestId("analytics-chart")).toBeInTheDocument()
     expect(screen.getByRole("table")).toBeInTheDocument()

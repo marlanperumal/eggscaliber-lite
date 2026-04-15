@@ -61,12 +61,20 @@ interface Props {
   query: QueryConfig | null
   onQueryChange: (q: QueryConfig | ((prev: QueryConfig | null) => QueryConfig)) => void
   onResult: (r: AnalyticsResult, q: QueryConfig) => void
+  isLoading: boolean
+  onLoadingChange: (loading: boolean) => void
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }: Props) {
-  const [loading, setLoading] = useState(false)
+export function QueryBuilderPanel({
+  onCollapse,
+  query,
+  onQueryChange,
+  onResult,
+  isLoading,
+  onLoadingChange,
+}: Props) {
   const [error, setError] = useState<string | null>(null)
 
   const q = query ?? DEFAULT_QUERY
@@ -85,7 +93,7 @@ export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }
       setError("Select a collection first")
       return
     }
-    setLoading(true)
+    onLoadingChange(true)
     setError(null)
     try {
       if (q.mode === "crosstab") {
@@ -122,7 +130,7 @@ export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Request failed")
     } finally {
-      setLoading(false)
+      onLoadingChange(false)
     }
   }
 
@@ -239,11 +247,11 @@ export function QueryBuilderPanel({ onCollapse, query, onQueryChange, onResult }
         <button
           type="button"
           onClick={run}
-          disabled={loading}
+          disabled={isLoading}
           className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
           <Play className="h-3 w-3" aria-hidden />
-          {loading ? "Running…" : "Run Query"}
+          {isLoading ? "Running…" : "Run Query"}
         </button>
       </div>
     </div>

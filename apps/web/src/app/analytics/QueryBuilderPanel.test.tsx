@@ -49,10 +49,12 @@ function renderPanel(
   overrides: {
     onQueryChange?: ReturnType<typeof vi.fn>
     onResult?: ReturnType<typeof vi.fn>
+    onLoadingChange?: ReturnType<typeof vi.fn>
   } = {},
 ) {
   const onQueryChange = overrides.onQueryChange ?? vi.fn()
   const onResult = overrides.onResult ?? vi.fn()
+  const onLoadingChange = overrides.onLoadingChange ?? vi.fn()
   render(
     <QueryBuilderPanel
       onCollapse={vi.fn()}
@@ -63,9 +65,11 @@ function renderPanel(
         ) => void
       }
       onResult={onResult as unknown as (r: AnalyticsResult, q: QueryConfig) => void}
+      isLoading={false}
+      onLoadingChange={onLoadingChange}
     />,
   )
-  return { onQueryChange, onResult }
+  return { onQueryChange, onResult, onLoadingChange }
 }
 
 beforeEach(() => {
@@ -127,13 +131,13 @@ describe("QueryBuilderPanel", () => {
     await waitFor(() => expect(onResult).toHaveBeenCalledWith(CROSSTAB_RESULT, expect.anything()))
   })
 
-  it("shows loading state while API call is in flight", async () => {
+  it("calls onLoadingChange(true) when Run is clicked", async () => {
     const user = userEvent.setup()
     mockPost.mockReturnValueOnce(new Promise(() => {}) as never)
-    renderPanel(makeQuery({ dataset_id: 1 }))
+    const { onLoadingChange } = renderPanel(makeQuery({ dataset_id: 1 }))
 
     await user.click(screen.getByRole("button", { name: /run query/i }))
-    expect(screen.getByRole("button", { name: /running/i })).toBeDisabled()
+    expect(onLoadingChange).toHaveBeenCalledWith(true)
   })
 
   it("shows error message when API call fails", async () => {

@@ -1,8 +1,11 @@
 "use client"
 import { useState } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { AnalyticsChart } from "./AnalyticsChart"
 import { AnalyticsTable } from "./AnalyticsTable"
 import type { AnalyticsResult, ChartType, QueryConfig, ViewMode } from "./analytics-types"
+import { EmptyState } from "./EmptyState"
+import { ResultsIllustration } from "./illustrations/ResultsIllustration"
 
 const MEASURE_TYPE_LABELS: Record<string, string> = {
   count: "Count",
@@ -20,24 +23,63 @@ interface Props {
   result: AnalyticsResult | null
   query: QueryConfig | null
   lastRunQuery: QueryConfig | null
+  isLoading: boolean
 }
 
-export function ResultsPanel({ result, query, lastRunQuery }: Props) {
+function PanelSpinner() {
+  return (
+    <div
+      role="status"
+      aria-label="Loading"
+      className="h-3 w-3 animate-spin rounded-full border-2 border-muted-foreground/20 border-t-muted-foreground/60"
+    />
+  )
+}
+
+export function ResultsPanel({ result, query, lastRunQuery, isLoading }: Props) {
   const [chartType, setChartType] = useState<ChartType>("grouped_bar")
   const [viewMode, setViewMode] = useState<ViewMode>("stacked")
+
+  if (isLoading) {
+    return (
+      <div data-testid="results-panel" className="flex h-full flex-col">
+        <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-2">
+          <PanelSpinner />
+          <p className="text-sm text-muted-foreground">Running…</p>
+        </div>
+        <div className="flex flex-1 flex-col gap-3 p-4">
+          <div className="flex items-end gap-2">
+            <Skeleton className="h-20 w-8" />
+            <Skeleton className="h-28 w-8" />
+            <Skeleton className="h-16 w-8" />
+            <Skeleton className="h-24 w-8" />
+            <Skeleton className="h-20 w-8" />
+            <Skeleton className="h-14 w-8" />
+          </div>
+          <Skeleton className="h-3 w-[90%]" />
+          <Skeleton className="h-3 w-[80%]" />
+          <Skeleton className="h-3 w-[85%]" />
+        </div>
+      </div>
+    )
+  }
+
+  if (!result) {
+    return (
+      <div data-testid="results-panel" className="flex h-full flex-col">
+        <EmptyState
+          illustration={<ResultsIllustration />}
+          title="No results yet"
+          body="Configure a query and press Run"
+        />
+      </div>
+    )
+  }
 
   const isTrend = query?.mode === "trend"
 
   const isStale =
     !!result && !!query && !!lastRunQuery && JSON.stringify(query) !== JSON.stringify(lastRunQuery)
-
-  if (!result) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-sm text-muted-foreground">Configure a query and press Run.</p>
-      </div>
-    )
-  }
 
   const showChart = viewMode !== "table_only"
   const showTable = viewMode !== "chart_only"
