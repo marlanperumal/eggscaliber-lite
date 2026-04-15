@@ -1,3 +1,4 @@
 {
-  "installCommand": "cd ../.. && pnpm install"
+  "installCommand": "cd ../.. && pnpm install",
+  "ignoreCommand": "if [[ \"$VERCEL_GIT_COMMIT_REF\" == dependabot/* ]]; then exit 0; else exit 1; fi"
 }
