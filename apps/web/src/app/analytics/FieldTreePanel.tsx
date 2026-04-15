@@ -307,7 +307,7 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
         )}
 
         {effectiveDatasetId && treeLoading && (
-          <div className="space-y-2 px-3 py-2">
+          <div role="status" aria-label="Loading fields" className="space-y-2 px-3 py-2">
             <Skeleton className="h-4 w-[70%]" />
             <Skeleton className="ml-4 h-3 w-[50%]" />
             <Skeleton className="ml-4 h-3 w-[60%]" />

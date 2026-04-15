@@ -95,8 +95,7 @@ describe("FieldTreePanel", () => {
   it("shows loading skeleton while tree is fetching", () => {
     mockGet.mockReturnValue(new Promise(() => {}) as never)
     renderPanel()
-    const skeletons = document.querySelectorAll(".animate-pulse")
-    expect(skeletons.length).toBeGreaterThan(0)
+    expect(screen.getByRole("status", { name: /loading fields/i })).toBeInTheDocument()
   })
 
   it("fetches and renders the field tree when dataset_id is set", async () => {

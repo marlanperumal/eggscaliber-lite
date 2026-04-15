@@ -13,13 +13,15 @@ async def get_with_fields(session: AsyncSession, dataset_id: int) -> DatasetWith
         raise DatasetNotFoundError(dataset_id)
     fields_with_levels = await dataset_repo.get_fields_with_levels(session, dataset_id)
     fields_out = [
-        FieldWithLevels(
-            **f.model_dump(),
-            levels=[LevelOut.model_validate(lv.model_dump()) for lv in levels],
+        FieldWithLevels.model_validate(
+            {
+                **f.model_dump(),
+                "levels": [LevelOut.model_validate(lv.model_dump()) for lv in levels],
+            }
         )
         for f, levels in fields_with_levels
     ]
-    return DatasetWithFields(**ds.model_dump(), fields=fields_out)
+    return DatasetWithFields.model_validate({**ds.model_dump(), "fields": fields_out})
 
 
 async def get_responses(

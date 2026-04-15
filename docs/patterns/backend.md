@@ -260,11 +260,15 @@ dataset_ids = [ds.id for ds in datasets if ds.id is not None]
 When a service constructs a response schema from a table model, use `model_validate(obj.model_dump())`. Direct construction or `**model.model_dump()` would pass `id: int | None` into a field typed `id: int`, producing a type error even though it always works at runtime:
 
 ```python
-# correct
+# correct — 1:1 field mapping
 return [FieldOut.model_validate(f.model_dump()) for f in fields]
+
+# correct — extra fields not in the ORM model (e.g. computed relations)
+return DatasetWithFields.model_validate({**ds.model_dump(), "fields": fields_out})
 
 # incorrect — id: int | None assigned to id: int
 return [FieldOut(**f.model_dump()) for f in fields]
+return DatasetWithFields(**ds.model_dump(), fields=fields_out)  # same problem with extra kwargs
 ```
 
 ### SQLAlchemy ORM false positives

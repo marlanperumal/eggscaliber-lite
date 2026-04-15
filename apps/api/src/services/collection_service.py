@@ -21,9 +21,11 @@ async def get_with_datasets(session: AsyncSession, collection_id: int) -> Collec
     if col is None:
         raise CollectionNotFoundError(collection_id)
     datasets = await collection_repo.get_datasets_for_collection(session, collection_id)
-    return CollectionWithDatasets(
-        **col.model_dump(),
-        datasets=[DatasetSummary.model_validate(d.model_dump()) for d in datasets],
+    return CollectionWithDatasets.model_validate(
+        {
+            **col.model_dump(),
+            "datasets": [DatasetSummary.model_validate(d.model_dump()) for d in datasets],
+        }
     )
 
 

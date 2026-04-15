@@ -46,7 +46,9 @@ async def get_with_collections(session: AsyncSession, package_id: int) -> Packag
     if pkg is None:
         raise PackageNotFoundError(package_id)
     collections = await package_repo.get_collections_for_package(session, package_id)
-    return PackageWithCollections(
-        **pkg.model_dump(),
-        collections=[CollectionSummary.model_validate(c.model_dump()) for c in collections],
+    return PackageWithCollections.model_validate(
+        {
+            **pkg.model_dump(),
+            "collections": [CollectionSummary.model_validate(c.model_dump()) for c in collections],
+        }
     )

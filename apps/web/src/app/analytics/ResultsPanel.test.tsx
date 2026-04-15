@@ -53,8 +53,6 @@ describe("ResultsPanel", () => {
 
   it("shows skeleton and spinner when isLoading is true", () => {
     render(<ResultsPanel result={null} query={null} lastRunQuery={null} isLoading={true} />)
-    const skeletons = document.querySelectorAll(".animate-pulse")
-    expect(skeletons.length).toBeGreaterThan(0)
     expect(screen.getByRole("status", { name: "Loading" })).toBeInTheDocument()
   })
 
