@@ -54,7 +54,7 @@ export const CrosstabWithFields: Story = {
     query: withFields({
       dataset_id: 1,
       rows: [
-        { field_key: "gender", display_name: "Gender", field_type: "single_response" },
+        { field_key: "gender", display_name: "Gender", field_type: "categorical" },
         { field_key: "age_group", display_name: "Age Group", field_type: "ordinal" },
       ],
       columns: [
@@ -75,9 +75,9 @@ export const StackedNestedToggle: Story = {
     query: withFields({
       dataset_id: 1,
       rows: [
-        { field_key: "gender", display_name: "Gender", field_type: "single_response" },
+        { field_key: "gender", display_name: "Gender", field_type: "categorical" },
         { field_key: "age_group", display_name: "Age Group", field_type: "ordinal" },
-        { field_key: "region", display_name: "Region", field_type: "single_response" },
+        { field_key: "region", display_name: "Region", field_type: "categorical" },
       ],
       row_mode: "stacked",
     }),
@@ -91,7 +91,7 @@ export const TrendMode: Story = {
       mode: "trend",
       collection_id: 1,
       rows: [{ field_key: "satisfaction", display_name: "Satisfaction", field_type: "ordinal" }],
-      breakdown: { field_key: "gender", display_name: "Gender", field_type: "single_response" },
+      breakdown: { field_key: "gender", display_name: "Gender", field_type: "categorical" },
       measure: { type: "count", field_key: null, aggregation: null, display: "pct_col" },
     }),
   },

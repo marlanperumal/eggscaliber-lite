@@ -26,7 +26,7 @@ import { DEFAULT_QUERY } from "./analytics-types"
 // ── Field type display config ──────────────────────────────────────────────
 
 const FIELD_TYPE_CONFIG: Record<string, { color: string; icon: string }> = {
-  single_response: { color: "#6366f1", icon: "◯" },
+  categorical: { color: "#6366f1", icon: "◯" },
   multi_response: { color: "#0ea5e9", icon: "⊕" },
   ordinal: { color: "#f59e0b", icon: "≡" },
   numeric: { color: "#10b981", icon: "#" },
