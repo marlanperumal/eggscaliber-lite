@@ -3,7 +3,7 @@ from enum import StrEnum
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.errors import CollectionNotFoundError
-from src.models.collection import CollectionWithDatasets, InconsistencyOut
+from src.models.collection import CollectionWithDatasets, DatasetSummary, InconsistencyOut
 from src.models.field import FieldType
 from src.repositories import collection_repo, dataset_repo
 
@@ -21,7 +21,10 @@ async def get_with_datasets(session: AsyncSession, collection_id: int) -> Collec
     if col is None:
         raise CollectionNotFoundError(collection_id)
     datasets = await collection_repo.get_datasets_for_collection(session, collection_id)
-    return CollectionWithDatasets(**col.model_dump(), datasets=datasets)
+    return CollectionWithDatasets(
+        **col.model_dump(),
+        datasets=[DatasetSummary.model_validate(d.model_dump()) for d in datasets],
+    )
 
 
 async def get_consistency(session: AsyncSession, collection_id: int) -> list[InconsistencyOut]:
@@ -41,10 +44,14 @@ async def check_field_consistency(
     if len(datasets) <= 1:
         return []
 
-    all_fields = await dataset_repo.get_fields_for_datasets(session, [ds.id for ds in datasets])
-    all_levels = await dataset_repo.get_levels_for_field_ids(session, [f.id for f in all_fields])
+    all_fields = await dataset_repo.get_fields_for_datasets(
+        session, [ds.id for ds in datasets if ds.id is not None]
+    )
+    all_levels = await dataset_repo.get_levels_for_field_ids(
+        session, [f.id for f in all_fields if f.id is not None]
+    )
 
-    levels_by_field: dict[int, list[str]] = {}
+    levels_by_field: dict[int | None, list[str]] = {}
     for lv in all_levels:
         levels_by_field.setdefault(lv.field_id, []).append(lv.value)
 

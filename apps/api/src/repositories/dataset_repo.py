@@ -75,8 +75,8 @@ async def get_fields_with_levels(
         .scalars()
         .all()
     )
-    all_levels = await get_levels_for_field_ids(session, [f.id for f in fields])
-    levels_by_field: dict[int, list[Level]] = {}
+    all_levels = await get_levels_for_field_ids(session, [f.id for f in fields if f.id is not None])
+    levels_by_field: dict[int | None, list[Level]] = {}
     for lv in all_levels:
         levels_by_field.setdefault(lv.field_id, []).append(lv)
     return [(f, levels_by_field.get(f.id, [])) for f in fields]
@@ -91,7 +91,7 @@ async def get_responses(
             select(func.count()).select_from(Response).where(Response.dataset_id == dataset_id)
         )
     ).scalar_one()
-    items = (
+    items = list(
         (await session.execute(base_stmt.offset((page - 1) * page_size).limit(page_size)))
         .scalars()
         .all()

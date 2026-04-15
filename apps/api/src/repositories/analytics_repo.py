@@ -69,7 +69,7 @@ async def get_field_metas(session: AsyncSession, dataset_id: int, field_keys: li
     )
     all_levels = list((await session.execute(levels_stmt)).scalars().all())
 
-    levels_by_field: dict[int, list[dict]] = {}
+    levels_by_field: dict[int | None, list[dict]] = {}
     for lv in all_levels:
         levels_by_field.setdefault(lv.field_id, []).append(
             {"value": lv.value, "display_label": lv.display_label}

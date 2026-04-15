@@ -1,7 +1,9 @@
+from typing import cast
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.errors import PackageNotFoundError
-from src.models.package import PackageWithCollections
+from src.models.package import CollectionSummary, PackageWithCollections
 from src.models.scope import ScopeCollection, ScopeDataset, ScopePackage
 from src.repositories import collection_repo, dataset_repo, package_repo
 
@@ -12,22 +14,28 @@ async def get_scope(session: AsyncSession) -> list[ScopePackage]:
     if not packages:
         return []
 
-    collections = await collection_repo.get_all_for_packages(session, [p.id for p in packages])
+    collections = await collection_repo.get_all_for_packages(
+        session, [p.id for p in packages if p.id is not None]
+    )
 
-    datasets = await dataset_repo.get_all_for_collections(session, [c.id for c in collections])
+    datasets = await dataset_repo.get_all_for_collections(
+        session, [c.id for c in collections if c.id is not None]
+    )
 
-    datasets_by_col: dict[int, list[ScopeDataset]] = {}
+    datasets_by_col: dict[int | None, list[ScopeDataset]] = {}
     for d in datasets:
-        datasets_by_col.setdefault(d.collection_id, []).append(ScopeDataset(id=d.id, name=d.name))
+        datasets_by_col.setdefault(d.collection_id, []).append(
+            ScopeDataset(id=cast(int, d.id), name=d.name)
+        )
 
-    collections_by_pkg: dict[int, list[ScopeCollection]] = {}
+    collections_by_pkg: dict[int | None, list[ScopeCollection]] = {}
     for c in collections:
         collections_by_pkg.setdefault(c.package_id, []).append(
-            ScopeCollection(id=c.id, name=c.name, datasets=datasets_by_col.get(c.id, []))
+            ScopeCollection(id=cast(int, c.id), name=c.name, datasets=datasets_by_col.get(c.id, []))
         )
 
     return [
-        ScopePackage(id=p.id, name=p.name, collections=collections_by_pkg.get(p.id, []))
+        ScopePackage(id=cast(int, p.id), name=p.name, collections=collections_by_pkg.get(p.id, []))
         for p in packages
     ]
 
@@ -38,4 +46,7 @@ async def get_with_collections(session: AsyncSession, package_id: int) -> Packag
     if pkg is None:
         raise PackageNotFoundError(package_id)
     collections = await package_repo.get_collections_for_package(session, package_id)
-    return PackageWithCollections(**pkg.model_dump(), collections=collections)
+    return PackageWithCollections(
+        **pkg.model_dump(),
+        collections=[CollectionSummary.model_validate(c.model_dump()) for c in collections],
+    )

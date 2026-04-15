@@ -143,9 +143,9 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 ### Repository query patterns
 
 ```python
-# Fetch many
+# Fetch many — always wrap .all() in list() so return type is list[T] not Sequence[T]
 result = await session.execute(select(Model).where(...))
-rows = result.scalars().all()
+rows = list(result.scalars().all())
 
 # Fetch one or None
 result = await session.execute(select(Model).where(Model.id == id))
@@ -234,6 +234,52 @@ async def get_dataset(..., session: Session = Depends(get_session)): ...
 
 # NEVER — engine or sessionmaker at module level (must be in lifespan)
 engine = create_async_engine(...)   # at module scope — wrong
+```
+
+## Type-checking patterns (ty)
+
+### SQLModel primary-key IDs are `int | None`
+
+Table models declare `id: int | None = Field(default=None, primary_key=True)` so SQLAlchemy can auto-assign on INSERT. After a DB fetch the value is always non-`None`, but ty doesn't know that. Use `cast(int, obj.id)` when passing an ORM id to a function or constructor that expects `int`:
+
+```python
+from typing import cast
+
+ScopeDataset(id=cast(int, d.id), name=d.name)
+await repo.get_by_id(session, cast(int, ds.id))
+```
+
+When building a list of IDs to pass into a repo function, filter `None` instead of casting — the filtering is both type-safe and self-documenting:
+
+```python
+dataset_ids = [ds.id for ds in datasets if ds.id is not None]
+```
+
+### ORM → response model conversion
+
+When a service constructs a response schema from a table model, use `model_validate(obj.model_dump())`. Direct construction or `**model.model_dump()` would pass `id: int | None` into a field typed `id: int`, producing a type error even though it always works at runtime:
+
+```python
+# correct
+return [FieldOut.model_validate(f.model_dump()) for f in fields]
+
+# incorrect — id: int | None assigned to id: int
+return [FieldOut(**f.model_dump()) for f in fields]
+```
+
+### SQLAlchemy ORM false positives
+
+ty 0.0.x can't see through SQLAlchemy's instrumented-attribute descriptor, so column comparisons (`Model.col == value`) and ORM methods (`.in_()`, `.not_in()`) appear to return primitive Python types instead of `ColumnElement`. This affects every `.where()` and `.order_by()` call. These are already downgraded to `warn` in `pyproject.toml` — do not add `# type: ignore` per line; the project-level config is the right suppression point. `# type: ignore` does not suppress `warn`-level diagnostics in ty 0.0.x anyway.
+
+### dict lookups keyed by ORM id
+
+When a dict is built from ORM objects using `setdefault(obj.field_id, ...)` and then looked up with another ORM id (`obj2.id`), annotate the key type as `int | None` to match SQLModel's nullable id fields:
+
+```python
+levels_by_field: dict[int | None, list[Level]] = {}
+for lv in levels:
+    levels_by_field.setdefault(lv.field_id, []).append(lv)
+result = levels_by_field.get(f.id, [])  # f.id: int | None — now type-checks
 ```
 
 ## Adding Models to Alembic

@@ -24,7 +24,7 @@ async def get_by_id(session: AsyncSession, collection_id: int) -> Collection | N
 
 
 async def get_datasets_for_collection(session: AsyncSession, collection_id: int) -> list[Dataset]:
-    return (
+    return list(
         (
             await session.execute(
                 select(Dataset)

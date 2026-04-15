@@ -1,3 +1,5 @@
+from typing import cast
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.errors import CollectionNotFoundError, DatasetNotFoundError
@@ -92,7 +94,9 @@ async def run_trend(session: AsyncSession, request: TrendRequest) -> TrendRespon
 
     field_metas: dict = {}
     for ds in datasets:
-        for k, v in (await analytics_repo.get_field_metas(session, ds.id, all_keys)).items():
+        for k, v in (
+            await analytics_repo.get_field_metas(session, cast(int, ds.id), all_keys)
+        ).items():
             if k not in field_metas:
                 field_metas[k] = v
 
@@ -100,7 +104,7 @@ async def run_trend(session: AsyncSession, request: TrendRequest) -> TrendRespon
     datasets_data = []
     for ds in datasets:
         worker = WorkerFactory.for_dataset(ds, session)
-        data = await worker.fetch(ds.id, all_keys, {})
+        data = await worker.fetch(cast(int, ds.id), all_keys, {})
         data = crosstab_service.apply_filters(
             data, [f.model_dump() for f in request.filters], field_metas
         )
@@ -147,13 +151,13 @@ def _build_group_out(
     fields_by_group: dict[int | None, list[Field]],
 ) -> FieldTreeGroupOut:
     return FieldTreeGroupOut(
-        id=g.id,
+        id=cast(int, g.id),
         name=g.name,
         slug=g.slug,
         sort_order=g.sort_order,
         fields=[
             FieldTreeFieldOut(
-                id=f.id,
+                id=cast(int, f.id),
                 field_key=f.field_key,
                 display_name=f.display_name,
                 field_type=f.field_type,
@@ -192,7 +196,7 @@ async def get_field_tree(session: AsyncSession, dataset_id: int) -> FieldTreeOut
         ],
         ungrouped_fields=[
             FieldTreeFieldOut(
-                id=f.id,
+                id=cast(int, f.id),
                 field_key=f.field_key,
                 display_name=f.display_name,
                 field_type=f.field_type,
@@ -209,4 +213,5 @@ async def get_weight_fields(session: AsyncSession, dataset_id: int) -> list[Fiel
     ds = await analytics_repo.get_dataset(session, dataset_id)
     if ds is None:
         raise DatasetNotFoundError(dataset_id)
-    return await analytics_repo.get_weight_fields(session, dataset_id)
+    fields = await analytics_repo.get_weight_fields(session, dataset_id)
+    return [FieldOut.model_validate(f.model_dump()) for f in fields]

@@ -6,7 +6,7 @@ from src.models.package import Package
 
 
 async def get_all(session: AsyncSession) -> list[Package]:
-    return (await session.execute(select(Package))).scalars().all()
+    return list((await session.execute(select(Package))).scalars().all())
 
 
 async def get_by_id(session: AsyncSession, package_id: int) -> Package | None:
@@ -16,7 +16,7 @@ async def get_by_id(session: AsyncSession, package_id: int) -> Package | None:
 
 
 async def get_collections_for_package(session: AsyncSession, package_id: int) -> list[Collection]:
-    return (
+    return list(
         (await session.execute(select(Collection).where(Collection.package_id == package_id)))
         .scalars()
         .all()
