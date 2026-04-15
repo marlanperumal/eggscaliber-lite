@@ -120,6 +120,29 @@ async def test_detects_level_removed(db):
     assert any(r.field_key == "media" for r in removed)
 
 
+async def test_detects_inconsistency_between_later_dataset_pair_in_three_dataset_collection(db):
+    # Verifies that the consecutive-pair comparison catches an inconsistency between
+    # datasets 2 and 3 when datasets 1 and 2 are consistent.
+    col = await _make_collection(db)
+    ds1 = await _add_dataset(db, col, "W1", "w1-3ds", 1)
+    ds2 = await _add_dataset(db, col, "W2", "w2-3ds", 2)
+    ds3 = await _add_dataset(db, col, "W3", "w3-3ds", 3)
+
+    for ds in [ds1, ds2]:
+        f = await _add_field(db, ds, "media", FieldType.multi_response)
+        await _add_levels(db, f, ["tv", "radio"])
+
+    # W3 drops "radio" — inconsistency exists only between W2 and W3, not W1 and W2.
+    f3 = await _add_field(db, ds3, "media", FieldType.multi_response)
+    await _add_levels(db, f3, ["tv"])
+
+    result = await check_field_consistency(db, col.id)
+    types = {r.inconsistency_type for r in result}
+    assert InconsistencyType.level_removed in types
+    removed = [r for r in result if r.inconsistency_type == InconsistencyType.level_removed]
+    assert any(r.field_key == "media" for r in removed)
+
+
 async def test_consistency_endpoint(client, db):
     col = await _make_collection(db)
     ds1 = await _add_dataset(db, col, "W1", "w1-ep", 1)

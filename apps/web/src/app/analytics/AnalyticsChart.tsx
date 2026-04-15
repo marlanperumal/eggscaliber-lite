@@ -26,7 +26,7 @@ function useChartColors(): string[] {
   }, [])
 }
 
-function resolveLevel(
+export function resolveLevel(
   fieldKey: string,
   levelCode: string,
   levelLabels: Record<string, Record<string, string>> | undefined,
@@ -34,7 +34,7 @@ function resolveLevel(
   return levelLabels?.[fieldKey]?.[levelCode] ?? levelCode
 }
 
-function resolveColLabel(
+export function resolveColLabel(
   key: string,
   colFields: { field_key: string; display_name: string }[] | undefined,
   levelLabels: Record<string, Record<string, string>> | undefined,

@@ -1,9 +1,66 @@
+import pytest
 from src.models.collection import Collection, CollectionType
 from src.models.dataset import Dataset, WorkerType
 from src.models.field import Field, FieldType
 from src.models.level import Level
 from src.models.package import Package
 from src.models.response import Response
+
+
+async def _seed_measure_fixture(db):
+    """Dataset with brand_rating (ordinal), gender (categorical), weight (weight), nps (numeric)."""
+    pkg = Package(name="PM", slug="pm-measure")
+    db.add(pkg)
+    await db.flush()
+    await db.refresh(pkg)
+    col = Collection(
+        name="CM", slug="cm-measure", package_id=pkg.id, collection_type=CollectionType.survey
+    )
+    db.add(col)
+    await db.flush()
+    await db.refresh(col)
+    ds = Dataset(
+        name="Wave 1",
+        slug="w1-measure",
+        collection_id=col.id,
+        worker_type=WorkerType.jsonb_response,
+        sort_order=0,
+    )
+    db.add(ds)
+    await db.flush()
+    await db.refresh(ds)
+
+    brand_field = Field(
+        field_key="brand_rating",
+        display_name="Brand Rating",
+        field_type=FieldType.ordinal,
+        dataset_id=ds.id,
+    )
+    weight_field = Field(
+        field_key="pw",
+        display_name="Panel Weight",
+        field_type=FieldType.weight,
+        dataset_id=ds.id,
+    )
+    nps_field = Field(
+        field_key="nps",
+        display_name="NPS Score",
+        field_type=FieldType.numeric,
+        dataset_id=ds.id,
+    )
+    db.add_all([brand_field, weight_field, nps_field])
+    await db.flush()
+    await db.refresh(brand_field)
+
+    for val in ["Good", "Poor"]:
+        db.add(Level(field_id=brand_field.id, value=val, display_label=val, sort_order=0))
+    await db.flush()
+
+    db.add(Response(dataset_id=ds.id, payload={"brand_rating": "Good", "pw": 2.0, "nps": 8.0}))
+    db.add(Response(dataset_id=ds.id, payload={"brand_rating": "Good", "pw": 1.0, "nps": 6.0}))
+    db.add(Response(dataset_id=ds.id, payload={"brand_rating": "Poor", "pw": 1.5, "nps": 3.0}))
+    await db.flush()
+    return ds
 
 
 async def _seed_trend_fixture(db):
@@ -435,3 +492,121 @@ async def test_trend_with_breakdown_returns_breakdown_level_columns(client, db):
         assert "Aware" in row["values"]
         assert "Not Aware" in row["values"]
         assert "Total" in row["values"]
+
+
+async def test_crosstab_weighted_measure_sums_weights_per_level(client, db):
+    # Seed: 2 Good responses (pw=2.0, pw=1.0), 1 Poor response (pw=1.5).
+    # Weighted total for Good = 3.0, Poor = 1.5.
+    ds = await _seed_measure_fixture(db)
+    resp = await client.post(
+        "/api/v1/analytics/crosstab",
+        json={
+            "dataset_id": ds.id,
+            "rows": [{"field_key": "brand_rating"}],
+            "row_mode": "stacked",
+            "columns": [],
+            "col_mode": "stacked",
+            "filters": [],
+            "measure": {
+                "type": "weighted",
+                "field_key": "pw",
+                "aggregation": None,
+                "display": "n",
+            },
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    rows = data["rows"]
+    good = next(r for r in rows if r["key"] == ["brand_rating", "Good"])
+    poor = next(r for r in rows if r["key"] == ["brand_rating", "Poor"])
+    assert good["values"]["Total"] == pytest.approx(3.0)
+    assert poor["values"]["Total"] == pytest.approx(1.5)
+
+
+async def test_crosstab_value_field_sum_measure_sums_numeric_field_per_level(client, db):
+    # Seed: Good rows have nps 8.0 + 6.0 = 14.0; Poor row has nps 3.0.
+    ds = await _seed_measure_fixture(db)
+    resp = await client.post(
+        "/api/v1/analytics/crosstab",
+        json={
+            "dataset_id": ds.id,
+            "rows": [{"field_key": "brand_rating"}],
+            "row_mode": "stacked",
+            "columns": [],
+            "col_mode": "stacked",
+            "filters": [],
+            "measure": {
+                "type": "value_field",
+                "field_key": "nps",
+                "aggregation": "sum",
+                "display": "n",
+            },
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    rows = data["rows"]
+    good = next(r for r in rows if r["key"] == ["brand_rating", "Good"])
+    poor = next(r for r in rows if r["key"] == ["brand_rating", "Poor"])
+    assert good["values"]["Total"] == pytest.approx(14.0)
+    assert poor["values"]["Total"] == pytest.approx(3.0)
+
+
+async def test_crosstab_nested_col_mode_returns_composite_column_keys(client, db):
+    # Two col fields in nested mode → column keys use "field_key|level" composite format.
+    ds = await _seed_crosstab_fixture(db)
+    # Add a region field to the existing fixture dataset so we have 2 col fields.
+    region_field = Field(
+        field_key="region",
+        display_name="Region",
+        field_type=FieldType.categorical,
+        dataset_id=ds.id,
+    )
+    db.add(region_field)
+    await db.flush()
+    await db.refresh(region_field)
+    for val in ["North", "South"]:
+        db.add(Level(field_id=region_field.id, value=val, display_label=val, sort_order=0))
+    # Patch existing responses to include region (they currently have brand_rating + gender).
+    # Easier: add fresh responses that carry all three fields.
+    db.add(
+        Response(
+            dataset_id=ds.id,
+            payload={"brand_rating": "Good", "gender": "Female", "region": "North"},
+        )
+    )
+    db.add(
+        Response(
+            dataset_id=ds.id,
+            payload={"brand_rating": "Good", "gender": "Male", "region": "South"},
+        )
+    )
+    await db.flush()
+
+    resp = await client.post(
+        "/api/v1/analytics/crosstab",
+        json={
+            "dataset_id": ds.id,
+            "rows": [{"field_key": "brand_rating"}],
+            "row_mode": "stacked",
+            "columns": [{"field_key": "gender"}, {"field_key": "region"}],
+            "col_mode": "nested",
+            "filters": [],
+            "measure": {
+                "type": "count",
+                "field_key": None,
+                "aggregation": None,
+                "display": "n",
+            },
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    rows = data["rows"]
+    assert len(rows) > 0
+    # With 2 col fields, values use composite "field_key|level" keys.
+    sample_values = rows[0]["values"]
+    col_keys = set(sample_values.keys()) - {"Total"}
+    assert any("|" in k for k in col_keys), f"Expected composite keys but got: {col_keys}"
+    assert "gender|Female" in sample_values or "gender|Male" in sample_values

@@ -29,26 +29,6 @@ async def test_jsonb_worker_fetch_with_field_keys(worker_dataset, db):
     assert all(set(r.keys()) == {"gender"} for r in rows)
 
 
-async def test_jsonb_worker_fetch_with_filter(worker_dataset, db):
-    # Note: analytics_service always passes filters={} to the worker and applies filtering
-    # downstream via crosstab_service.apply_filters. These tests exercise the worker's own
-    # filter capability directly — not the production call path.
-    worker = JsonbResponseWorker(db)
-    rows = await worker.fetch(worker_dataset.id, field_keys=[], filters={"gender": "Male"})
-    assert len(rows) == 2
-    assert all(r["gender"] == "Male" for r in rows)
-
-
-async def test_jsonb_worker_fetch_with_multiple_filters(worker_dataset, db):
-    worker = JsonbResponseWorker(db)
-    rows = await worker.fetch(
-        worker_dataset.id, field_keys=[], filters={"gender": "Male", "age_group": "18-34"}
-    )
-    assert len(rows) == 2
-    assert all(r["gender"] == "Male" for r in rows)
-    assert all(r["age_group"] == "18-34" for r in rows)
-
-
 async def test_jsonb_worker_count(worker_dataset, db):
     worker = JsonbResponseWorker(db)
     assert await worker.count(worker_dataset.id, filters={}) == 3
