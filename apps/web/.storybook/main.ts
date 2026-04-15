@@ -15,6 +15,10 @@ const config: StorybookConfig = {
     config.build = {
       ...config.build,
       minify: false,
+      rollupOptions: {
+        ...config.build?.rollupOptions,
+        treeshake: false,
+      },
     }
     return config
   },
