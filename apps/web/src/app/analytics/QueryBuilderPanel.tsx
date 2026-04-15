@@ -363,7 +363,7 @@ function Zone({
         {isEmpty ? (
           <div className="flex flex-col items-center gap-1 py-1">
             <QueryZoneIllustration />
-            <p className="text-[9px] text-muted-foreground">Drop fields here</p>
+            <p className="text-[9px] text-muted-foreground">Click +R or +C to add fields</p>
           </div>
         ) : (
           <div className="flex flex-wrap gap-1">

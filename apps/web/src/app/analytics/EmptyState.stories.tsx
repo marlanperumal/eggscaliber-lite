@@ -26,8 +26,8 @@ export const QueryZone: Story = {
   name: "Query zone — empty drop target",
   args: {
     illustration: <QueryZoneIllustration />,
-    title: "Drop fields here",
-    body: "Click a field in the field tree to add it",
+    title: "Click +R or +C to add fields",
+    body: "Hover a field in the field tree to see the buttons",
   },
 }
 
