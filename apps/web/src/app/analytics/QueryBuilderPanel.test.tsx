@@ -85,12 +85,10 @@ describe("QueryBuilderPanel", () => {
     expect(screen.getByText("Dataset")).toBeInTheDocument()
   })
 
-  it("switching to Trending shows Collection scope picker", async () => {
-    const user = userEvent.setup()
-    renderPanel()
-    await user.click(screen.getByRole("button", { name: /trending/i }))
+  it("trend mode shows Collection scope picker instead of Dataset", () => {
     renderPanel(makeQuery({ mode: "trend" }))
     expect(screen.getByText("Collection")).toBeInTheDocument()
+    expect(screen.queryByText("Dataset")).not.toBeInTheDocument()
   })
 
   it("shows error when Run clicked without a dataset in crosstab mode", async () => {

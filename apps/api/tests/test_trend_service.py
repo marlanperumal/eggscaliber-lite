@@ -48,6 +48,36 @@ def test_run_trend_with_breakdown_key_produces_per_breakdown_level_columns():
     assert not_aware["values"]["Total"] == 1.0
 
 
+def test_run_trend_with_multiple_field_keys_produces_rows_for_each_field():
+    datasets_data = [
+        {
+            "dataset_name": "Wave 1",
+            "data": [
+                {"brand_awareness": "Aware", "satisfaction": "High"},
+                {"brand_awareness": "Not Aware", "satisfaction": "Low"},
+            ],
+        }
+    ]
+    field_metas = {
+        "brand_awareness": _fm("brand_awareness", ["Aware", "Not Aware"]),
+        "satisfaction": _fm("satisfaction", ["High", "Low"]),
+    }
+
+    rows = run_trend(
+        datasets_data=datasets_data,
+        field_keys=["brand_awareness", "satisfaction"],
+        breakdown_key=None,
+        field_metas_by_key=field_metas,
+        measure=MEASURE_COUNT,
+    )
+
+    returned_field_keys = {r["key"][1] for r in rows}
+    assert "brand_awareness" in returned_field_keys
+    assert "satisfaction" in returned_field_keys
+    assert any(r["key"] == ["Wave 1", "brand_awareness", "Aware"] for r in rows)
+    assert any(r["key"] == ["Wave 1", "satisfaction", "High"] for r in rows)
+
+
 def test_run_trend_field_key_absent_from_metas_is_silently_skipped():
     datasets_data = [
         {

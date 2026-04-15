@@ -35,6 +35,8 @@ async def test_jsonb_worker_count(worker_dataset, db):
     assert await worker.count(worker_dataset.id, filters={"gender": "Female"}) == 1
 
 
-async def test_factory_returns_jsonb_worker_for_default(worker_dataset, db):
+async def test_factory_returns_jsonb_worker_that_can_fetch_rows(worker_dataset, db):
     worker = WorkerFactory.for_dataset(worker_dataset, db)
     assert isinstance(worker, JsonbResponseWorker)
+    rows = await worker.fetch(worker_dataset.id, field_keys=[], filters={})
+    assert len(rows) == 3

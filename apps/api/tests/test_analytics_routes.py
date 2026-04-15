@@ -610,3 +610,34 @@ async def test_crosstab_nested_col_mode_returns_composite_column_keys(client, db
     col_keys = set(sample_values.keys()) - {"Total"}
     assert any("|" in k for k in col_keys), f"Expected composite keys but got: {col_keys}"
     assert "gender|Female" in sample_values or "gender|Male" in sample_values
+
+
+async def test_crosstab_pct_col_display_returns_percentage_values(client, db):
+    # Seed: 2 Good (Female + Male), 1 Poor (Female) → 3 Female total, 1 Male total, 3 Grand total.
+    # pct_col for Good/Female = 1/2*100 = 50%, Good/Male = 1/1*100 = 100%, Good/Total = 2/3*100 ≈ 66.7%
+    ds = await _seed_crosstab_fixture(db)
+    resp = await client.post(
+        "/api/v1/analytics/crosstab",
+        json={
+            "dataset_id": ds.id,
+            "rows": [{"field_key": "brand_rating"}],
+            "row_mode": "stacked",
+            "columns": [{"field_key": "gender"}],
+            "col_mode": "stacked",
+            "filters": [],
+            "measure": {
+                "type": "count",
+                "field_key": None,
+                "aggregation": None,
+                "display": "pct_col",
+            },
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    rows = data["rows"]
+    good = next(r for r in rows if r["key"] == ["brand_rating", "Good"])
+    # pct_col: each cell divided by its column total × 100
+    assert good["values"]["Female"] == pytest.approx(50.0, abs=0.1)
+    assert good["values"]["Male"] == pytest.approx(100.0, abs=0.1)
+    assert good["values"]["Total"] == pytest.approx(66.7, abs=0.1)

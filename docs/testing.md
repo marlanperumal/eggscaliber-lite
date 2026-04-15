@@ -119,7 +119,11 @@ Use `@testing-library/react` with a consistent locator strategy:
 - **`getByTestId`** to find structural containers (chip wrappers, list rows, panel regions)
 - **`getByRole`** / **`getByText`** to find interactive elements within those containers, and for content assertions
 - **Never locate by CSS class** — Tailwind class names are implementation details
-- **Exception — `Skeleton`**: the shadcn `Skeleton` component has no semantic role or text. Assert on the `animate-pulse` class to verify skeletons are rendered:
+- **Exception — `Skeleton`**: the shadcn `Skeleton` component has no semantic role or text. When the skeleton is wrapped in a container with `role="status"`, prefer that:
+  ```typescript
+  expect(screen.getByRole("status", { name: /loading/i })).toBeInTheDocument()
+  ```
+  Only fall back to the `.animate-pulse` CSS class when the skeleton has no accessible wrapper:
   ```typescript
   const skeletons = document.querySelectorAll(".animate-pulse")
   expect(skeletons.length).toBeGreaterThan(0)
@@ -133,8 +137,7 @@ Use a never-resolving promise to freeze a component in its loading state:
 it("shows loading skeleton while fetching", () => {
   mockGet.mockReturnValue(new Promise(() => {}) as never)
   render(<FieldTreePanel ... />)
-  const skeletons = document.querySelectorAll(".animate-pulse")
-  expect(skeletons.length).toBeGreaterThan(0)
+  expect(screen.getByRole("status", { name: /loading fields/i })).toBeInTheDocument()
 })
 ```
 
