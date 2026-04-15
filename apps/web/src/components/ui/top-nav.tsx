@@ -25,7 +25,7 @@ export function TopNav() {
       <span className="text-sm font-bold tracking-tight">{themeConfig.brand.name}</span>
       <div className="flex gap-1">
         {NAV_LINKS.map(({ href, label }) => {
-          const isActive = pathname.startsWith(href)
+          const isActive = pathname?.startsWith(href) ?? false
           return (
             <Link
               key={href}
