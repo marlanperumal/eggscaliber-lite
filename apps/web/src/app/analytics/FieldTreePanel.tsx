@@ -1,9 +1,12 @@
 "use client"
 import { ChevronDown, ChevronRight, X } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/lib/api"
 import type { QueryConfig } from "./analytics-types"
 import { DEFAULT_QUERY } from "./analytics-types"
+import { EmptyState } from "./EmptyState"
+import { FieldTreeIllustration } from "./illustrations/FieldTreeIllustration"
 
 interface FieldNode {
   id: number
@@ -34,12 +37,21 @@ interface Props {
   onQueryChange: (q: QueryConfig | ((prev: QueryConfig | null) => QueryConfig)) => void
 }
 
+function PanelSpinner() {
+  return (
+    <div
+      role="status"
+      aria-label="Loading"
+      className="h-3 w-3 animate-spin rounded-full border-2 border-muted-foreground/20 border-t-muted-foreground/60"
+    />
+  )
+}
+
 export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
   const [tree, setTree] = useState<FieldTree | null>(null)
+  const [treeLoading, setTreeLoading] = useState(false)
   const [search, setSearch] = useState("")
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
-  // In trending mode, resolve the first dataset in the collection to use for
-  // the field tree (the collection shares a common field schema across datasets)
   const [effectiveDatasetId, setEffectiveDatasetId] = useState<number | null>(null)
 
   useEffect(() => {
@@ -68,7 +80,6 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
     }
   }, [query?.dataset_id, query?.collection_id])
 
-  // Ref so the tree-load effect can read the current query without re-subscribing
   const queryRef = useRef(query)
   useEffect(() => {
     queryRef.current = query
@@ -77,8 +88,10 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
   useEffect(() => {
     if (!effectiveDatasetId) {
       setTree(null)
+      setTreeLoading(false)
       return
     }
+    setTreeLoading(true)
     api
       .GET("/api/v1/datasets/{dataset_id}/field-tree", {
         params: { path: { dataset_id: effectiveDatasetId } },
@@ -87,9 +100,9 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
         if (data) {
           const t = data as FieldTree
           setTree(t)
+          setTreeLoading(false)
           setExpanded(new Set(t.groups.map((g) => g.id)))
 
-          // Enrich display_names for any chips restored from URL (display_name not stored in URL)
           const allFields: FieldNode[] = []
           const collectFields = (g: GroupNode) => {
             allFields.push(...g.fields)
@@ -99,9 +112,6 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
           allFields.push(...t.ungrouped_fields)
           const byKey = Object.fromEntries(allFields.map((f) => [f.field_key, f]))
 
-          // Only call onQueryChange if there are actually chips that need enriching
-          // (avoids spurious calls when query was freshly built from the UI)
-          // Read via ref so the effect doesn't re-run on every query field change
           const currentQuery = queryRef.current
           const needsEnrich =
             currentQuery?.rows.some((r) => !r.display_name && byKey[r.field_key]) ||
@@ -125,6 +135,9 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
             })
           }
         }
+      })
+      .catch(() => {
+        setTreeLoading(false)
       })
   }, [effectiveDatasetId, onQueryChange])
 
@@ -251,10 +264,17 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
     )
   }
 
+  const isEmptyTree =
+    tree !== null && tree.groups.length === 0 && tree.ungrouped_fields.length === 0
+
   return (
     <div className="flex h-full flex-col">
+      {/* Panel header */}
       <div className="flex items-center justify-between border-b border-border bg-muted/50 px-3 py-2">
-        <span className="text-sm font-medium">Fields</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Fields</span>
+          {treeLoading && <PanelSpinner />}
+        </div>
         <button
           type="button"
           onClick={onCollapse}
@@ -263,6 +283,8 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
           <X className="h-4 w-4" />
         </button>
       </div>
+
+      {/* Search input */}
       <div className="px-3 py-2">
         <input
           type="search"
@@ -272,11 +294,37 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
           className="w-full rounded border bg-background px-2 py-1 text-sm"
         />
       </div>
+
+      {/* Body */}
       <div className="flex-1 overflow-y-auto px-1">
         {!effectiveDatasetId && (
-          <p className="px-3 py-4 text-sm text-muted-foreground">Select a dataset to see fields.</p>
+          <EmptyState
+            illustration={<FieldTreeIllustration />}
+            title="No dataset selected"
+            body="Choose a dataset in the Query Builder to browse fields"
+          />
         )}
-        {tree && (
+
+        {effectiveDatasetId && treeLoading && (
+          <div className="space-y-2 px-3 py-2">
+            <Skeleton className="h-4 w-[70%]" />
+            <Skeleton className="ml-4 h-3 w-[50%]" />
+            <Skeleton className="ml-4 h-3 w-[60%]" />
+            <Skeleton className="mt-2 h-4 w-[55%]" />
+            <Skeleton className="ml-4 h-3 w-[45%]" />
+            <Skeleton className="ml-4 h-3 w-[65%]" />
+          </div>
+        )}
+
+        {effectiveDatasetId && isEmptyTree && (
+          <EmptyState
+            illustration={<FieldTreeIllustration />}
+            title="No fields"
+            body="This dataset has no browsable fields"
+          />
+        )}
+
+        {tree && !isEmptyTree && (
           <>
             {tree.groups.map((g) => renderGroup(g))}
             {tree.ungrouped_fields.length > 0 && (

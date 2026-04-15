@@ -83,10 +83,20 @@ beforeEach(() => {
 })
 
 describe("FieldTreePanel", () => {
-  it("shows placeholder when no dataset is selected", () => {
+  it("shows illustrated empty state when no dataset is selected", () => {
     renderPanel(makeQuery({ dataset_id: null }))
-    expect(screen.getByText("Select a dataset to see fields.")).toBeInTheDocument()
+    expect(screen.getByText("No dataset selected")).toBeInTheDocument()
+    expect(
+      screen.getByText("Choose a dataset in the Query Builder to browse fields"),
+    ).toBeInTheDocument()
     expect(mockGet).not.toHaveBeenCalled()
+  })
+
+  it("shows loading skeleton while tree is fetching", () => {
+    mockGet.mockReturnValue(new Promise(() => {}) as never)
+    renderPanel()
+    const skeletons = document.querySelectorAll(".animate-pulse")
+    expect(skeletons.length).toBeGreaterThan(0)
   })
 
   it("fetches and renders the field tree when dataset_id is set", async () => {
@@ -204,7 +214,7 @@ describe("FieldTreePanel", () => {
       dataset_id: 1,
       rows: [{ field_key: "brand_awareness" }],
     })
-    const enriched = updater!(prev)
+    const enriched = updater?.(prev)
     expect(enriched.rows[0].display_name).toBe("Brand Awareness")
   })
 })
