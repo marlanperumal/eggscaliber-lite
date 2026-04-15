@@ -78,8 +78,11 @@ jobs:
       - name: Check generated types are fresh
         run: just check-types
 
-      - name: Run tests
-        run: just test
+      - name: Run app tests
+        run: just test-api --ignore=tests/test_migrations.py && just test-web
+
+      - name: Run migration tests
+        run: just test-api tests/test_migrations.py
 
       - name: Build Storybook (verify no component errors)
         run: cd apps/web && pnpm build-storybook
