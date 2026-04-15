@@ -48,6 +48,13 @@ export const Empty: Story = {
   args: { query: withFields() },
 }
 
+export const EmptyZones: Story = {
+  name: "Empty zones — illustrated drop targets",
+  args: {
+    query: withFields({ dataset_id: 1 }),
+  },
+}
+
 export const CrosstabWithFields: Story = {
   name: "Crosstab — with fields",
   args: {

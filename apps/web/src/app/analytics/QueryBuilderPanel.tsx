@@ -22,6 +22,7 @@ import type {
   QueryConfig,
 } from "./analytics-types"
 import { DEFAULT_QUERY } from "./analytics-types"
+import { QueryZoneIllustration } from "./illustrations/QueryZoneIllustration"
 
 // ── Field type display config ──────────────────────────────────────────────
 
@@ -352,9 +353,10 @@ function Zone({
           </div>
         )}
         {isEmpty ? (
-          <p className="py-2 text-center text-[10px] text-muted-foreground">
-            Click fields to add here
-          </p>
+          <div className="flex flex-col items-center gap-1 py-1">
+            <QueryZoneIllustration />
+            <p className="text-[9px] text-muted-foreground">Drop fields here</p>
+          </div>
         ) : (
           <div className="flex flex-wrap gap-1">
             {fields.map((f) => (
