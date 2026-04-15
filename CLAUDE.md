@@ -124,6 +124,15 @@ Do not rely on training-data knowledge for installation or integration — alway
 
 This rule exists because version-specific breakage has already occurred: Storybook 8→10 changed the framework entirely, `next lint` was removed in Next.js 16, `eslint-plugin-react` v7 is incompatible with ESLint 10. Each was avoidable by reading current docs.
 
+## Prototyping Workflow (Brainstorming → Implementation)
+
+Use a **hybrid approach** for UI work — HTML display-server mockups for high-level layout decisions, then implement directly in Storybook. No throwaway code after the design phase.
+
+- **HTML mockups** (via `just brainstorm`): used only for structural/visual direction questions during brainstorming
+- **Storybook** (`just storybook`): the implementation target — build stateful stories that serve as both interactive prototype and reference artefact
+- Run the `frontend-design` skill during the Storybook implementation phase
+- Every new component needs a Storybook story with a11y passing before the task is complete
+
 ## Visual Companion (Brainstorming)
 
 When generating mockups for the visual companion, always make the images large and legible:
