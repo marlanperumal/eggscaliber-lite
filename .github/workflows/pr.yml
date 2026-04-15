@@ -61,6 +61,9 @@ jobs:
           PGPASSWORD=postgres psql -h localhost -U postgres -d eggscaliber_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
           PGPASSWORD=postgres psql -h localhost -U postgres -d eggscaliber_migrations_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
 
+      - name: Run migrations (dev DB)
+        run: cd apps/api && uv run alembic upgrade head
+
       - name: Run migrations (test DB)
         run: cd apps/api && uv run alembic upgrade head
         env:
