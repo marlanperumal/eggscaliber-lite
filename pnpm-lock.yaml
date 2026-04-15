@@ -43,8 +43,8 @@ importers:
         specifier: ^0.1.0
         version: 0.1.0(next@16.2.3(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rxjs@7.8.2)
       '@posthog/nextjs-config':
-        specifier: ^1.9.1
-        version: 1.9.1(next@16.2.3(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(webpack@5.105.4(esbuild@0.27.7))
+        specifier: ^1.9.2
+        version: 1.9.2(next@16.2.3(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(webpack@5.105.4(esbuild@0.27.7))
       '@radix-ui/react-avatar':
         specifier: ^1.1.11
         version: 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -1258,8 +1258,8 @@ packages:
   '@posthog/core@1.23.2':
     resolution: {integrity: sha512-zTDdda9NuSHrnwSOfFMxX/pyXiycF4jtU1kTr8DL61dHhV+7LF6XF1ndRZZTuaGGbfbb/GJYkEsjEX9SXfNZeQ==}
 
-  '@posthog/core@1.25.1':
-    resolution: {integrity: sha512-76enEGwLVtcCTbfAr1wJ6zi4tYzVkGsqJx+H9JiX0K8/VxuKdbOtVShsOJhTD9uvFfTeW3DX+PSCelcqWrRRkw==}
+  '@posthog/core@1.25.2':
+    resolution: {integrity: sha512-h2FO7ut/BbfwpAXWpwdDHTzQgUo9ibDFEs6ZO+3cI3KPWQt5XwczK1OLAuPprcjm8T/jl0SH8jSFo5XdU4RbTg==}
 
   '@posthog/next@0.1.0':
     resolution: {integrity: sha512-Gxgd7axQBOYEXahL6hEMRsujyxNyEpyxg+mk+ubpRhlkvkI/b7RbAu/V6I6iPy2g6O95OZeVDcNb7BCllMgTgA==}
@@ -1272,8 +1272,8 @@ packages:
       '@vercel/functions':
         optional: true
 
-  '@posthog/nextjs-config@1.9.1':
-    resolution: {integrity: sha512-gxYd27oJOK9ba9OuXdf2dN8RPS+NFJRS/jDv3XhYFod7WjgM8U/6gJEoOb7wSBuEDUwQ/E8sElXonbHJnsMXzg==}
+  '@posthog/nextjs-config@1.9.2':
+    resolution: {integrity: sha512-XBFST0qgdj92pwUTKYCt290qMbmERqLv+cKrT9ZrSZoxBgOvJ13ih5jSSsa5AOdB4qNS9i40jq2gt/rfvVL+3A==}
     engines: {node: ^20.20.0 || >=22.22.0}
     peerDependencies:
       next: '>12.1.0'
@@ -1284,8 +1284,8 @@ packages:
   '@posthog/types@1.359.1':
     resolution: {integrity: sha512-oQihoHWLnOkSkzOToCWKNigbJ7UZcIkl+rSJuq2PLwL7EB0Q/r1UGSbVCkrPH8xtPbYpi7w4TVpMrg41TMT+LQ==}
 
-  '@posthog/webpack-plugin@1.4.1':
-    resolution: {integrity: sha512-uF9DWgflK9t1aJoiCn1t5LGi2okx/BCWU/AAzaQSj5cGyrZrH+VqjdAbYDO5k/H9AP3w0hg7XFAvk5G4cqG+Jw==}
+  '@posthog/webpack-plugin@1.4.2':
+    resolution: {integrity: sha512-ArITZeNvt5BRQyNEfNt3IKqswiqZo6iLIQuoWTGdf7O8tkeBYUh+J65cjU65Yv/K7SCmd1Hkm6v+xaQitdBjZA==}
     peerDependencies:
       webpack: ^5
 
@@ -6643,7 +6643,7 @@ snapshots:
     dependencies:
       cross-spawn: 7.0.6
 
-  '@posthog/core@1.25.1': {}
+  '@posthog/core@1.25.2': {}
 
   '@posthog/next@0.1.0(next@16.2.3(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rxjs@7.8.2)':
     dependencies:
@@ -6657,11 +6657,11 @@ snapshots:
     transitivePeerDependencies:
       - rxjs
 
-  '@posthog/nextjs-config@1.9.1(next@16.2.3(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(webpack@5.105.4(esbuild@0.27.7))':
+  '@posthog/nextjs-config@1.9.2(next@16.2.3(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(webpack@5.105.4(esbuild@0.27.7))':
     dependencies:
       '@posthog/cli': 0.7.5
       '@posthog/plugin-utils': 1.0.1
-      '@posthog/webpack-plugin': 1.4.1(webpack@5.105.4(esbuild@0.27.7))
+      '@posthog/webpack-plugin': 1.4.2(webpack@5.105.4(esbuild@0.27.7))
       next: 16.2.3(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       semver: 7.7.4
     transitivePeerDependencies:
@@ -6674,10 +6674,10 @@ snapshots:
 
   '@posthog/types@1.359.1': {}
 
-  '@posthog/webpack-plugin@1.4.1(webpack@5.105.4(esbuild@0.27.7))':
+  '@posthog/webpack-plugin@1.4.2(webpack@5.105.4(esbuild@0.27.7))':
     dependencies:
       '@posthog/cli': 0.7.5
-      '@posthog/core': 1.25.1
+      '@posthog/core': 1.25.2
       '@posthog/plugin-utils': 1.0.1
       webpack: 5.105.4(esbuild@0.27.7)
     transitivePeerDependencies:
