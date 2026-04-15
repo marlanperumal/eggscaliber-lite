@@ -7,7 +7,7 @@ Five sub-projects, each with its own spec → plan → implementation cycle.
 | 1 | Project Foundation | ✅ Complete | [spec](superpowers/specs/2026-04-07-project-foundation-design.md) | [plan](superpowers/plans/2026-04-07-project-foundation.md) |
 | 2 | Nomenclature & Data Model | ✅ Complete | [spec](superpowers/specs/2026-04-10-nomenclature-data-model-design.md) | [plan](superpowers/plans/2026-04-10-nomenclature-data-model.md) |
 | 3 | Analytics Engine | ✅ Complete | — | [plan](superpowers/plans/2026-04-10-analytics-engine.md) |
-| 4 | UX Polish | 🔜 Next | — | [plan](superpowers/plans/2026-04-15-ux-polish-iteration-3.md) |
+| 4 | UX Polish | ✅ Complete | — | [plan](superpowers/plans/2026-04-15-ux-polish-iteration-3.md) |
 | 5 | Drag & Drop | ⏳ Pending | — | — |
 | 6 | Data Ingestion & Metadata Editor | ⏳ Pending | — | — |
 | 7 | AI Interface | ⏳ Pending | — | — |
@@ -36,7 +36,7 @@ Bringing the frontend from unstyled prototype to a polished, usable product:
 - **Iteration 1 — App shell & panel chrome** ✅ — Top nav bar (logo, links, user avatar), visible panel borders/backgrounds/headers, page frame
 - **Iteration 2 — Query builder controls** ✅ — Mode mini-cards, shadcn Select with breadcrumb hierarchy, type-circle field chips, zone empty/populated states, stacked/nested toggle, measure matrix
 - **Iteration 3 — Empty & loading states** ✅ — Illustrated empty states (SVG + title + copy) for field tree, query zones, and results panel; skeleton + spinner loading states
-- **Iteration 4 — Home page** — Minimal landing with CTA or redirect to `/analytics`
+- **Iteration 4 — Home page** ✅ — Minimal landing with CTA or redirect to `/analytics`
 
 **Done when:** All iterations shipped and analytics engine feels polished end-to-end.
 
