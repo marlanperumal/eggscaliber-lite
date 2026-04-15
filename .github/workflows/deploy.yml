@@ -24,7 +24,6 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/eggscaliber_dev
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/eggscaliber_test
       MIGRATIONS_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/eggscaliber_migrations_test
 
@@ -56,14 +55,15 @@ jobs:
 
       - name: Create test databases and extensions
         run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE eggscaliber_dev;"
           PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE eggscaliber_test;"
           PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE eggscaliber_migrations_test;"
           PGPASSWORD=postgres psql -h localhost -U postgres -d eggscaliber_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
           PGPASSWORD=postgres psql -h localhost -U postgres -d eggscaliber_migrations_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
 
-      - name: Run migrations
+      - name: Run migrations (migrations test DB)
         run: cd apps/api && uv run alembic upgrade head
+        env:
+          DATABASE_URL: ${{ env.MIGRATIONS_TEST_DATABASE_URL }}
 
       - name: Run all checks and tests
         run: |
@@ -71,7 +71,11 @@ jobs:
           just format-check
           just typecheck
           just audit
-          just test
+          just test-api --ignore=tests/test_migrations.py
+          just test-web
+
+      - name: Run migration tests
+        run: just test-api tests/test_migrations.py
 
       # Vercel deploys automatically via Vercel GitHub integration — no step needed here.
       # Render deploys automatically via Render GitHub integration — no step needed here.
