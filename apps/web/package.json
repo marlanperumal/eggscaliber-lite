@@ -14,7 +14,7 @@
     "chromatic": "npx chromatic --project-token=chpt_85846330fe69bf3"
   },
   "dependencies": {
-    "@clerk/nextjs": "^7.0.11",
+    "@clerk/nextjs": "^7.2.0",
     "@posthog/next": "^0.1.0",
     "@posthog/nextjs-config": "^1.9.1",
     "@radix-ui/react-avatar": "^1.1.11",
