@@ -27,10 +27,10 @@ import { QueryZoneIllustration } from "./illustrations/QueryZoneIllustration"
 // ── Field type display config ──────────────────────────────────────────────
 
 const FIELD_TYPE_CONFIG: Record<string, { color: string; icon: string }> = {
-  categorical: { color: "#6366f1", icon: "◯" },
-  multi_response: { color: "#0ea5e9", icon: "⊕" },
-  ordinal: { color: "#f59e0b", icon: "≡" },
-  numeric: { color: "#10b981", icon: "#" },
+  categorical: { color: "var(--field-type-categorical)", icon: "◯" },
+  multi_response: { color: "var(--field-type-multi-response)", icon: "⊕" },
+  ordinal: { color: "var(--field-type-ordinal)", icon: "≡" },
+  numeric: { color: "var(--field-type-numeric)", icon: "#" },
 }
 
 // ── Measure matrix config ──────────────────────────────────────────────────
@@ -269,7 +269,7 @@ function FieldChip({ field, onRemove }: { field: FieldSelection; onRemove: (fk: 
     >
       {typeConfig ? (
         <span
-          className="flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-full text-[8px] font-black text-white"
+          className="flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-full text-[8px] font-black text-primary-foreground"
           style={{ background: typeConfig.color }}
         >
           {typeConfig.icon}

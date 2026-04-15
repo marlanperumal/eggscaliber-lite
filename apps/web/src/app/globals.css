@@ -32,4 +32,5 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-nav: var(--nav);
+  --color-nav-foreground: var(--nav-foreground);
 }

@@ -1,6 +1,7 @@
 "use client"
 import { ChevronDown, ChevronRight, X } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/lib/api"
 import type { QueryConfig } from "./analytics-types"
@@ -286,12 +287,12 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
 
       {/* Search input */}
       <div className="px-3 py-2">
-        <input
+        <Input
           type="search"
           placeholder="Search fields…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded border bg-background px-2 py-1 text-sm"
+          className="h-7 px-2 py-1 text-xs"
         />
       </div>
 

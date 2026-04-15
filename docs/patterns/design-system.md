@@ -22,7 +22,9 @@ semantic token utilities.
 | `border-border` | All panel and input borders |
 | `ring-ring` | Focus rings |
 | `bg-nav` | Top navigation bar background (custom token) |
+| `text-nav-foreground` | Text/icons on the nav bar (always `#ffffff`; use `/opacity` modifier for inactive states: `text-nav-foreground/70`) |
 | `--chart-1` … `--chart-8` | Chart series colours — 8 hues evenly spaced from the brand base hue (read via `getComputedStyle`, not Tailwind utilities) |
+| `--field-type-categorical` … `--field-type-numeric` | Field-type indicator badge backgrounds — fixed semantic colours, not theme-derived (read via inline `style={{ background: "var(--field-type-X)" }}`) |
 
 ### Chart series colours
 
@@ -58,6 +60,25 @@ primary-coloured surfaces is handled by `text-primary-foreground` (`#ffffff`).
   Rows
 </span>
 ```
+
+### Soft selection chip (tag/badge)
+
+For "selected field" chips with a soft primary-tinted background, use the `bg-primary/10 border-primary/30 text-primary` pattern. This is **not** the same as using `text-primary` as body text — it is specifically for small interactive chips where the primary-tinted background makes the primary text color readable as a selection indicator.
+
+```tsx
+// CORRECT — soft chip indicating a selected field
+<div className="flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+  <span>Field Name</span>
+  <button type="button" className="text-primary/60 hover:text-primary">
+    <X className="h-2.5 w-2.5" />
+  </button>
+</div>
+
+// WRONG — text-primary as body/paragraph text
+<p className="text-primary">Description text here</p>
+```
+
+This pattern is permitted only for chip/badge-sized selection indicators, not for any readable body text or labels.
 
 ### Dark mode — secondary/inactive text
 

@@ -102,7 +102,12 @@ export function generateThemeCSS(config: ThemeConfig): string {
       --input: ${s[200]};
       --ring: ${s[600]};
       --nav: ${s[900]};
+      --nav-foreground: #ffffff;
       --radius: ${config.radius};
+      --field-type-categorical: #6366f1;
+      --field-type-multi-response: #0ea5e9;
+      --field-type-ordinal: #f59e0b;
+      --field-type-numeric: #10b981;
 ${generateChartTokens(baseHue, 0.58, 0.15)}
     }
     .dark {

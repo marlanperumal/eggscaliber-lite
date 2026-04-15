@@ -21,7 +21,7 @@ export function TopNav() {
   const { setTheme } = useTheme()
 
   return (
-    <nav className="flex h-12 shrink-0 items-center gap-4 bg-nav px-4 text-white">
+    <nav className="flex h-12 shrink-0 items-center gap-4 bg-nav px-4 text-nav-foreground">
       <span className="text-sm font-bold tracking-tight">{themeConfig.brand.name}</span>
       <div className="flex gap-1">
         {NAV_LINKS.map(({ href, label }) => {
@@ -32,8 +32,8 @@ export function TopNav() {
               href={href}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 isActive
-                  ? "bg-white/15 text-white"
-                  : "text-white/70 hover:bg-white/10 hover:text-white"
+                  ? "bg-nav-foreground/15 text-nav-foreground"
+                  : "text-nav-foreground/70 hover:bg-nav-foreground/10 hover:text-nav-foreground"
               }`}
             >
               {label}
@@ -48,7 +48,7 @@ export function TopNav() {
               variant="ghost"
               size="icon"
               aria-label="Toggle colour scheme"
-              className="text-white hover:bg-white/15 hover:text-white"
+              className="text-nav-foreground hover:bg-nav-foreground/15 hover:text-nav-foreground"
             >
               {/* Exception: dark: classes here are transform utilities (rotate/scale) for icon
                   animation — not colour overrides. The "no dark: overrides" rule targets
@@ -64,7 +64,7 @@ export function TopNav() {
           </DropdownMenuContent>
         </DropdownMenu>
         <Avatar className="h-7 w-7">
-          <AvatarFallback className="bg-white/20 text-[10px] font-bold text-white">
+          <AvatarFallback className="bg-nav-foreground/20 text-[10px] font-bold text-nav-foreground">
             MP
           </AvatarFallback>
         </Avatar>
