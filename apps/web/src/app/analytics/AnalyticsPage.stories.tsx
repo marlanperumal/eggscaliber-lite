@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
+import { NuqsTestingAdapter } from "nuqs/adapters/testing"
 import { AnalyticsLayout } from "./AnalyticsLayout"
 
 const meta = {
@@ -17,9 +18,11 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-        <Story />
-      </div>
+      <NuqsTestingAdapter>
+        <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+          <Story />
+        </div>
+      </NuqsTestingAdapter>
     ),
   ],
 } satisfies Meta<typeof AnalyticsLayout>
