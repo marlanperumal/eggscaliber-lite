@@ -108,6 +108,9 @@ export function generateThemeCSS(config: ThemeConfig): string {
       --field-type-multi-response: #0ea5e9;
       --field-type-ordinal: #f59e0b;
       --field-type-numeric: #10b981;
+      --zone-rows: #6366f1;
+      --zone-columns: #d97706;
+      --zone-breakdown: #059669;
 ${generateChartTokens(baseHue, 0.58, 0.15)}
     }
     .dark {

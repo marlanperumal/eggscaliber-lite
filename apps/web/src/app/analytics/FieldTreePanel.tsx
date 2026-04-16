@@ -1,5 +1,6 @@
 "use client"
 import { useDraggable } from "@dnd-kit/core"
+import type { components } from "@shared/api"
 import { ChevronDown, ChevronRight, X } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
@@ -11,28 +12,9 @@ import { DEFAULT_QUERY } from "./analytics-types"
 import { EmptyState } from "./EmptyState"
 import { FieldTreeIllustration } from "./illustrations/FieldTreeIllustration"
 
-interface FieldNode {
-  id: number
-  field_key: string
-  display_name: string
-  field_type: string
-  is_filterable: boolean
-  sort_order: number
-}
-
-interface GroupNode {
-  id: number
-  name: string
-  slug: string
-  sort_order: number
-  fields: FieldNode[]
-  children: GroupNode[]
-}
-
-interface FieldTree {
-  groups: GroupNode[]
-  ungrouped_fields: FieldNode[]
-}
+type FieldNode = components["schemas"]["FieldTreeFieldOut"]
+type GroupNode = components["schemas"]["FieldTreeGroupOut"]
+type FieldTree = components["schemas"]["FieldTreeOut"]
 
 interface Props {
   onCollapse: () => void
@@ -281,7 +263,7 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
           ) : (
             <ChevronRight className="h-3 w-3 shrink-0" />
           )}
-          <span className="text-sm font-medium">{g.name}</span>
+          <span className="font-medium text-sm">{g.name}</span>
         </button>
         {isOpen && (
           <div>
@@ -299,9 +281,9 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
   return (
     <div className="flex h-full flex-col">
       {/* Panel header */}
-      <div className="flex items-center justify-between border-b border-border bg-muted/50 px-3 py-2">
+      <div className="flex items-center justify-between border-border border-b bg-muted/50 px-3 py-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Fields</span>
+          <span className="font-medium text-sm">Fields</span>
           {treeLoading && <PanelSpinner />}
         </div>
         <button
@@ -358,7 +340,7 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
             {tree.groups.map((g) => renderGroup(g))}
             {tree.ungrouped_fields.length > 0 && (
               <div>
-                <p className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <p className="px-2 py-1 font-medium text-muted-foreground text-xs uppercase tracking-wide">
                   Ungrouped
                 </p>
                 {tree.ungrouped_fields.map(renderField)}
@@ -423,9 +405,7 @@ function DraggableFieldRow({
       <ZoneToggleButton
         label="R"
         isOn={inRows}
-        colorClass="text-indigo-500"
-        activeBg="bg-indigo-500/15"
-        activeBorder="border-indigo-400/40"
+        colorVar="var(--zone-rows)"
         ariaLabelOn={`Remove ${field.display_name} from Rows`}
         ariaLabelOff={`Add ${field.display_name} to Rows`}
         onClick={() => onToggleZone(field, "rows")}
@@ -434,9 +414,7 @@ function DraggableFieldRow({
         <ZoneToggleButton
           label="C"
           isOn={inCols}
-          colorClass="text-amber-600"
-          activeBg="bg-amber-500/15"
-          activeBorder="border-amber-400/40"
+          colorVar="var(--zone-columns)"
           ariaLabelOn={`Remove ${field.display_name} from Columns`}
           ariaLabelOff={`Add ${field.display_name} to Columns`}
           onClick={() => onToggleZone(field, "columns")}
@@ -445,9 +423,7 @@ function DraggableFieldRow({
         <ZoneToggleButton
           label="B"
           isOn={inBreakdown}
-          colorClass="text-emerald-700"
-          activeBg="bg-emerald-500/15"
-          activeBorder="border-emerald-400/40"
+          colorVar="var(--zone-breakdown)"
           ariaLabelOn={`Remove ${field.display_name} from Breakdown`}
           ariaLabelOff={`Add ${field.display_name} to Breakdown`}
           onClick={() => onToggleZone(field, "breakdown")}
@@ -462,18 +438,14 @@ function DraggableFieldRow({
 function ZoneToggleButton({
   label,
   isOn,
-  colorClass,
-  activeBg,
-  activeBorder,
+  colorVar,
   ariaLabelOn,
   ariaLabelOff,
   onClick,
 }: {
   label: string
   isOn: boolean
-  colorClass: string
-  activeBg: string
-  activeBorder: string
+  colorVar: string
   ariaLabelOn: string
   ariaLabelOff: string
   onClick: () => void
@@ -486,10 +458,19 @@ function ZoneToggleButton({
         e.stopPropagation()
         onClick()
       }}
-      className={cn(
-        "flex h-[18px] w-[22px] items-center justify-center rounded border text-[9px] font-black transition-colors",
+      style={
         isOn
-          ? cn(colorClass, activeBg, activeBorder)
+          ? {
+              color: colorVar,
+              background: `color-mix(in srgb, ${colorVar} 15%, transparent)`,
+              borderColor: `color-mix(in srgb, ${colorVar} 40%, transparent)`,
+            }
+          : undefined
+      }
+      className={cn(
+        "flex h-[18px] w-[22px] items-center justify-center rounded border font-black text-[9px] transition-colors",
+        isOn
+          ? "border-solid"
           : "border-transparent text-transparent group-hover:border-border group-hover:text-muted-foreground",
       )}
     >

@@ -25,6 +25,7 @@ semantic token utilities.
 | `text-nav-foreground` | Text/icons on the nav bar (always `#ffffff`; use `/opacity` modifier for inactive states: `text-nav-foreground/70`) |
 | `--chart-1` … `--chart-8` | Chart series colours — 8 hues evenly spaced from the brand base hue (read via `getComputedStyle`, not Tailwind utilities) |
 | `--field-type-categorical` … `--field-type-numeric` | Field-type indicator badge backgrounds — fixed semantic colours, not theme-derived (read via inline `style={{ background: "var(--field-type-X)" }}`) |
+| `--zone-rows`, `--zone-columns`, `--zone-breakdown` | Zone identity colours for the R/C/B toggle buttons in the field tree — fixed semantic colours, not theme-derived. Applied via inline `style` with `color-mix()` for alpha variants (see `ZoneToggleButton` in `FieldTreePanel.tsx`). |
 
 ### Chart series colours
 

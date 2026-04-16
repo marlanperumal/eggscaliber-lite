@@ -2,6 +2,7 @@
 import { useDndMonitor, useDroppable } from "@dnd-kit/core"
 import { horizontalListSortingStrategy, SortableContext, useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import type { components } from "@shared/api"
 import { Play, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import {
@@ -24,17 +25,8 @@ import type {
   MeasureType,
   QueryConfig,
 } from "./analytics-types"
-import { DEFAULT_QUERY } from "./analytics-types"
+import { DEFAULT_QUERY, FIELD_TYPE_CONFIG } from "./analytics-types"
 import { QueryZoneIllustration } from "./illustrations/QueryZoneIllustration"
-
-// ── Field type display config ──────────────────────────────────────────────
-
-const FIELD_TYPE_CONFIG: Record<string, { color: string; icon: string }> = {
-  categorical: { color: "var(--field-type-categorical)", icon: "◯" },
-  multi_response: { color: "var(--field-type-multi-response)", icon: "⊕" },
-  ordinal: { color: "var(--field-type-ordinal)", icon: "≡" },
-  numeric: { color: "var(--field-type-numeric)", icon: "#" },
-}
 
 // ── Measure matrix config ──────────────────────────────────────────────────
 
@@ -107,10 +99,8 @@ export function QueryBuilderPanel({
             row_mode: q.row_mode,
             columns: q.columns,
             col_mode: q.col_mode,
-            // biome-ignore lint/suspicious/noExplicitAny: API body types differ slightly from local types
-            filters: q.filters as unknown as any,
-            // biome-ignore lint/suspicious/noExplicitAny: API body types differ slightly from local types
-            measure: q.measure as unknown as any,
+            filters: q.filters.map(({ display_name: _dn, ...rest }) => rest),
+            measure: q.measure,
           },
         })
         if (apiError) throw new Error(JSON.stringify(apiError))
@@ -121,10 +111,8 @@ export function QueryBuilderPanel({
             collection_id: q.collection_id as number,
             fields: q.rows,
             breakdown: q.breakdown ?? undefined,
-            // biome-ignore lint/suspicious/noExplicitAny: API body types differ slightly from local types
-            filters: q.filters as unknown as any,
-            // biome-ignore lint/suspicious/noExplicitAny: API body types differ slightly from local types
-            measure: q.measure as unknown as any,
+            filters: q.filters.map(({ display_name: _dn, ...rest }) => rest),
+            measure: q.measure,
           },
         })
         if (apiError) throw new Error(JSON.stringify(apiError))
@@ -140,8 +128,8 @@ export function QueryBuilderPanel({
   return (
     <div className="flex h-full flex-col">
       {/* Panel header */}
-      <div className="flex items-center justify-between border-b border-border bg-muted/50 px-3 py-2">
-        <span className="text-sm font-medium">Query Builder</span>
+      <div className="flex items-center justify-between border-border border-b bg-muted/50 px-3 py-2">
+        <span className="font-medium text-sm">Query Builder</span>
         <button
           type="button"
           onClick={onCollapse}
@@ -167,8 +155,8 @@ export function QueryBuilderPanel({
               )}
             >
               <span className="mb-0.5 text-lg leading-none">{icon}</span>
-              <span className="text-xs font-semibold">{label}</span>
-              <span className="mt-0.5 text-[9px] leading-tight text-muted-foreground">{desc}</span>
+              <span className="font-semibold text-xs">{label}</span>
+              <span className="mt-0.5 text-[9px] text-muted-foreground leading-tight">{desc}</span>
             </button>
           ))}
         </div>
@@ -208,7 +196,7 @@ export function QueryBuilderPanel({
         {/* Filters */}
         {q.filters.length > 0 && (
           <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="mb-1 font-semibold text-[10px] text-muted-foreground uppercase tracking-wide">
               Filters
             </p>
             <div className="flex flex-wrap gap-1">
@@ -224,13 +212,13 @@ export function QueryBuilderPanel({
       </div>
 
       {/* Run button */}
-      <div className="border-t border-border p-3">
-        {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
+      <div className="border-border border-t p-3">
+        {error && <p className="mb-2 text-destructive text-xs">{error}</p>}
         <button
           type="button"
           onClick={run}
           disabled={isLoading}
-          className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 font-semibold text-primary-foreground text-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
           <Play className="h-3 w-3" aria-hidden />
           {isLoading ? "Running…" : "Run Query"}
@@ -247,11 +235,11 @@ function FieldChip({ field, onRemove }: { field: FieldSelection; onRemove: (fk: 
   return (
     <div
       data-testid={`field-chip-${field.field_key}`}
-      className="flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+      className="flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-medium text-[10px] text-primary"
     >
       {typeConfig ? (
         <span
-          className="flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-full text-[8px] font-black text-primary-foreground"
+          className="flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-full font-black text-[8px] text-primary-foreground"
           style={{ background: typeConfig.color }}
         >
           {typeConfig.icon}
@@ -311,7 +299,7 @@ function FilterChip({ filter, onRemove }: { filter: FilterSpec; onRemove: (fk: s
   return (
     <div
       data-testid={`field-chip-${filter.field_key}`}
-      className="flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+      className="flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-medium text-[10px] text-primary"
     >
       <span>{filter.display_name ?? filter.field_key}</span>
       {filter.levels && <span className="text-primary/60">{filter.levels.join(", ")}</span>}
@@ -359,7 +347,7 @@ function Zone({
 
   return (
     <div>
-      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="mb-1 font-semibold text-[10px] text-muted-foreground uppercase tracking-wide">
         {label}
       </p>
       <div
@@ -372,11 +360,11 @@ function Zone({
           isOver &&
             "border-2 border-primary bg-primary/[0.07] shadow-[0_0_0_4px_hsl(var(--primary)/0.14),0_0_12px_hsl(var(--primary)/0.18)]",
           !isDragActive &&
-            (isEmpty ? "border-dashed border-border bg-muted/30" : "border-border bg-card"),
+            (isEmpty ? "border-border border-dashed bg-muted/30" : "border-border bg-card"),
         )}
       >
         {showModeSelector && (
-          <div className="mb-1.5 flex justify-end border-b border-border/50 pb-1.5">
+          <div className="mb-1.5 flex justify-end border-border/50 border-b pb-1.5">
             <div className="flex overflow-hidden rounded-full border border-border">
               {(["stacked", "nested"] as const).map((m) => (
                 <button
@@ -384,7 +372,7 @@ function Zone({
                   type="button"
                   onClick={() => onModeChange(m)}
                   className={cn(
-                    "px-2 py-0.5 text-[10px] font-semibold transition-colors",
+                    "px-2 py-0.5 font-semibold text-[10px] transition-colors",
                     mode === m
                       ? "bg-muted text-foreground"
                       : "text-muted-foreground hover:bg-muted/50",
@@ -439,7 +427,7 @@ function BreakdownZone({
 
   return (
     <div>
-      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="mb-1 font-semibold text-[10px] text-muted-foreground uppercase tracking-wide">
         Break down by
       </p>
       <div
@@ -457,7 +445,7 @@ function BreakdownZone({
         {breakdown ? (
           <div
             data-testid={`field-chip-${breakdown.field_key}`}
-            className="flex w-fit items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+            className="flex w-fit items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-medium text-[10px] text-primary"
           >
             <span>{breakdown.display_name ?? breakdown.field_key}</span>
             <button type="button" onClick={onRemove} className="text-primary/60 hover:text-primary">
@@ -483,17 +471,17 @@ function MeasureMatrix({
 }) {
   return (
     <div>
-      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="mb-1 font-semibold text-[10px] text-muted-foreground uppercase tracking-wide">
         Measure
       </p>
       <div className="overflow-hidden rounded-md border border-border text-[10px]">
         {/* Column headers */}
-        <div className="grid grid-cols-[44px_1fr_1fr_1fr] border-b border-border bg-muted/50">
-          <div className="border-r border-border" />
+        <div className="grid grid-cols-[44px_1fr_1fr_1fr] border-border border-b bg-muted/50">
+          <div className="border-border border-r" />
           {MEASURE_TYPES.map(({ value, label }) => (
             <div
               key={value}
-              className="border-r border-border py-1 text-center text-[9px] font-semibold text-muted-foreground last:border-r-0"
+              className="border-border border-r py-1 text-center font-semibold text-[9px] text-muted-foreground last:border-r-0"
             >
               {label}
             </div>
@@ -503,9 +491,9 @@ function MeasureMatrix({
         {DISPLAY_TYPES.map(({ value: display, label: displayLabel }) => (
           <div
             key={display}
-            className="grid grid-cols-[44px_1fr_1fr_1fr] border-b border-border last:border-b-0"
+            className="grid grid-cols-[44px_1fr_1fr_1fr] border-border border-b last:border-b-0"
           >
-            <div className="flex items-center border-r border-border bg-muted/50 px-1.5 py-1 text-[9px] font-semibold text-muted-foreground">
+            <div className="flex items-center border-border border-r bg-muted/50 px-1.5 py-1 font-semibold text-[9px] text-muted-foreground">
               {displayLabel}
             </div>
             {MEASURE_TYPES.map(({ value: type, ariaLabel: typeAriaLabel }) => {
@@ -517,7 +505,7 @@ function MeasureMatrix({
                   aria-label={`${typeAriaLabel}, ${displayLabel}`}
                   onClick={() => onSet({ measure: { ...measure, type, display } })}
                   className={cn(
-                    "border-r border-border py-1 text-center transition-colors last:border-r-0",
+                    "border-border border-r py-1 text-center transition-colors last:border-r-0",
                     isActive
                       ? "bg-primary/10 font-semibold text-primary"
                       : "text-muted-foreground hover:bg-muted/50",
@@ -536,15 +524,7 @@ function MeasureMatrix({
 
 // ── ScopePicker ────────────────────────────────────────────────────────────
 
-type ScopePackage = {
-  id: number
-  name: string
-  collections: {
-    id: number
-    name: string
-    datasets: { id: number; name: string }[]
-  }[]
-}
+type ScopePackage = components["schemas"]["ScopePackage"]
 
 function ScopePicker({
   query,
@@ -564,7 +544,7 @@ function ScopePicker({
   if (query.mode === "crosstab") {
     return (
       <div>
-        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="mb-1 font-semibold text-[10px] text-muted-foreground uppercase tracking-wide">
           Dataset
         </p>
         <Select
@@ -597,7 +577,7 @@ function ScopePicker({
 
   return (
     <div>
-      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="mb-1 font-semibold text-[10px] text-muted-foreground uppercase tracking-wide">
         Collection
       </p>
       <Select

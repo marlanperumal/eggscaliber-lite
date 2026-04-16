@@ -10,20 +10,12 @@ import {
   usePanelRef,
 } from "react-resizable-panels"
 import type { AnalyticsResult, QueryConfig } from "./analytics-types"
+import { FIELD_TYPE_CONFIG } from "./analytics-types"
 import { FieldTreePanel } from "./FieldTreePanel"
 import { QueryBuilderPanel } from "./QueryBuilderPanel"
 import { ResultsPanel } from "./ResultsPanel"
 import { useAnalyticsState } from "./useAnalyticsState"
 import { useDragAndDrop } from "./useDragAndDrop"
-
-// ── Field type config (mirrors QueryBuilderPanel — used for ghost chip) ──────
-
-const FIELD_TYPE_CONFIG: Record<string, { color: string; icon: string }> = {
-  categorical: { color: "var(--field-type-categorical)", icon: "◯" },
-  multi_response: { color: "var(--field-type-multi-response)", icon: "⊕" },
-  ordinal: { color: "var(--field-type-ordinal)", icon: "≡" },
-  numeric: { color: "var(--field-type-numeric)", icon: "#" },
-}
 
 const COLLAPSED_SIZE = 3
 
@@ -168,10 +160,10 @@ function GhostChip({
 }) {
   const typeConfig = fieldType ? FIELD_TYPE_CONFIG[fieldType] : null
   return (
-    <div className="flex cursor-grabbing items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary opacity-90 shadow-lg">
+    <div className="flex cursor-grabbing items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-medium text-[10px] text-primary opacity-90 shadow-lg">
       {typeConfig ? (
         <span
-          className="flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-full text-[8px] font-black text-primary-foreground"
+          className="flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-full font-black text-[8px] text-primary-foreground"
           style={{ background: typeConfig.color }}
         >
           {typeConfig.icon}
@@ -192,7 +184,7 @@ function CollapsedStrip({ label, onClick }: { label: string; onClick: () => void
       className="flex h-full w-full cursor-pointer items-center justify-center transition-colors hover:bg-muted/60"
     >
       <span
-        className="text-xs font-medium tracking-widest text-muted-foreground"
+        className="font-medium text-muted-foreground text-xs tracking-widest"
         style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
       >
         {label}

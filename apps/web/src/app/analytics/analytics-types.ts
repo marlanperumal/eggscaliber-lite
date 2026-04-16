@@ -1,3 +1,5 @@
+import type { components } from "@shared/api"
+
 export type AnalysisMode = "crosstab" | "trend"
 export type RowColMode = "stacked" | "nested"
 export type MeasureType = "count" | "weighted" | "value_field"
@@ -5,25 +7,19 @@ export type DisplayType = "n" | "pct_col" | "pct_row"
 export type ChartType = "grouped_bar" | "stacked_bar" | "stacked_bar_100" | "line"
 export type ViewMode = "chart_only" | "table_only" | "stacked" | "side_by_side"
 
-export interface FieldSelection {
-  field_key: string
+// UI-only extension of the API FieldSelection — adds display metadata not sent to the API
+export type FieldSelection = components["schemas"]["FieldSelection"] & {
   display_name?: string
   field_type?: string
 }
 
-export interface FilterSpec {
-  field_key: string
+// UI-only extension of the API FilterSpec — adds display_name for chip labels (not sent to API)
+export type FilterSpec = components["schemas"]["FilterSpec"] & {
   display_name?: string
-  levels?: string[]
-  value_range?: [number, number]
 }
 
-export interface MeasureSpec {
-  type: MeasureType
-  field_key: string | null
-  aggregation: "sum" | "mean" | null
-  display: DisplayType
-}
+// Use the generated type directly — local definition was identical
+export type MeasureSpec = components["schemas"]["MeasureSpec"]
 
 export interface QueryConfig {
   mode: AnalysisMode
@@ -54,6 +50,17 @@ export const DEFAULT_QUERY: QueryConfig = {
   breakdown: null,
   filters: [],
   measure: { type: "count", field_key: null, aggregation: null, display: "n" },
+}
+
+// ── Field type display config ──────────────────────────────────────────────
+// Fixed semantic map: field_type value → badge colour (CSS var) + icon character.
+// Colour vars are defined in lib/theme.ts alongside --field-type-* tokens.
+
+export const FIELD_TYPE_CONFIG: Record<string, { color: string; icon: string }> = {
+  categorical: { color: "var(--field-type-categorical)", icon: "◯" },
+  multi_response: { color: "var(--field-type-multi-response)", icon: "⊕" },
+  ordinal: { color: "var(--field-type-ordinal)", icon: "≡" },
+  numeric: { color: "var(--field-type-numeric)", icon: "#" },
 }
 
 export interface AnalyticsResult {
