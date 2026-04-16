@@ -4,8 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-**Always `just <command>` from the repo root.** Check `just --list` for all recipes. Fall back to direct invocation only when no recipe covers it.
+**`just` commands are pre-approved and MUST always be used when a recipe exists.** Using the raw equivalent (e.g. `cd apps/api && uv run pytest` instead of `just test-api`) is never acceptable — it may require manual approval and block progress, and it violates this rule regardless. Check `just --list` before reaching for any direct invocation. Only fall back when no recipe covers the operation.
 
+When no `just` recipe exists, target everything from the repo root:
 - **pnpm workspace** — use `--filter` from root: `pnpm --filter web run build`; for packages use `just add-web-dep` / `just add-web-dev-dep`
 - **uv one-off** — use `--project` from root: `uv run --project apps/api <cmd>`; for packages use `just add-api-dep` / `just add-api-dev-dep`
 
