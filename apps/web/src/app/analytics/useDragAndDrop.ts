@@ -57,8 +57,9 @@ export function applyDragEnd(q: QueryConfig, args: DragEventArgs): QueryConfig {
     return addToZone(q, field, targetZone)
   }
 
-  // chip drag
+  // chip drag — sourceZone is always set for chip drags
   if (!overId) {
+    // biome-ignore lint/style/noNonNullAssertion: chip drags always have a sourceZone
     return removeFromZone(q, fieldKey, sourceZone!)
   }
 
@@ -79,7 +80,8 @@ export function applyDragEnd(q: QueryConfig, args: DragEventArgs): QueryConfig {
     return sourceZone === "rows" ? { ...q, rows: reordered } : { ...q, columns: reordered }
   }
 
-  // Move to different zone
+  // Move to different zone — sourceZone is always set for chip drags
+  // biome-ignore lint/style/noNonNullAssertion: chip drags always have a sourceZone
   const updated = removeFromZone(q, fieldKey, sourceZone!)
   return addToZone(updated, field, targetZone)
 }
@@ -106,10 +108,9 @@ function removeFromZone(q: QueryConfig, fieldKey: string, zone: ZoneName): Query
 // ── Hook ──────────────────────────────────────────────────────────────────
 
 export function useDragAndDrop({
-  query,
   onQueryChange,
 }: {
-  query: QueryConfig | null
+  query?: QueryConfig | null
   onQueryChange: (q: QueryConfig | ((prev: QueryConfig | null) => QueryConfig)) => void
 }) {
   const [activeDrag, setActiveDrag] = useState<ActiveDragState | null>(null)
