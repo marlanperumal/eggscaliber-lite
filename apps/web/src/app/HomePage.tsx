@@ -8,15 +8,15 @@ export function HomePage() {
       <div className="grid w-full max-w-5xl items-center gap-16 md:grid-cols-2">
         {/* Left: text + CTA */}
         <div className="flex flex-col gap-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="font-semibold text-[11px] text-muted-foreground uppercase tracking-wide">
             Data analysis platform
           </p>
-          <h1 className="text-4xl font-bold tracking-tight text-foreground">
+          <h1 className="font-bold text-4xl text-foreground tracking-tight">
             Survey insights,
             <br />
             without the code
           </h1>
-          <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
+          <p className="max-w-sm text-muted-foreground text-sm leading-relaxed">
             Cross-tab, trend, and breakdown analysis across datasets. Configure queries visually,
             get results instantly.
           </p>

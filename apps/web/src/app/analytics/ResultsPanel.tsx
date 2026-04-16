@@ -43,9 +43,9 @@ export function ResultsPanel({ result, query, lastRunQuery, isLoading }: Props) 
   if (isLoading) {
     return (
       <div data-testid="results-panel" className="flex h-full flex-col">
-        <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-2">
+        <div className="flex items-center gap-2 border-border border-b bg-muted/50 px-4 py-2">
           <PanelSpinner />
-          <p className="text-sm text-muted-foreground">Running…</p>
+          <p className="text-muted-foreground text-sm">Running…</p>
         </div>
         <div className="flex flex-1 flex-col gap-3 p-4">
           <div className="flex items-end gap-2">
@@ -88,17 +88,17 @@ export function ResultsPanel({ result, query, lastRunQuery, isLoading }: Props) 
 
   return (
     <div data-testid="results-panel" className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border bg-muted/50 px-4 py-2">
+      <div className="flex items-center justify-between border-border border-b bg-muted/50 px-4 py-2">
         <div>
-          <p className="text-sm font-medium">
+          <p className="font-medium text-sm">
             {result.meta.dataset_name ?? result.meta.collection_name}
             {isStale && (
-              <span className="ml-2 text-xs font-normal text-muted-foreground">
+              <span className="ml-2 font-normal text-muted-foreground text-xs">
                 (stale — re-run to update)
               </span>
             )}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             n = {result.meta.base_n ?? "—"} · {measureLabel} · {displayLabel}
           </p>
         </div>
@@ -155,7 +155,7 @@ export function ResultsPanel({ result, query, lastRunQuery, isLoading }: Props) 
       >
         {showChart && (
           <div
-            className={`p-4 ${viewMode === "stacked" ? "border-b border-border" : "flex-1 border-r border-border"}`}
+            className={`p-4 ${viewMode === "stacked" ? "border-border border-b" : "flex-1 border-border border-r"}`}
           >
             <AnalyticsChart result={result} chartType={chartType} />
           </div>

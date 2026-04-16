@@ -12,7 +12,7 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   render: () => (
-    <div className="flex flex-col gap-2 w-64">
+    <div className="flex w-64 flex-col gap-2">
       <Skeleton className="h-4 w-full" />
       <Skeleton className="h-4 w-3/4" />
       <Skeleton className="h-4 w-1/2" />
@@ -22,7 +22,7 @@ export const Default: Story = {
 
 export const Card: Story = {
   render: () => (
-    <div className="flex flex-col gap-3 w-64 p-4 border rounded-lg">
+    <div className="flex w-64 flex-col gap-3 rounded-lg border p-4">
       <Skeleton className="h-6 w-1/2" />
       <Skeleton className="h-4 w-full" />
       <Skeleton className="h-4 w-3/4" />

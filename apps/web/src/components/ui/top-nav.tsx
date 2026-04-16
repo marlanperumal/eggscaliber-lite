@@ -22,7 +22,7 @@ export function TopNav() {
 
   return (
     <nav className="flex h-12 shrink-0 items-center gap-4 bg-nav px-4 text-nav-foreground">
-      <span className="text-sm font-bold tracking-tight">{themeConfig.brand.name}</span>
+      <span className="font-bold text-sm tracking-tight">{themeConfig.brand.name}</span>
       <div className="flex gap-1">
         {NAV_LINKS.map(({ href, label }) => {
           const isActive = pathname?.startsWith(href) ?? false
@@ -30,7 +30,7 @@ export function TopNav() {
             <Link
               key={href}
               href={href}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`rounded-md px-3 py-1.5 font-medium text-sm transition-colors ${
                 isActive
                   ? "bg-nav-foreground/15 text-nav-foreground"
                   : "text-nav-foreground/70 hover:bg-nav-foreground/10 hover:text-nav-foreground"
@@ -64,7 +64,7 @@ export function TopNav() {
           </DropdownMenuContent>
         </DropdownMenu>
         <Avatar className="h-7 w-7">
-          <AvatarFallback className="bg-nav-foreground/20 text-[10px] font-bold text-nav-foreground">
+          <AvatarFallback className="bg-nav-foreground/20 font-bold text-[10px] text-nav-foreground">
             MP
           </AvatarFallback>
         </Avatar>

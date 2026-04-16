@@ -37,7 +37,7 @@ function colHeader(
 
 export function AnalyticsTable({ result }: Props) {
   const { meta, rows } = result
-  if (rows.length === 0) return <p className="p-4 text-sm text-muted-foreground">No data.</p>
+  if (rows.length === 0) return <p className="p-4 text-muted-foreground text-sm">No data.</p>
 
   const colKeys = Object.keys(rows[0].values)
   const isTrend = meta.mode === "trend"
@@ -57,7 +57,7 @@ export function AnalyticsTable({ result }: Props) {
     <div className="overflow-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-border bg-muted/50">
+          <tr className="border-border border-b bg-muted/50">
             {isNested ? (
               <>
                 <th className="px-3 py-2 text-left font-medium">
@@ -89,7 +89,7 @@ export function AnalyticsTable({ result }: Props) {
             return (
               <tr
                 key={row.key.join("||")}
-                className={`border-b border-border hover:bg-muted/30 ${isNewSection ? "border-t-2 border-t-border" : ""}`}
+                className={`border-border border-b hover:bg-muted/30 ${isNewSection ? "border-t-2 border-t-border" : ""}`}
               >
                 {isNested ? (
                   <>

@@ -46,7 +46,7 @@ export const Simple: Story = {
         <CardTitle>Simple Card</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-muted-foreground">No footer on this one.</p>
+        <p className="text-muted-foreground text-sm">No footer on this one.</p>
       </CardContent>
     </Card>
   ),

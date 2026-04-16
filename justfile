@@ -142,9 +142,9 @@ test:
 test-api *args:
     cd apps/api && uv run pytest -v {{args}}
 
-# Run TypeScript tests
-test-web:
-    cd apps/web && pnpm vitest run
+# Run TypeScript tests (pass extra args e.g. `just test-web -t "test name"`)
+test-web *args:
+    cd apps/web && pnpm vitest run {{args}}
 
 # Run E2E tests — requires dev servers already running (`just dev`) and seed data (`just db-seed`)
 # Optional args passed to playwright: e.g. just test-e2e --headed, just test-e2e analytics
@@ -159,6 +159,11 @@ install-browsers:
 lint:
     cd apps/api && uv run ruff check .
     cd apps/web && pnpm biome check src/
+
+# Apply safe + unsafe lint auto-fixes (ruff + biome)
+lint-fix:
+    cd apps/api && uv run ruff check --fix .
+    cd apps/web && pnpm biome check --write --unsafe src/
 
 # Format Python (ruff) + TypeScript (biome)
 format:

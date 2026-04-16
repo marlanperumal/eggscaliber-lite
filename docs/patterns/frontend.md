@@ -164,6 +164,10 @@ Follow `docs/patterns/design-system.md` for all styling decisions. Key rules:
   the colour token system.
 - Typography: `text-sm` is the body default; use the scale in
   `design-system.md` for headings and labels
+- Use canonical Tailwind class names — Biome's `useSortedClasses` rule enforces
+  the short form where Tailwind v4 deprecated the long alias (e.g. `shrink-0`
+  not `flex-shrink-0`, `grow` not `flex-grow`). This also applies inside `cn()`
+  calls. Violations appear as warnings during `just lint`.
 
 ## State Management
 

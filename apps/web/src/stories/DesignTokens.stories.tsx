@@ -86,10 +86,10 @@ const CHART_HUE_OFFSETS = [0, 45, 90, 135, 180, 225, 270, 315]
 export const ColourPalette: StoryObj = {
   render: () => (
     <div className="space-y-8">
-      <h2 className="text-xl font-semibold">Colour Palette</h2>
+      <h2 className="font-semibold text-xl">Colour Palette</h2>
       {tokenGroups.map(({ heading, tokens }) => (
         <div key={heading}>
-          <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          <h3 className="mb-3 font-semibold text-muted-foreground text-sm uppercase tracking-wide">
             {heading}
           </h3>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -100,8 +100,8 @@ export const ColourPalette: StoryObj = {
                   style={{ backgroundColor: `var(${v})` }}
                 />
                 <div>
-                  <p className="text-sm font-medium leading-none">{name}</p>
-                  <p className="mt-1 font-mono text-xs text-muted-foreground">{v}</p>
+                  <p className="font-medium text-sm leading-none">{name}</p>
+                  <p className="mt-1 font-mono text-muted-foreground text-xs">{v}</p>
                 </div>
               </div>
             ))}
@@ -119,8 +119,8 @@ export const ThemeComparison: StoryObj = {
   render: () => (
     <div className="space-y-8">
       <div>
-        <h2 className="text-xl font-semibold mb-2">Theme Comparison</h2>
-        <p className="text-sm text-muted-foreground mb-3">
+        <h2 className="mb-2 font-semibold text-xl">Theme Comparison</h2>
+        <p className="mb-3 text-muted-foreground text-sm">
           To switch the active palette, edit one line in{" "}
           <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
             src/config/theme.config.ts
@@ -138,20 +138,20 @@ export const ThemeComparison: StoryObj = {
           const destructive = config.destructive ?? DEFAULT_DESTRUCTIVE
           return (
             <div key={name}>
-              <h3 className="mb-4 text-base font-semibold capitalize">{name}</h3>
+              <h3 className="mb-4 font-semibold text-base capitalize">{name}</h3>
 
               {/* Colour scale */}
-              <div className="space-y-1.5 mb-6">
+              <div className="mb-6 space-y-1.5">
                 {SCALE_STEPS.map((step) => (
                   <div key={step} className="flex items-center gap-3">
                     <div
                       className="h-7 w-14 shrink-0 rounded border"
                       style={{ backgroundColor: scale[step] }}
                     />
-                    <span className="w-8 shrink-0 font-mono text-xs text-right text-muted-foreground">
+                    <span className="w-8 shrink-0 text-right font-mono text-muted-foreground text-xs">
                       {step}
                     </span>
-                    <span className="font-mono text-xs text-muted-foreground truncate">
+                    <span className="truncate font-mono text-muted-foreground text-xs">
                       {scale[step]}
                     </span>
                   </div>
@@ -160,7 +160,7 @@ export const ThemeComparison: StoryObj = {
 
               {/* Destructive */}
               <div className="border-t pt-4">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="mb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide">
                   Destructive
                 </p>
                 {(
@@ -169,13 +169,13 @@ export const ThemeComparison: StoryObj = {
                     ["Dark mode", destructive.dark],
                   ] as const
                 ).map(([label, value]) => (
-                  <div key={label} className="flex items-center gap-3 mb-2">
+                  <div key={label} className="mb-2 flex items-center gap-3">
                     <div
                       className="h-7 w-14 shrink-0 rounded border"
                       style={{ backgroundColor: value }}
                     />
-                    <span className="w-20 shrink-0 text-xs text-muted-foreground">{label}</span>
-                    <span className="font-mono text-xs text-muted-foreground truncate">
+                    <span className="w-20 shrink-0 text-muted-foreground text-xs">{label}</span>
+                    <span className="truncate font-mono text-muted-foreground text-xs">
                       {value}
                     </span>
                   </div>
@@ -194,8 +194,8 @@ export const ChartColours: StoryObj = {
   render: () => (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold tracking-tight">Chart Colours</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h2 className="font-bold text-xl tracking-tight">Chart Colours</h2>
+        <p className="mt-1 text-muted-foreground text-sm">
           8 hues evenly distributed from the brand base hue. Light/dark values differ — toggle the
           theme to compare. Read via{" "}
           <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">getComputedStyle</code>{" "}
@@ -213,9 +213,9 @@ export const ChartColours: StoryObj = {
                 style={{ backgroundColor: `var(--chart-${n})` }}
               />
               <div>
-                <p className="text-sm font-medium leading-none">Series {n}</p>
-                <p className="mt-1 font-mono text-xs text-muted-foreground">--chart-{n}</p>
-                <p className="font-mono text-xs text-muted-foreground">+{offset}°</p>
+                <p className="font-medium text-sm leading-none">Series {n}</p>
+                <p className="mt-1 font-mono text-muted-foreground text-xs">--chart-{n}</p>
+                <p className="font-mono text-muted-foreground text-xs">+{offset}°</p>
               </div>
             </div>
           )
@@ -228,15 +228,15 @@ export const ChartColours: StoryObj = {
 export const Typography: StoryObj = {
   render: () => (
     <div className="space-y-4">
-      <h2 className="mb-4 text-xl font-semibold">Typography</h2>
-      <h1 className="text-4xl font-bold">Heading 1 — text-4xl font-bold</h1>
-      <h2 className="text-3xl font-semibold">Heading 2 — text-3xl font-semibold</h2>
-      <h3 className="text-2xl font-semibold">Heading 3 — text-2xl font-semibold</h3>
-      <h4 className="text-xl font-medium">Heading 4 — text-xl font-medium</h4>
+      <h2 className="mb-4 font-semibold text-xl">Typography</h2>
+      <h1 className="font-bold text-4xl">Heading 1 — text-4xl font-bold</h1>
+      <h2 className="font-semibold text-3xl">Heading 2 — text-3xl font-semibold</h2>
+      <h3 className="font-semibold text-2xl">Heading 3 — text-2xl font-semibold</h3>
+      <h4 className="font-medium text-xl">Heading 4 — text-xl font-medium</h4>
       <p className="text-base">
         Body text — text-base. The quick brown fox jumps over the lazy dog.
       </p>
-      <p className="text-sm text-muted-foreground">Muted text — text-sm text-muted-foreground.</p>
+      <p className="text-muted-foreground text-sm">Muted text — text-sm text-muted-foreground.</p>
       <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">code snippet</code>
     </div>
   ),

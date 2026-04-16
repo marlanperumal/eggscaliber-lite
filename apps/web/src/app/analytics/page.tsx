@@ -6,7 +6,7 @@ import { AnalyticsLayout } from "./AnalyticsLayout"
 
 const loadingFallback = (
   <div className="flex h-screen items-center justify-center">
-    <p className="text-sm text-muted-foreground">Loading…</p>
+    <p className="text-muted-foreground text-sm">Loading…</p>
   </div>
 )
 
@@ -27,7 +27,7 @@ export default function AnalyticsPage() {
     <Suspense
       fallback={
         <div className="flex h-screen items-center justify-center">
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <p className="text-muted-foreground text-sm">Loading…</p>
         </div>
       }
     >
