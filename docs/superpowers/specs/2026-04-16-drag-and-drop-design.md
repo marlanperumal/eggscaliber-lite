@@ -47,8 +47,8 @@ Each field row in `FieldTreePanel` becomes draggable via `useDraggable`. Drag da
 - `onDragStart` — record which zone the dragged item came from (if it's a chip being reordered/moved); activate drop zone glow on all valid targets
 - `onDragOver` — track the current `over` zone to drive the active border highlight; insert ghost chip preview
 - `onDragEnd` — commit the mutation:
-  - `over === null` → remove chip from its source zone
-  - `over` is a zone id → add field to that zone (if from field tree) or move chip there (if from another zone)
+  - `over === null` → remove chip from its source zone only (a field in both R and C, dragged from R and released outside, is removed from R but remains in C)
+  - `over` is a zone id → add field to that zone (if from field tree) or move chip there (if from another zone; removes from source zone only)
   - `over` is a chip id → reorder within zone using `arrayMove`
 
 ### DragOverlay
