@@ -244,41 +244,24 @@ async def test_crosstab_dataset_not_found(client):
     assert resp.status_code == 404
 
 
-async def test_crosstab_nested_row_mode_at_limit_passes_validation(client):
-    # Exactly 2 rows in nested mode is at the allowed limit — validation must pass.
-    # Uses a nonexistent dataset so we get 404, not 422.
+@pytest.mark.parametrize(
+    "rows,row_mode,columns,col_mode",
+    [
+        ([{"field_key": "f1"}, {"field_key": "f2"}], "nested", [], "stacked"),
+        ([{"field_key": f"f{i}"} for i in range(1, 6)], "stacked", [], "stacked"),
+        ([{"field_key": "f1"}], "stacked", [{"field_key": "c1"}, {"field_key": "c2"}], "nested"),
+    ],
+)
+async def test_crosstab_at_field_limit_passes_validation(client, rows, row_mode, columns, col_mode):
+    # At-limit requests must pass validation and reach the DB layer (404, not 422).
     resp = await client.post(
         "/api/v1/analytics/crosstab",
         json={
             "dataset_id": 99999,
-            "rows": [{"field_key": "f1"}, {"field_key": "f2"}],
-            "row_mode": "nested",
-            "columns": [],
-            "col_mode": "stacked",
-            "filters": [],
-            "measure": {"type": "count", "field_key": None, "aggregation": None, "display": "n"},
-        },
-    )
-    assert resp.status_code == 404
-
-
-async def test_crosstab_stacked_row_mode_at_limit_passes_validation(client):
-    # Exactly 5 rows in stacked mode is at the allowed limit — validation must pass.
-    # Uses a nonexistent dataset so we get 404, not 422.
-    resp = await client.post(
-        "/api/v1/analytics/crosstab",
-        json={
-            "dataset_id": 99999,
-            "rows": [
-                {"field_key": "f1"},
-                {"field_key": "f2"},
-                {"field_key": "f3"},
-                {"field_key": "f4"},
-                {"field_key": "f5"},
-            ],
-            "row_mode": "stacked",
-            "columns": [],
-            "col_mode": "stacked",
+            "rows": rows,
+            "row_mode": row_mode,
+            "columns": columns,
+            "col_mode": col_mode,
             "filters": [],
             "measure": {"type": "count", "field_key": None, "aggregation": None, "display": "n"},
         },
@@ -333,24 +316,6 @@ async def test_crosstab_stacked_row_limit_exceeded_returns_422(client):
         },
     )
     assert resp.status_code == 422
-
-
-async def test_crosstab_nested_col_mode_at_limit_passes_validation(client):
-    # Exactly 2 cols in nested mode is at the allowed limit — validation must pass.
-    # Uses a nonexistent dataset so we get 404, not 422.
-    resp = await client.post(
-        "/api/v1/analytics/crosstab",
-        json={
-            "dataset_id": 99999,
-            "rows": [{"field_key": "f1"}],
-            "row_mode": "stacked",
-            "columns": [{"field_key": "c1"}, {"field_key": "c2"}],
-            "col_mode": "nested",
-            "filters": [],
-            "measure": {"type": "count", "field_key": None, "aggregation": None, "display": "n"},
-        },
-    )
-    assert resp.status_code == 404
 
 
 async def test_crosstab_nested_col_limit_exceeded_returns_422(client, db):
@@ -641,3 +606,126 @@ async def test_crosstab_pct_col_display_returns_percentage_values(client, db):
     assert good["values"]["Female"] == pytest.approx(50.0, abs=0.1)
     assert good["values"]["Male"] == pytest.approx(100.0, abs=0.1)
     assert good["values"]["Total"] == pytest.approx(66.7, abs=0.1)
+
+
+async def test_crosstab_pct_row_display_returns_percentage_values(client, db):
+    # Seed: Good has Female=1, Male=1 (Total=2); Poor has Female=1, Male=0 (Total=1).
+    # pct_row for Good: Female=50%, Male=50%, Total=100%
+    ds = await _seed_crosstab_fixture(db)
+    resp = await client.post(
+        "/api/v1/analytics/crosstab",
+        json={
+            "dataset_id": ds.id,
+            "rows": [{"field_key": "brand_rating"}],
+            "row_mode": "stacked",
+            "columns": [{"field_key": "gender"}],
+            "col_mode": "stacked",
+            "filters": [],
+            "measure": {
+                "type": "count",
+                "field_key": None,
+                "aggregation": None,
+                "display": "pct_row",
+            },
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    rows = data["rows"]
+    good = next(r for r in rows if r["key"] == ["brand_rating", "Good"])
+    assert good["values"]["Female"] == pytest.approx(50.0, abs=0.1)
+    assert good["values"]["Male"] == pytest.approx(50.0, abs=0.1)
+    assert good["values"]["Total"] == pytest.approx(100.0, abs=0.1)
+    poor = next(r for r in rows if r["key"] == ["brand_rating", "Poor"])
+    assert poor["values"]["Female"] == pytest.approx(100.0, abs=0.1)
+    assert poor["values"]["Total"] == pytest.approx(100.0, abs=0.1)
+
+
+async def _seed_trend_weighted_fixture(db):
+    """Collection with 2 datasets, each having brand_awareness (categorical) + pw (weight)."""
+    pkg = Package(name="P3", slug="p3-tw")
+    db.add(pkg)
+    await db.flush()
+    await db.refresh(pkg)
+    col = Collection(
+        name="Weighted Tracker",
+        slug="wt-tracker",
+        package_id=pkg.id,
+        collection_type=CollectionType.survey,
+    )
+    db.add(col)
+    await db.flush()
+    await db.refresh(col)
+
+    ds1 = Dataset(
+        name="Wave 1",
+        slug="w1-tw",
+        collection_id=col.id,
+        worker_type=WorkerType.jsonb_response,
+        sort_order=0,
+    )
+    ds2 = Dataset(
+        name="Wave 2",
+        slug="w2-tw",
+        collection_id=col.id,
+        worker_type=WorkerType.jsonb_response,
+        sort_order=1,
+    )
+    db.add_all([ds1, ds2])
+    await db.flush()
+    await db.refresh(ds1)
+    await db.refresh(ds2)
+
+    for ds in [ds1, ds2]:
+        f = Field(
+            field_key="brand_awareness",
+            display_name="Brand Awareness",
+            field_type=FieldType.categorical,
+            dataset_id=ds.id,
+        )
+        pw = Field(
+            field_key="pw",
+            display_name="Panel Weight",
+            field_type=FieldType.weight,
+            dataset_id=ds.id,
+        )
+        db.add_all([f, pw])
+        await db.flush()
+        await db.refresh(f)
+        for val in ["Aware", "Not Aware"]:
+            db.add(Level(field_id=f.id, value=val, display_label=val, sort_order=0))
+        # 2 Aware (pw=2.0, pw=1.0), 1 Not Aware (pw=1.5)
+        db.add(Response(dataset_id=ds.id, payload={"brand_awareness": "Aware", "pw": 2.0}))
+        db.add(Response(dataset_id=ds.id, payload={"brand_awareness": "Aware", "pw": 1.0}))
+        db.add(Response(dataset_id=ds.id, payload={"brand_awareness": "Not Aware", "pw": 1.5}))
+    await db.flush()
+    return col
+
+
+async def test_trend_weighted_measure_sums_weights_per_wave_per_level(client, db):
+    # Each wave: Aware weighted total = 2.0+1.0 = 3.0, Not Aware = 1.5.
+    col = await _seed_trend_weighted_fixture(db)
+    resp = await client.post(
+        "/api/v1/analytics/trend",
+        json={
+            "collection_id": col.id,
+            "fields": [{"field_key": "brand_awareness"}],
+            "breakdown": None,
+            "filters": [],
+            "measure": {
+                "type": "weighted",
+                "field_key": "pw",
+                "aggregation": None,
+                "display": "n",
+            },
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    for wave in ["Wave 1", "Wave 2"]:
+        aware = next(r for r in data["rows"] if r["key"] == [wave, "brand_awareness", "Aware"])
+        not_aware = next(
+            r for r in data["rows"] if r["key"] == [wave, "brand_awareness", "Not Aware"]
+        )
+        assert aware["values"]["Total"] == pytest.approx(3.0)
+        assert not_aware["values"]["Total"] == pytest.approx(1.5)

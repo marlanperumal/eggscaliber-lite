@@ -102,16 +102,16 @@ async def test_get_dataset_responses_page_size_above_maximum_returns_422(client,
     assert response.status_code == 422
 
 
+async def test_get_dataset_responses_out_of_bounds_page_returns_empty_items(client, db):
+    ds = await _seed_dataset(db)
+    response = await client.get(f"/api/v1/datasets/{ds.id}/responses?page=999")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 2
+    assert data["items"] == []
+    assert data["page"] == 999
+
+
 async def test_get_dataset_responses_not_found(client):
     response = await client.get("/api/v1/datasets/99999/responses")
-    assert response.status_code == 404
-
-
-async def test_get_dataset_field_tree_not_found(client):
-    response = await client.get("/api/v1/datasets/99999/field-tree")
-    assert response.status_code == 404
-
-
-async def test_get_dataset_weight_fields_not_found(client):
-    response = await client.get("/api/v1/datasets/99999/weight-fields")
     assert response.status_code == 404

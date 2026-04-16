@@ -153,4 +153,9 @@ async def test_consistency_endpoint(client, db):
     response = await client.get(f"/api/v1/collections/{col.id}/consistency")
     assert response.status_code == 200
     data = response.json()
-    assert any(item["inconsistency_type"] == "type_mismatch" for item in data)
+    type_mismatch_items = [item for item in data if item["inconsistency_type"] == "type_mismatch"]
+    assert len(type_mismatch_items) == 1
+    item = type_mismatch_items[0]
+    assert item["field_key"] == "score"
+    assert "detail" in item
+    assert item["detail"] != ""

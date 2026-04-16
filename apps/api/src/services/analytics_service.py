@@ -99,7 +99,12 @@ async def run_trend(session: AsyncSession, request: TrendRequest) -> TrendRespon
     field_keys = [f.field_key for f in request.fields]
     breakdown_key = request.breakdown.field_key if request.breakdown else None
     filter_keys = [f.field_key for f in request.filters]
-    all_keys = list(set(field_keys + ([breakdown_key] if breakdown_key else []) + filter_keys))
+    extra_keys = []
+    if request.measure.type in ("weighted", "value_field") and request.measure.field_key:
+        extra_keys.append(request.measure.field_key)
+    all_keys = list(
+        set(field_keys + ([breakdown_key] if breakdown_key else []) + filter_keys + extra_keys)
+    )
 
     field_metas: dict[str, FieldMeta] = {}
     for ds in datasets:
