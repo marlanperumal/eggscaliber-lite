@@ -1,3 +1,4 @@
+import { DndContext } from "@dnd-kit/core"
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { fn } from "@storybook/test"
 import type { QueryConfig } from "./analytics-types"
@@ -10,20 +11,22 @@ const meta = {
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (
-      <div style={{ width: 280, height: 640, display: "flex" }}>
-        <div
-          style={{
-            flex: 1,
-            border: "1px solid var(--border)",
-            borderRadius: 8,
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <Story />
+      <DndContext>
+        <div style={{ width: 280, height: 640, display: "flex" }}>
+          <div
+            style={{
+              flex: 1,
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <Story />
+          </div>
         </div>
-      </div>
+      </DndContext>
     ),
   ],
   args: {
@@ -116,4 +119,23 @@ export const WithError: Story = {
   name: "Error state",
   // Render the panel with no dataset so clicking Run triggers the validation error
   args: { query: withFields({ dataset_id: null }) },
+}
+
+export const WithPopulatedZones: Story = {
+  name: "Populated zones — drag handles visible",
+  args: {
+    query: withFields({
+      dataset_id: 1,
+      rows: [
+        {
+          field_key: "brand_awareness",
+          display_name: "Brand Awareness",
+          field_type: "multi_response",
+        },
+        { field_key: "age_group", display_name: "Age Group", field_type: "ordinal" },
+      ],
+      columns: [{ field_key: "gender", display_name: "Gender", field_type: "categorical" }],
+      measure: { type: "count", field_key: null, aggregation: null, display: "pct_col" },
+    }),
+  },
 }

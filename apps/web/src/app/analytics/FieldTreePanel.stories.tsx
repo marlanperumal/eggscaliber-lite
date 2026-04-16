@@ -1,3 +1,4 @@
+import { DndContext } from "@dnd-kit/core"
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { fn } from "@storybook/test"
 import { api } from "@/lib/api"
@@ -11,20 +12,22 @@ const meta = {
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (
-      <div style={{ width: 240, height: 560, display: "flex" }}>
-        <div
-          style={{
-            flex: 1,
-            border: "1px solid var(--border)",
-            borderRadius: 8,
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <Story />
+      <DndContext>
+        <div style={{ width: 240, height: 560, display: "flex" }}>
+          <div
+            style={{
+              flex: 1,
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <Story />
+          </div>
         </div>
-      </div>
+      </DndContext>
     ),
   ],
   args: {
@@ -66,6 +69,38 @@ export const Populated: Story = {
     docs: {
       description: {
         story: "Requires `just api` running with seed data (`just db-seed`) to load fields.",
+      },
+    },
+  },
+}
+
+export const WithAssignedFields: Story = {
+  name: "With Assigned Fields (toggle indicators)",
+  args: {
+    query: makeQuery({
+      dataset_id: 1,
+      rows: [
+        {
+          field_key: "brand_awareness",
+          display_name: "Brand Awareness",
+          field_type: "categorical",
+        },
+        { field_key: "age_group", display_name: "Age Group", field_type: "categorical" },
+      ],
+      columns: [
+        {
+          field_key: "brand_awareness",
+          display_name: "Brand Awareness",
+          field_type: "categorical",
+        },
+      ],
+    }),
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Shows R/C indicator badges on fields that are assigned to zones. Requires `just api` for live field tree data.",
       },
     },
   },
