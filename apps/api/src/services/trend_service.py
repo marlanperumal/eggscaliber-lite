@@ -1,13 +1,16 @@
+from typing import Any
+
+from src.models.analytics import DatasetData, FieldMeta
 from src.services.crosstab_service import _compute_measure, _value_matches
 
 
 def run_trend(
-    datasets_data: list[dict],
+    datasets_data: list[DatasetData],
     field_keys: list[str],
     breakdown_key: str | None,
-    field_metas_by_key: dict,
-    measure: dict,
-) -> list[dict]:
+    field_metas_by_key: dict[str, FieldMeta],
+    measure: dict[str, Any],
+) -> list[dict[str, Any]]:
     """
     Returns ResultRow-shaped dicts with key = [dataset_name, field_key, level].
     If breakdown_key is set, col keys are breakdown levels; else just "Total".

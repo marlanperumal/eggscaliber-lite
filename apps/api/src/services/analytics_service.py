@@ -7,11 +7,14 @@ from src.models.analytics import (
     CrosstabMeta,
     CrosstabRequest,
     CrosstabResponse,
+    DatasetData,
+    FieldMeta,
     FieldTreeFieldOut,
     FieldTreeGroupOut,
     FieldTreeOut,
     MetaField,
     ResultRow,
+    RowColMeta,
     TrendMeta,
     TrendRequest,
     TrendResponse,
@@ -46,8 +49,14 @@ async def run_crosstab(session: AsyncSession, request: CrosstabRequest) -> Cross
     data = crosstab_service.apply_filters(data, filters_raw, field_metas)
     base_n = len(data)
 
-    row_metas = [{"field_key": k, **field_metas[k]} for k in row_keys if k in field_metas]
-    col_metas = [{"field_key": k, **field_metas[k]} for k in col_keys if k in field_metas]
+    row_metas = cast(
+        list[RowColMeta],
+        [{"field_key": k, **field_metas[k]} for k in row_keys if k in field_metas],
+    )
+    col_metas = cast(
+        list[RowColMeta],
+        [{"field_key": k, **field_metas[k]} for k in col_keys if k in field_metas],
+    )
     measure_dict = request.measure.model_dump()
 
     if request.row_mode == "nested" and len(row_metas) >= 2:
@@ -92,7 +101,7 @@ async def run_trend(session: AsyncSession, request: TrendRequest) -> TrendRespon
     filter_keys = [f.field_key for f in request.filters]
     all_keys = list(set(field_keys + ([breakdown_key] if breakdown_key else []) + filter_keys))
 
-    field_metas: dict = {}
+    field_metas: dict[str, FieldMeta] = {}
     for ds in datasets:
         for k, v in (
             await analytics_repo.get_field_metas(session, cast(int, ds.id), all_keys)
@@ -101,7 +110,7 @@ async def run_trend(session: AsyncSession, request: TrendRequest) -> TrendRespon
                 field_metas[k] = v
 
     measure_dict = request.measure.model_dump()
-    datasets_data = []
+    datasets_data: list[DatasetData] = []
     for ds in datasets:
         worker = WorkerFactory.for_dataset(ds, session)
         data = await worker.fetch(cast(int, ds.id), all_keys, {})

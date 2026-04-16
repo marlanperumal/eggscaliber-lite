@@ -1,8 +1,33 @@
-from typing import Literal
+from typing import Any, Literal, TypedDict
 
 from sqlmodel import SQLModel
 
 from src.models.field import FieldType
+
+# ── TypedDicts for the analytics computation pipeline ─────────────────────────
+
+
+class FieldMeta(TypedDict):
+    """Shape of a single field's metadata as returned by analytics_repo.get_field_metas."""
+
+    field_type: FieldType
+    display_name: str
+    levels: list[str]
+    level_labels: dict[str, str]
+
+
+class RowColMeta(FieldMeta):
+    """FieldMeta with field_key prepended — passed to aggregate_stacked / aggregate_nested."""
+
+    field_key: str
+
+
+class DatasetData(TypedDict):
+    """One dataset's rows for the trend pipeline."""
+
+    dataset_name: str
+    data: list[dict[str, Any]]
+
 
 # --- Request schemas ---
 

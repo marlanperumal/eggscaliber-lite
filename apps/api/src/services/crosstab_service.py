@@ -1,14 +1,17 @@
+from typing import Any
+
+from src.models.analytics import FieldMeta, RowColMeta
 from src.models.field import FieldType
 
 
-def _value_matches(row: dict, field_key: str, field_type: FieldType, level: str) -> bool:
+def _value_matches(row: dict[str, Any], field_key: str, field_type: FieldType, level: str) -> bool:
     val = row.get(field_key)
     if field_type == FieldType.multi_response:
         return isinstance(val, list) and level in val
     return str(val) == str(level)
 
 
-def _compute_measure(rows: list[dict], measure: dict) -> float:
+def _compute_measure(rows: list[dict[str, Any]], measure: dict[str, Any]) -> float:
     if measure["type"] == "count":
         return float(len(rows))
     if measure["type"] == "weighted":
@@ -24,11 +27,11 @@ def _compute_measure(rows: list[dict], measure: dict) -> float:
 
 
 def aggregate_stacked(
-    data: list[dict],
-    row_fields: list[dict],
-    col_fields: list[dict],
-    measure: dict,
-) -> list[dict]:
+    data: list[dict[str, Any]],
+    row_fields: list[RowColMeta],
+    col_fields: list[RowColMeta],
+    measure: dict[str, Any],
+) -> list[dict[str, Any]]:
     result = []
     for rf in row_fields:
         for level in rf["levels"]:
@@ -53,11 +56,11 @@ def aggregate_stacked(
 
 
 def aggregate_nested(
-    data: list[dict],
-    row_fields: list[dict],
-    col_fields: list[dict],
-    measure: dict,
-) -> list[dict]:
+    data: list[dict[str, Any]],
+    row_fields: list[RowColMeta],
+    col_fields: list[RowColMeta],
+    measure: dict[str, Any],
+) -> list[dict[str, Any]]:
     """Two-level nested rows: key = [outer_key, outer_level, inner_key, inner_level]."""
     if len(row_fields) < 2:
         return aggregate_stacked(data, row_fields, col_fields, measure)
@@ -102,10 +105,15 @@ def aggregate_nested(
     return result
 
 
-def apply_filters(data: list[dict], filters: list[dict], field_metas: dict) -> list[dict]:
+def apply_filters(
+    data: list[dict[str, Any]],
+    filters: list[dict[str, Any]],
+    field_metas: dict[str, FieldMeta],
+) -> list[dict[str, Any]]:
     for f in filters:
         fk = f["field_key"]
-        ft = field_metas.get(fk, {}).get("field_type", FieldType.categorical)
+        fm = field_metas.get(fk)
+        ft = fm["field_type"] if fm is not None else FieldType.categorical
         levels = f.get("levels")
         value_range = f.get("value_range")
 
@@ -119,7 +127,7 @@ def apply_filters(data: list[dict], filters: list[dict], field_metas: dict) -> l
     return data
 
 
-def apply_display(rows: list[dict], display: str) -> list[dict]:
+def apply_display(rows: list[dict[str, Any]], display: str) -> list[dict[str, Any]]:
     if display == "n":
         return rows
     col_keys: set[str] = set()

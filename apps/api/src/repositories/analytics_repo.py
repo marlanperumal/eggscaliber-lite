@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.models.analytics import FieldMeta
 from src.models.dataset import Dataset
 from src.models.field import Field, FieldType
 from src.models.field_group import FieldGroup
@@ -54,7 +55,9 @@ async def get_groups_and_fields(
     return groups, fields
 
 
-async def get_field_metas(session: AsyncSession, dataset_id: int, field_keys: list[str]) -> dict:
+async def get_field_metas(
+    session: AsyncSession, dataset_id: int, field_keys: list[str]
+) -> dict[str, FieldMeta]:
     fields_stmt = select(Field).where(
         Field.dataset_id == dataset_id,
         Field.field_key.in_(field_keys),
@@ -69,20 +72,18 @@ async def get_field_metas(session: AsyncSession, dataset_id: int, field_keys: li
     )
     all_levels = list((await session.execute(levels_stmt)).scalars().all())
 
-    levels_by_field: dict[int | None, list[dict]] = {}
+    levels_by_field: dict[int | None, list[dict[str, str]]] = {}
     for lv in all_levels:
         levels_by_field.setdefault(lv.field_id, []).append(
             {"value": lv.value, "display_label": lv.display_label}
         )
 
     return {
-        f.field_key: {
-            "field_type": f.field_type,
-            "display_name": f.display_name,
-            "levels": [lv["value"] for lv in levels_by_field.get(f.id, [])],
-            "level_labels": {
-                lv["value"]: lv["display_label"] for lv in levels_by_field.get(f.id, [])
-            },
-        }
+        f.field_key: FieldMeta(
+            field_type=f.field_type,
+            display_name=f.display_name,
+            levels=[lv["value"] for lv in levels_by_field.get(f.id, [])],
+            level_labels={lv["value"]: lv["display_label"] for lv in levels_by_field.get(f.id, [])},
+        )
         for f in fields
     }
