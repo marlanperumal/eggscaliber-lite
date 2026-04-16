@@ -239,13 +239,13 @@ function FieldChip({ field, onRemove }: { field: FieldSelection; onRemove: (fk: 
     >
       {typeConfig ? (
         <span
-          className="flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-full font-black text-[8px] text-primary-foreground"
+          className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full font-black text-[8px] text-primary-foreground"
           style={{ background: typeConfig.color }}
         >
           {typeConfig.icon}
         </span>
       ) : (
-        <span className="h-[18px] w-[18px] flex-shrink-0 rounded-full bg-muted" />
+        <span className="h-[18px] w-[18px] shrink-0 rounded-full bg-muted" />
       )}
       <span>{field.display_name ?? field.field_key}</span>
       <button

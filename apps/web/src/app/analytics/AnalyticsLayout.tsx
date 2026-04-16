@@ -163,13 +163,13 @@ function GhostChip({
     <div className="flex cursor-grabbing items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-medium text-[10px] text-primary opacity-90 shadow-lg">
       {typeConfig ? (
         <span
-          className="flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-full font-black text-[8px] text-primary-foreground"
+          className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full font-black text-[8px] text-primary-foreground"
           style={{ background: typeConfig.color }}
         >
           {typeConfig.icon}
         </span>
       ) : (
-        <span className="h-[18px] w-[18px] flex-shrink-0 rounded-full bg-muted" />
+        <span className="h-[18px] w-[18px] shrink-0 rounded-full bg-muted" />
       )}
       <span>{displayName ?? "Field"}</span>
     </div>
