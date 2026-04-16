@@ -1,4 +1,5 @@
 "use client"
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
 import { useCallback, useState } from "react"
 import {
   Group,
@@ -13,6 +14,16 @@ import { FieldTreePanel } from "./FieldTreePanel"
 import { QueryBuilderPanel } from "./QueryBuilderPanel"
 import { ResultsPanel } from "./ResultsPanel"
 import { useAnalyticsState } from "./useAnalyticsState"
+import { useDragAndDrop } from "./useDragAndDrop"
+
+// ── Field type config (mirrors QueryBuilderPanel — used for ghost chip) ──────
+
+const FIELD_TYPE_CONFIG: Record<string, { color: string; icon: string }> = {
+  categorical: { color: "var(--field-type-categorical)", icon: "◯" },
+  multi_response: { color: "var(--field-type-multi-response)", icon: "⊕" },
+  ordinal: { color: "var(--field-type-ordinal)", icon: "≡" },
+  numeric: { color: "var(--field-type-numeric)", icon: "#" },
+}
 
 const COLLAPSED_SIZE = 3
 
@@ -60,68 +71,115 @@ export function AnalyticsLayout() {
     [setQuery],
   )
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
+  const { activeDrag, onDragStart, onDragOver, onDragEnd, onDragCancel } = useDragAndDrop({
+    query,
+    onQueryChange: handleQueryChange,
+  })
+
   return (
     <div className="flex h-full flex-col bg-muted">
-      <Group orientation="horizontal" className="flex-1 p-2">
-        <Panel
-          panelRef={treeRef}
-          defaultSize={20}
-          minSize={3}
-          collapsible
-          collapsedSize={COLLAPSED_SIZE}
-          onResize={onTreeResize}
-        >
-          <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
-            {treeCollapsed ? (
-              <CollapsedStrip label="Fields" onClick={toggleTree} />
-            ) : (
-              <FieldTreePanel
-                onCollapse={toggleTree}
+      <DndContext
+        sensors={sensors}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDragEnd={onDragEnd}
+        onDragCancel={onDragCancel}
+      >
+        <Group orientation="horizontal" className="flex-1 p-2">
+          <Panel
+            panelRef={treeRef}
+            defaultSize={20}
+            minSize={3}
+            collapsible
+            collapsedSize={COLLAPSED_SIZE}
+            onResize={onTreeResize}
+          >
+            <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
+              {treeCollapsed ? (
+                <CollapsedStrip label="Fields" onClick={toggleTree} />
+              ) : (
+                <FieldTreePanel
+                  onCollapse={toggleTree}
+                  query={query}
+                  onQueryChange={handleQueryChange}
+                />
+              )}
+            </div>
+          </Panel>
+          <Separator className="w-2 cursor-col-resize bg-muted transition-colors hover:bg-primary/20" />
+          <Panel
+            panelRef={builderRef}
+            defaultSize={25}
+            minSize={3}
+            collapsible
+            collapsedSize={COLLAPSED_SIZE}
+            onResize={onBuilderResize}
+          >
+            <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
+              {builderCollapsed ? (
+                <CollapsedStrip label="Query" onClick={toggleBuilder} />
+              ) : (
+                <QueryBuilderPanel
+                  onCollapse={toggleBuilder}
+                  query={query}
+                  onQueryChange={handleQueryChange}
+                  isLoading={isRunning}
+                  onLoadingChange={setIsRunning}
+                  onResult={(r, q) => {
+                    setResult(r)
+                    setLastRunQuery(q)
+                  }}
+                />
+              )}
+            </div>
+          </Panel>
+          <Separator className="w-2 cursor-col-resize bg-muted transition-colors hover:bg-primary/20" />
+          <Panel defaultSize={55} minSize={20}>
+            <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
+              <ResultsPanel
+                result={result}
                 query={query}
-                onQueryChange={handleQueryChange}
-              />
-            )}
-          </div>
-        </Panel>
-        <Separator className="w-2 cursor-col-resize bg-muted transition-colors hover:bg-primary/20" />
-        <Panel
-          panelRef={builderRef}
-          defaultSize={25}
-          minSize={3}
-          collapsible
-          collapsedSize={COLLAPSED_SIZE}
-          onResize={onBuilderResize}
-        >
-          <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
-            {builderCollapsed ? (
-              <CollapsedStrip label="Query" onClick={toggleBuilder} />
-            ) : (
-              <QueryBuilderPanel
-                onCollapse={toggleBuilder}
-                query={query}
-                onQueryChange={handleQueryChange}
+                lastRunQuery={lastRunQuery}
                 isLoading={isRunning}
-                onLoadingChange={setIsRunning}
-                onResult={(r, q) => {
-                  setResult(r)
-                  setLastRunQuery(q)
-                }}
               />
-            )}
-          </div>
-        </Panel>
-        <Separator className="w-2 cursor-col-resize bg-muted transition-colors hover:bg-primary/20" />
-        <Panel defaultSize={55} minSize={20}>
-          <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
-            <ResultsPanel
-              result={result}
-              query={query}
-              lastRunQuery={lastRunQuery}
-              isLoading={isRunning}
-            />
-          </div>
-        </Panel>
-      </Group>
+            </div>
+          </Panel>
+        </Group>
+        <DragOverlay dropAnimation={null}>
+          {activeDrag ? (
+            <GhostChip displayName={activeDrag.displayName} fieldType={activeDrag.fieldType} />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </div>
+  )
+}
+
+// ── GhostChip ─────────────────────────────────────────────────────────────
+
+function GhostChip({
+  displayName,
+  fieldType,
+}: {
+  displayName: string | undefined
+  fieldType: string | undefined
+}) {
+  const typeConfig = fieldType ? FIELD_TYPE_CONFIG[fieldType] : null
+  return (
+    <div className="flex cursor-grabbing items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary opacity-90 shadow-lg">
+      {typeConfig ? (
+        <span
+          className="flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-full text-[8px] font-black text-primary-foreground"
+          style={{ background: typeConfig.color }}
+        >
+          {typeConfig.icon}
+        </span>
+      ) : (
+        <span className="h-[18px] w-[18px] flex-shrink-0 rounded-full bg-muted" />
+      )}
+      <span>{displayName ?? "Field"}</span>
     </div>
   )
 }
