@@ -1,4 +1,7 @@
 "use client"
+import { useDndMonitor, useDroppable } from "@dnd-kit/core"
+import { horizontalListSortingStrategy, SortableContext, useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import { Play, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import {
@@ -176,6 +179,7 @@ export function QueryBuilderPanel({
         {/* Rows / Fields zone */}
         <Zone
           label={q.mode === "trend" ? "Fields" : "Rows"}
+          zoneId="zone-rows"
           fields={q.rows}
           onRemove={removeRow}
           mode={q.row_mode}
@@ -187,6 +191,7 @@ export function QueryBuilderPanel({
         {q.mode === "crosstab" && (
           <Zone
             label="Columns"
+            zoneId="zone-columns"
             fields={q.columns}
             onRemove={removeCol}
             mode={q.col_mode}
@@ -197,30 +202,7 @@ export function QueryBuilderPanel({
 
         {/* Breakdown (trend only) */}
         {q.mode === "trend" && (
-          <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Break down by
-            </p>
-            {q.breakdown ? (
-              <div
-                data-testid={`field-chip-${q.breakdown.field_key}`}
-                className="flex w-fit items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
-              >
-                <span>{q.breakdown.display_name ?? q.breakdown.field_key}</span>
-                <button
-                  type="button"
-                  onClick={() => set({ breakdown: null })}
-                  className="text-primary/60 hover:text-primary"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </div>
-            ) : (
-              <p className="text-[10px] text-muted-foreground">
-                Click a field in the field tree to add it here.
-              </p>
-            )}
-          </div>
+          <BreakdownZone breakdown={q.breakdown} onRemove={() => set({ breakdown: null })} />
         )}
 
         {/* Filters */}
@@ -280,11 +262,45 @@ function FieldChip({ field, onRemove }: { field: FieldSelection; onRemove: (fk: 
       <span>{field.display_name ?? field.field_key}</span>
       <button
         type="button"
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={() => onRemove(field.field_key)}
         className="ml-0.5 text-primary/60 hover:text-primary"
       >
         <X className="h-2.5 w-2.5" />
       </button>
+    </div>
+  )
+}
+
+// ── SortableFieldChip ─────────────────────────────────────────────────────
+
+function SortableFieldChip({
+  field,
+  zone,
+  onRemove,
+}: {
+  field: FieldSelection
+  zone: "rows" | "columns"
+  onRemove: (fk: string) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `chip-${zone}-${field.field_key}`,
+    data: {
+      type: "chip",
+      field_key: field.field_key,
+      display_name: field.display_name,
+      field_type: field.field_type,
+      sourceZone: zone,
+    },
+  })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.35 : 1,
+  }
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <FieldChip field={field} onRemove={onRemove} />
     </div>
   )
 }
@@ -314,6 +330,7 @@ function FilterChip({ filter, onRemove }: { filter: FilterSpec; onRemove: (fk: s
 
 function Zone({
   label,
+  zoneId,
   fields,
   onRemove,
   mode,
@@ -321,22 +338,41 @@ function Zone({
   showModeSelector,
 }: {
   label: string
+  zoneId: "zone-rows" | "zone-columns"
   fields: FieldSelection[]
   onRemove: (fk: string) => void
   mode: "stacked" | "nested"
   onModeChange: (m: "stacked" | "nested") => void
   showModeSelector: boolean
 }) {
+  const [isDragActive, setIsDragActive] = useState(false)
+  useDndMonitor({
+    onDragStart: () => setIsDragActive(true),
+    onDragEnd: () => setIsDragActive(false),
+    onDragCancel: () => setIsDragActive(false),
+  })
+
+  const { setNodeRef, isOver } = useDroppable({ id: zoneId })
   const isEmpty = fields.length === 0
+  const zoneName = zoneId === "zone-rows" ? "rows" : "columns"
+  const sortableIds = fields.map((f) => `chip-${zoneName}-${f.field_key}`)
+
   return (
     <div>
       <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
       <div
+        ref={setNodeRef}
         className={cn(
-          "min-h-[52px] rounded-lg border p-1.5",
-          isEmpty ? "border-dashed border-border bg-muted/30" : "border-border bg-card",
+          "min-h-[52px] rounded-lg border p-1.5 transition-[box-shadow,background-color]",
+          isDragActive &&
+            !isOver &&
+            "bg-primary/[0.07] shadow-[0_0_0_4px_hsl(var(--primary)/0.14),0_0_12px_hsl(var(--primary)/0.18)]",
+          isOver &&
+            "border-2 border-primary bg-primary/[0.07] shadow-[0_0_0_4px_hsl(var(--primary)/0.14),0_0_12px_hsl(var(--primary)/0.18)]",
+          !isDragActive &&
+            (isEmpty ? "border-dashed border-border bg-muted/30" : "border-border bg-card"),
         )}
       >
         {showModeSelector && (
@@ -360,17 +396,76 @@ function Zone({
             </div>
           </div>
         )}
-        {isEmpty ? (
+        {isEmpty && !isDragActive ? (
           <div className="flex flex-col items-center gap-1 py-1">
             <QueryZoneIllustration />
-            <p className="text-[9px] text-muted-foreground">Click +R or +C to add fields</p>
+            <p className="text-[9px] text-muted-foreground">Drag fields here or use R/C buttons</p>
           </div>
         ) : (
-          <div className="flex flex-wrap gap-1">
-            {fields.map((f) => (
-              <FieldChip key={f.field_key} field={f} onRemove={onRemove} />
-            ))}
+          <SortableContext items={sortableIds} strategy={horizontalListSortingStrategy}>
+            <div className="flex flex-wrap gap-1">
+              {fields.map((f) => (
+                <SortableFieldChip
+                  key={f.field_key}
+                  field={f}
+                  zone={zoneName}
+                  onRemove={onRemove}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── BreakdownZone ─────────────────────────────────────────────────────────
+
+function BreakdownZone({
+  breakdown,
+  onRemove,
+}: {
+  breakdown: FieldSelection | null
+  onRemove: () => void
+}) {
+  const [isDragActive, setIsDragActive] = useState(false)
+  useDndMonitor({
+    onDragStart: () => setIsDragActive(true),
+    onDragEnd: () => setIsDragActive(false),
+    onDragCancel: () => setIsDragActive(false),
+  })
+  const { setNodeRef, isOver } = useDroppable({ id: "zone-breakdown" })
+
+  return (
+    <div>
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Break down by
+      </p>
+      <div
+        ref={setNodeRef}
+        className={cn(
+          "min-h-[32px] rounded-lg border p-1.5 transition-[box-shadow,background-color]",
+          isDragActive &&
+            !isOver &&
+            "bg-primary/[0.07] shadow-[0_0_0_4px_hsl(var(--primary)/0.14),0_0_12px_hsl(var(--primary)/0.18)]",
+          isOver &&
+            "border-2 border-primary bg-primary/[0.07] shadow-[0_0_0_4px_hsl(var(--primary)/0.14),0_0_12px_hsl(var(--primary)/0.18)]",
+          !isDragActive && "border-border bg-card",
+        )}
+      >
+        {breakdown ? (
+          <div
+            data-testid={`field-chip-${breakdown.field_key}`}
+            className="flex w-fit items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+          >
+            <span>{breakdown.display_name ?? breakdown.field_key}</span>
+            <button type="button" onClick={onRemove} className="text-primary/60 hover:text-primary">
+              <X className="h-2.5 w-2.5" />
+            </button>
           </div>
+        ) : (
+          <p className="text-[9px] text-muted-foreground">Drag a field here or use the B button</p>
         )}
       </div>
     </div>

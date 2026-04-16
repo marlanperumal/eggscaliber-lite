@@ -1,3 +1,4 @@
+import { DndContext } from "@dnd-kit/core"
 import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -56,18 +57,20 @@ function renderPanel(
   const onResult = overrides.onResult ?? vi.fn()
   const onLoadingChange = overrides.onLoadingChange ?? vi.fn()
   render(
-    <QueryBuilderPanel
-      onCollapse={vi.fn()}
-      query={query}
-      onQueryChange={
-        onQueryChange as unknown as (
-          q: QueryConfig | ((prev: QueryConfig | null) => QueryConfig),
-        ) => void
-      }
-      onResult={onResult as unknown as (r: AnalyticsResult, q: QueryConfig) => void}
-      isLoading={false}
-      onLoadingChange={onLoadingChange as (loading: boolean) => void}
-    />,
+    <DndContext>
+      <QueryBuilderPanel
+        onCollapse={vi.fn()}
+        query={query}
+        onQueryChange={
+          onQueryChange as unknown as (
+            q: QueryConfig | ((prev: QueryConfig | null) => QueryConfig),
+          ) => void
+        }
+        onResult={onResult as unknown as (r: AnalyticsResult, q: QueryConfig) => void}
+        isLoading={false}
+        onLoadingChange={onLoadingChange as (loading: boolean) => void}
+      />
+    </DndContext>,
   )
   return { onQueryChange, onResult, onLoadingChange }
 }
