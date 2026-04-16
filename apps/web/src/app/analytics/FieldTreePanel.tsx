@@ -1,4 +1,5 @@
 "use client"
+import { useDraggable } from "@dnd-kit/core"
 import { ChevronDown, ChevronRight, X } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
@@ -247,54 +248,16 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
     const inBreakdown = q.breakdown?.field_key === f.field_key
 
     return (
-      <div
+      <DraggableFieldRow
         key={f.field_key}
-        data-testid={`field-row-${f.field_key}`}
-        className="group grid items-center gap-1 rounded py-0.5 pl-4 hover:bg-muted/50"
-        style={{ gridTemplateColumns: "1fr 22px 22px" }}
-      >
-        <button
-          type="button"
-          className="flex-1 cursor-pointer truncate text-left text-sm"
-          onClick={() => handleFieldClick(f)}
-          aria-label={f.display_name}
-        >
-          {f.display_name}
-        </button>
-        <ZoneToggleButton
-          label="R"
-          isOn={inRows}
-          colorClass="text-indigo-500"
-          activeBg="bg-indigo-500/15"
-          activeBorder="border-indigo-400/40"
-          ariaLabelOn={`Remove ${f.display_name} from Rows`}
-          ariaLabelOff={`Add ${f.display_name} to Rows`}
-          onClick={() => toggleZone(f, "rows")}
-        />
-        {isCrosstab ? (
-          <ZoneToggleButton
-            label="C"
-            isOn={inCols}
-            colorClass="text-amber-600"
-            activeBg="bg-amber-500/15"
-            activeBorder="border-amber-400/40"
-            ariaLabelOn={`Remove ${f.display_name} from Columns`}
-            ariaLabelOff={`Add ${f.display_name} to Columns`}
-            onClick={() => toggleZone(f, "columns")}
-          />
-        ) : (
-          <ZoneToggleButton
-            label="B"
-            isOn={inBreakdown}
-            colorClass="text-emerald-700"
-            activeBg="bg-emerald-500/15"
-            activeBorder="border-emerald-400/40"
-            ariaLabelOn={`Remove ${f.display_name} from Breakdown`}
-            ariaLabelOff={`Add ${f.display_name} to Breakdown`}
-            onClick={() => toggleZone(f, "breakdown")}
-          />
-        )}
-      </div>
+        field={f}
+        inRows={inRows}
+        inCols={inCols}
+        inBreakdown={inBreakdown}
+        isCrosstab={isCrosstab}
+        onFieldClick={handleFieldClick}
+        onToggleZone={toggleZone}
+      />
     )
   }
 
@@ -404,6 +367,92 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
           </>
         )}
       </div>
+    </div>
+  )
+}
+
+// ── DraggableFieldRow ─────────────────────────────────────────────────────
+
+function DraggableFieldRow({
+  field,
+  inRows,
+  inCols,
+  inBreakdown,
+  isCrosstab,
+  onFieldClick,
+  onToggleZone,
+}: {
+  field: FieldNode
+  inRows: boolean
+  inCols: boolean
+  inBreakdown: boolean
+  isCrosstab: boolean
+  onFieldClick: (f: FieldNode) => void
+  onToggleZone: (f: FieldNode, zone: "rows" | "columns" | "breakdown") => void
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `field-${field.field_key}`,
+    data: {
+      type: "field",
+      field_key: field.field_key,
+      display_name: field.display_name,
+      field_type: field.field_type,
+    },
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      data-testid={`field-row-${field.field_key}`}
+      className={cn(
+        "group grid items-center gap-1 rounded py-0.5 pl-4 hover:bg-muted/50",
+        isDragging && "opacity-40",
+      )}
+      style={{ gridTemplateColumns: "1fr 22px 22px" }}
+    >
+      <button
+        type="button"
+        className="flex-1 cursor-grab truncate text-left text-sm active:cursor-grabbing"
+        onClick={() => onFieldClick(field)}
+        aria-label={field.display_name}
+        {...listeners}
+        {...attributes}
+      >
+        {field.display_name}
+      </button>
+      <ZoneToggleButton
+        label="R"
+        isOn={inRows}
+        colorClass="text-indigo-500"
+        activeBg="bg-indigo-500/15"
+        activeBorder="border-indigo-400/40"
+        ariaLabelOn={`Remove ${field.display_name} from Rows`}
+        ariaLabelOff={`Add ${field.display_name} to Rows`}
+        onClick={() => onToggleZone(field, "rows")}
+      />
+      {isCrosstab ? (
+        <ZoneToggleButton
+          label="C"
+          isOn={inCols}
+          colorClass="text-amber-600"
+          activeBg="bg-amber-500/15"
+          activeBorder="border-amber-400/40"
+          ariaLabelOn={`Remove ${field.display_name} from Columns`}
+          ariaLabelOff={`Add ${field.display_name} to Columns`}
+          onClick={() => onToggleZone(field, "columns")}
+        />
+      ) : (
+        <ZoneToggleButton
+          label="B"
+          isOn={inBreakdown}
+          colorClass="text-emerald-700"
+          activeBg="bg-emerald-500/15"
+          activeBorder="border-emerald-400/40"
+          ariaLabelOn={`Remove ${field.display_name} from Breakdown`}
+          ariaLabelOff={`Add ${field.display_name} to Breakdown`}
+          onClick={() => onToggleZone(field, "breakdown")}
+        />
+      )}
     </div>
   )
 }
