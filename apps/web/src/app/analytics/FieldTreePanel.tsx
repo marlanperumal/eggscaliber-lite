@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/lib/api"
+import { cn } from "@/lib/utils"
 import type { QueryConfig } from "./analytics-types"
 import { DEFAULT_QUERY } from "./analytics-types"
 import { EmptyState } from "./EmptyState"
@@ -149,11 +150,21 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
       return next
     })
 
-  const addToRows = useCallback(
+  const handleFieldClick = useCallback(
     (field: FieldNode) => {
       onQueryChange((prev) => {
         const base = prev ?? DEFAULT_QUERY
-        if (base.rows.some((r) => r.field_key === field.field_key)) return base
+        const inRows = base.rows.some((r) => r.field_key === field.field_key)
+        const inCols = base.columns.some((c) => c.field_key === field.field_key)
+        const inBreakdown = base.breakdown?.field_key === field.field_key
+        if (inRows || inCols || inBreakdown) {
+          return {
+            ...base,
+            rows: base.rows.filter((r) => r.field_key !== field.field_key),
+            columns: base.columns.filter((c) => c.field_key !== field.field_key),
+            breakdown: inBreakdown ? null : base.breakdown,
+          }
+        }
         return {
           ...base,
           rows: [
@@ -170,21 +181,53 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
     [onQueryChange],
   )
 
-  const addToColumns = useCallback(
-    (field: FieldNode) => {
+  const toggleZone = useCallback(
+    (field: FieldNode, zone: "rows" | "columns" | "breakdown") => {
       onQueryChange((prev) => {
         const base = prev ?? DEFAULT_QUERY
-        if (base.columns.some((c) => c.field_key === field.field_key)) return base
+        if (zone === "rows") {
+          if (base.rows.some((r) => r.field_key === field.field_key)) {
+            return { ...base, rows: base.rows.filter((r) => r.field_key !== field.field_key) }
+          }
+          return {
+            ...base,
+            rows: [
+              ...base.rows,
+              {
+                field_key: field.field_key,
+                display_name: field.display_name,
+                field_type: field.field_type,
+              },
+            ],
+          }
+        }
+        if (zone === "columns") {
+          if (base.columns.some((c) => c.field_key === field.field_key)) {
+            return { ...base, columns: base.columns.filter((c) => c.field_key !== field.field_key) }
+          }
+          return {
+            ...base,
+            columns: [
+              ...base.columns,
+              {
+                field_key: field.field_key,
+                display_name: field.display_name,
+                field_type: field.field_type,
+              },
+            ],
+          }
+        }
+        // breakdown
+        if (base.breakdown?.field_key === field.field_key) {
+          return { ...base, breakdown: null }
+        }
         return {
           ...base,
-          columns: [
-            ...base.columns,
-            {
-              field_key: field.field_key,
-              display_name: field.display_name,
-              field_type: field.field_type,
-            },
-          ],
+          breakdown: {
+            field_key: field.field_key,
+            display_name: field.display_name,
+            field_type: field.field_type,
+          },
         }
       })
     },
@@ -198,37 +241,59 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
 
   const renderField = (f: FieldNode) => {
     if (!matchesSearch(f.display_name)) return null
+    const q = query ?? DEFAULT_QUERY
+    const inRows = q.rows.some((r) => r.field_key === f.field_key)
+    const inCols = q.columns.some((c) => c.field_key === f.field_key)
+    const inBreakdown = q.breakdown?.field_key === f.field_key
+
     return (
       <div
         key={f.field_key}
         data-testid={`field-row-${f.field_key}`}
-        className="group flex w-full items-center gap-1 rounded py-0.5 pl-4 hover:bg-muted/50"
+        className="group grid items-center gap-1 rounded py-0.5 pl-4 hover:bg-muted/50"
+        style={{ gridTemplateColumns: "1fr 22px 22px" }}
       >
         <button
           type="button"
-          className="flex-1 cursor-pointer text-left text-sm"
-          onClick={() => addToRows(f)}
+          className="flex-1 cursor-pointer truncate text-left text-sm"
+          onClick={() => handleFieldClick(f)}
+          aria-label={f.display_name}
         >
           {f.display_name}
         </button>
-        <div className="flex shrink-0 gap-1 opacity-0 group-hover:opacity-100">
-          <button
-            type="button"
-            className="rounded px-1 text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => addToRows(f)}
-          >
-            +R
-          </button>
-          {isCrosstab && (
-            <button
-              type="button"
-              className="rounded px-1 text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => addToColumns(f)}
-            >
-              +C
-            </button>
-          )}
-        </div>
+        <ZoneToggleButton
+          label="R"
+          isOn={inRows}
+          colorClass="text-indigo-500"
+          activeBg="bg-indigo-500/15"
+          activeBorder="border-indigo-400/40"
+          ariaLabelOn={`Remove ${f.display_name} from Rows`}
+          ariaLabelOff={`Add ${f.display_name} to Rows`}
+          onClick={() => toggleZone(f, "rows")}
+        />
+        {isCrosstab ? (
+          <ZoneToggleButton
+            label="C"
+            isOn={inCols}
+            colorClass="text-amber-600"
+            activeBg="bg-amber-500/15"
+            activeBorder="border-amber-400/40"
+            ariaLabelOn={`Remove ${f.display_name} from Columns`}
+            ariaLabelOff={`Add ${f.display_name} to Columns`}
+            onClick={() => toggleZone(f, "columns")}
+          />
+        ) : (
+          <ZoneToggleButton
+            label="B"
+            isOn={inBreakdown}
+            colorClass="text-emerald-700"
+            activeBg="bg-emerald-500/15"
+            activeBorder="border-emerald-400/40"
+            ariaLabelOn={`Remove ${f.display_name} from Breakdown`}
+            ariaLabelOff={`Add ${f.display_name} to Breakdown`}
+            onClick={() => toggleZone(f, "breakdown")}
+          />
+        )}
       </div>
     )
   }
@@ -340,5 +405,46 @@ export function FieldTreePanel({ onCollapse, query, onQueryChange }: Props) {
         )}
       </div>
     </div>
+  )
+}
+
+// ── ZoneToggleButton ──────────────────────────────────────────────────────
+
+function ZoneToggleButton({
+  label,
+  isOn,
+  colorClass,
+  activeBg,
+  activeBorder,
+  ariaLabelOn,
+  ariaLabelOff,
+  onClick,
+}: {
+  label: string
+  isOn: boolean
+  colorClass: string
+  activeBg: string
+  activeBorder: string
+  ariaLabelOn: string
+  ariaLabelOff: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={isOn ? ariaLabelOn : ariaLabelOff}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      className={cn(
+        "flex h-[18px] w-[22px] items-center justify-center rounded border text-[9px] font-black transition-colors",
+        isOn
+          ? cn(colorClass, activeBg, activeBorder)
+          : "border-transparent text-transparent group-hover:border-border group-hover:text-muted-foreground",
+      )}
+    >
+      {label}
+    </button>
   )
 }

@@ -112,14 +112,16 @@ describe("FieldTreePanel", () => {
     expect(screen.getByText("Demographics")).toBeInTheDocument()
   })
 
-  it("clicking +R adds field to rows via onQueryChange", async () => {
+  it("R toggle button adds field to rows", async () => {
     const user = userEvent.setup()
     const { onQueryChange } = renderPanel()
     await waitFor(() => expect(screen.getByText("Brand Awareness")).toBeInTheDocument())
 
     const fieldContainer = screen.getByTestId("field-row-brand_awareness")
     await user.hover(fieldContainer)
-    await user.click(within(fieldContainer).getByRole("button", { name: "+R" }))
+    await user.click(
+      within(fieldContainer).getByRole("button", { name: "Add Brand Awareness to Rows" }),
+    )
 
     expect(onQueryChange).toHaveBeenCalledOnce()
     const updater = onQueryChange.mock.calls[0][0] as (prev: QueryConfig) => QueryConfig
@@ -129,14 +131,14 @@ describe("FieldTreePanel", () => {
     expect(result.rows[0].display_name).toBe("Brand Awareness")
   })
 
-  it("clicking +C adds field to columns in crosstab mode", async () => {
+  it("C toggle button adds field to columns in crosstab mode", async () => {
     const user = userEvent.setup()
     const { onQueryChange } = renderPanel(makeQuery({ dataset_id: 1, mode: "crosstab" }))
     await waitFor(() => expect(screen.getByText("Gender")).toBeInTheDocument())
 
     const fieldContainer = screen.getByTestId("field-row-gender")
     await user.hover(fieldContainer)
-    await user.click(within(fieldContainer).getByRole("button", { name: "+C" }))
+    await user.click(within(fieldContainer).getByRole("button", { name: "Add Gender to Columns" }))
 
     expect(onQueryChange).toHaveBeenCalledOnce()
     const updater = onQueryChange.mock.calls[0][0] as (prev: QueryConfig) => QueryConfig
@@ -146,15 +148,18 @@ describe("FieldTreePanel", () => {
     expect(result.columns[0].display_name).toBe("Gender")
   })
 
-  it("+C button is not rendered in trend mode", async () => {
+  it("C button is not rendered in trend mode, B button is rendered instead", async () => {
     renderPanel(makeQuery({ dataset_id: 1, mode: "trend" }))
     await waitFor(() => expect(screen.getByText("Brand Awareness")).toBeInTheDocument())
-    // Hover to make buttons visible
-    await userEvent.hover(screen.getByText("Brand Awareness"))
-    expect(screen.queryByRole("button", { name: "+C" })).not.toBeInTheDocument()
+    const fieldContainer = screen.getByTestId("field-row-brand_awareness")
+    await userEvent.hover(fieldContainer)
+    expect(screen.queryByRole("button", { name: /to Columns/i })).not.toBeInTheDocument()
+    expect(
+      within(fieldContainer).getByRole("button", { name: /to Breakdown/i }),
+    ).toBeInTheDocument()
   })
 
-  it("does not add a field to rows if already present", async () => {
+  it("R toggle when field already in rows removes it from rows", async () => {
     const user = userEvent.setup()
     const { onQueryChange } = renderPanel(
       makeQuery({
@@ -165,18 +170,57 @@ describe("FieldTreePanel", () => {
     await waitFor(() => expect(screen.getByText("Brand Awareness")).toBeInTheDocument())
 
     const fieldContainer = screen.getByTestId("field-row-brand_awareness")
-    await user.hover(fieldContainer)
-    await user.click(within(fieldContainer).getByRole("button", { name: "+R" }))
+    await user.click(
+      within(fieldContainer).getByRole("button", { name: "Remove Brand Awareness from Rows" }),
+    )
 
-    // The updater should return the same state (no duplicate)
+    expect(onQueryChange).toHaveBeenCalledOnce()
+    const updater = onQueryChange.mock.calls[0][0] as (prev: QueryConfig) => QueryConfig
+    const result = updater(
+      makeQuery({
+        dataset_id: 1,
+        rows: [{ field_key: "brand_awareness", display_name: "Brand Awareness" }],
+      }),
+    )
+    expect(result.rows).toHaveLength(0)
+  })
+
+  it("clicking field name adds to rows when unassigned", async () => {
+    const user = userEvent.setup()
+    const { onQueryChange } = renderPanel()
+    await waitFor(() => expect(screen.getByText("Brand Awareness")).toBeInTheDocument())
+
+    await user.click(screen.getByRole("button", { name: "Brand Awareness" }))
+
+    expect(onQueryChange).toHaveBeenCalledOnce()
+    const updater = onQueryChange.mock.calls[0][0] as (prev: QueryConfig) => QueryConfig
+    const result = updater(makeQuery({ dataset_id: 1 }))
+    expect(result.rows[0].field_key).toBe("brand_awareness")
+  })
+
+  it("clicking field name removes from all zones when already assigned", async () => {
+    const user = userEvent.setup()
+    const { onQueryChange } = renderPanel(
+      makeQuery({
+        dataset_id: 1,
+        rows: [{ field_key: "brand_awareness", display_name: "Brand Awareness" }],
+        columns: [{ field_key: "brand_awareness", display_name: "Brand Awareness" }],
+      }),
+    )
+    await waitFor(() => expect(screen.getByText("Brand Awareness")).toBeInTheDocument())
+
+    await user.click(screen.getByRole("button", { name: "Brand Awareness" }))
+
     expect(onQueryChange).toHaveBeenCalledOnce()
     const updater = onQueryChange.mock.calls[0][0] as (prev: QueryConfig) => QueryConfig
     const prev = makeQuery({
       dataset_id: 1,
       rows: [{ field_key: "brand_awareness", display_name: "Brand Awareness" }],
+      columns: [{ field_key: "brand_awareness", display_name: "Brand Awareness" }],
     })
     const result = updater(prev)
-    expect(result.rows).toHaveLength(1) // no duplicate added
+    expect(result.rows).toHaveLength(0)
+    expect(result.columns).toHaveLength(0)
   })
 
   it("search input filters visible fields", async () => {
