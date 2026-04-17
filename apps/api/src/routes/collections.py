@@ -11,6 +11,7 @@ router = APIRouter(tags=["collections"])
 
 @router.get("/collections/{collection_id}", response_model=CollectionWithDatasets)
 async def get_collection(collection_id: int, session: AsyncSession = Depends(get_session)):
+    """Get a collection with all its datasets."""
     try:
         return await collection_service.get_with_datasets(session, collection_id)
     except CollectionNotFoundError:
@@ -24,6 +25,7 @@ async def get_collection(collection_id: int, session: AsyncSession = Depends(get
 async def get_collection_consistency(
     collection_id: int, session: AsyncSession = Depends(get_session)
 ):
+    """List field inconsistencies across datasets in a collection (e.g. mismatched types or labels)."""
     try:
         return await collection_service.get_consistency(session, collection_id)
     except CollectionNotFoundError:

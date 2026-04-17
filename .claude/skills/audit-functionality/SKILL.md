@@ -43,17 +43,19 @@ Use all available evidence. For each item, use at least one of:
 | Evidence type | When to use |
 |---|---|
 | **Live browser** (Playwright MCP) | UI behaviour, layout, visible state, interactions |
-| **Live API call** (`curl`) | Endpoint shape, response fields, status codes |
+| **MCP tools** (`mcp__eggscaliber__*`) | Data queries, endpoint responses, live database state — use instead of curl when available |
+| **Live API call** (`curl`) | Raw HTTP response codes, headers, endpoints not exposed via MCP |
 | **Storybook** (navigate to story URL) | Edge-case UI states, loading/empty/error states |
 | Read the component/route file | Cross-check what code claims to do |
 | Grep for the relevant identifier | Confirm wiring — call site must actually exist |
 | Read the test file | Verify test exercises the right behaviour |
 
 **For live verification:**
-1. Check if dev servers are running (`curl http://localhost:8000/health` / `curl http://localhost:3000`)
+1. Check if dev servers are running (`curl http://localhost:8000/api/v1/health` / `curl http://localhost:3000`)
 2. Start them with `just dev` / `just api` / `just storybook` if not
-3. Use Playwright MCP to navigate pages and take screenshots
-4. Make real API calls and inspect response shapes
+3. Use `mcp__eggscaliber__*` tools for data-layer queries (packages, datasets, analytics) — faster than curl and returns structured data
+4. Use Playwright MCP to navigate pages and take screenshots
+5. Use `curl` for endpoints not in the MCP surface (uploads, health, raw HTTP checks)
 
 **Rules:**
 - Never mark something as ✅ because it "probably works" or "was in the plan". Verify it.

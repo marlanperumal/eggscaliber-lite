@@ -12,11 +12,13 @@ router = APIRouter(tags=["packages"])
 
 @router.get("/packages", response_model=list[PackageRead])
 async def list_packages(session: AsyncSession = Depends(get_session)):
+    """List all packages (top-level groupings of survey collections)."""
     return await package_repo.get_all(session)
 
 
 @router.get("/packages/{package_id}", response_model=PackageWithCollections)
 async def get_package(package_id: int, session: AsyncSession = Depends(get_session)):
+    """Get a package with its collections."""
     try:
         return await package_service.get_with_collections(session, package_id)
     except PackageNotFoundError:

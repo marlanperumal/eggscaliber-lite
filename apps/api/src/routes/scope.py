@@ -10,4 +10,5 @@ router = APIRouter(tags=["scope"])
 
 @router.get("/scope", response_model=list[ScopePackage])
 async def get_scope(session: AsyncSession = Depends(get_session)):
+    """Get the full data hierarchy: packages → collections → datasets with field metadata."""
     return await package_service.get_scope(session)

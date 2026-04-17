@@ -56,6 +56,12 @@ just audit          # pip-audit + pnpm audit
 - `packages/shared/api.d.ts` — **AUTO-GENERATED** TypeScript types from FastAPI OpenAPI spec. Never edit manually. Run `just generate-types`.
 - `docker/init/` — SQL bootstrap only (create DBs + extensions). All schema lives in `apps/api/migrations/`.
 
+## MCP Server
+
+The API exposes an MCP server at `http://localhost:8000/mcp` (streamable HTTP). When `just dev` or `just api` is running, the `eggscaliber` MCP server is available directly in Claude Code sessions — use its tools for interactive debugging and data exploration instead of writing curl commands.
+
+Exposed tags: `packages`, `scope`, `collections`, `datasets`, `analytics`. See `docs/patterns/backend.md` for wiring details and the docstring requirement for MCP-exposed routes.
+
 ## Key Conventions
 
 - All API routes prefixed `/api/v1/`

@@ -328,6 +328,36 @@ Do not use `text-primary` as a text colour — see
 backgrounds but may not catch it on all surfaces. Follow the token rules
 proactively.
 
+## MCP Tools for Debugging and Testing
+
+When `just dev` or `just api` is running, the MCP server at `http://localhost:8000/mcp` is available inside Claude Code as the `eggscaliber` MCP server. This gives you direct tool access to query the live database without writing curl commands or opening a browser.
+
+### Available tools (when API is running)
+
+| Tool | What it does |
+|------|-------------|
+| `list_packages` | List all packages |
+| `get_scope` | Full hierarchy: packages → collections → datasets |
+| `get_collection` | Collection with datasets |
+| `get_collection_consistency` | Field inconsistencies across datasets |
+| `list_datasets` | Datasets, filterable by collection |
+| `get_dataset` | Dataset with all fields and metadata |
+| `get_dataset_responses` | Raw paginated survey responses |
+| `get_field_tree` | Hierarchical field tree for a dataset |
+| `get_weight_fields` | Numeric weight fields for a dataset |
+| `run_crosstab` | Cross-tabulation query |
+| `run_trend` | Trend analysis across a collection |
+
+### When to use MCP tools vs curl
+
+Use MCP tools when debugging data-layer issues in a Claude Code session — they return structured data you can reason about directly. Use `curl` in tests, CI scripts, or when you need to verify raw HTTP response codes and headers.
+
+### MCP tools are not a substitute for API tests
+
+The MCP interface calls the same FastAPI routes as the REST API. It is useful for interactive exploration and debugging, but does not replace `pytest` integration tests. Do not write MCP-only verification for features that need automated regression coverage.
+
+---
+
 ## Test Data
 
 Use fixtures for frequently reused test data. Define them in `conftest.py` with `scope="function"` so they are rolled back with the transaction.

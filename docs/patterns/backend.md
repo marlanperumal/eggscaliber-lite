@@ -286,6 +286,53 @@ for lv in levels:
 result = levels_by_field.get(f.id, [])  # f.id: int | None — now type-checks
 ```
 
+## MCP Interface
+
+The API exposes an MCP server at `/mcp` via FastMCP 3.x (streamable HTTP transport). It is wired in `src/main.py` and co-starts with the app via `combine_lifespans`.
+
+### Which routes are exposed
+
+Routes are whitelisted by OpenAPI tag. Only these tags are exposed as MCP tools:
+
+```
+packages · scope · collections · datasets · analytics
+```
+
+All other tags (`uploads`, `health`, `sentry`) are excluded via a catch-all `RouteMap(mcp_type=MCPType.EXCLUDE)`.
+
+### Route docstrings are required for MCP-exposed routes
+
+FastMCP uses the route docstring as the tool description. Every route under the five exposed tags **must** have a one-line docstring:
+
+```python
+@router.get("/packages", response_model=list[PackageRead])
+async def list_packages(session: AsyncSession = Depends(get_session)):
+    """List all packages (top-level groupings of survey collections)."""
+    return await package_repo.get_all(session)
+```
+
+Routes without docstrings will use the raw operation ID as the tool description, which is unhelpful to agents.
+
+### Adding a new exposed route
+
+1. Add the route under one of the five exposed tags (or add a new `RouteMap` entry in `main.py` for a new tag)
+2. Add a one-line docstring
+3. Ensure the response model is non-recursive — FastMCP handles recursive schemas but the OpenAPI spec must be valid
+
+### Lifespan composition
+
+The MCP http_app has its own lifespan (session manager). It is composed with the database lifespan in `main.py` using `combine_lifespans`:
+
+```python
+mcp_app = mcp.http_app(path="/")
+app.router.lifespan_context = combine_lifespans(db_lifespan, mcp_app.lifespan)
+app.mount("/mcp", mcp_app)
+```
+
+Do not move this setup into `database.py` — the MCP server depends on `app` being fully configured with all routers before `from_fastapi(app)` is called.
+
+---
+
 ## Adding Models to Alembic
 
 After adding a new SQLModel `table=True` class, always:
