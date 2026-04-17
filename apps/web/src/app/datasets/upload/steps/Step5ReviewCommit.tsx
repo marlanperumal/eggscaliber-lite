@@ -1,0 +1,210 @@
+"use client"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import type { WizardState, WizardStep } from "../wizard-types"
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+
+interface SessionSummary {
+  dataset_name: string | null
+  row_count: number | null
+  collection_id: number | null
+  fields: { detected_type: string; override_type: string | null }[]
+  groups: { id: number; name: string; parent_id: number | null }[]
+  unassigned_fields: unknown[]
+}
+
+interface Props {
+  state: WizardState
+  setStep: (s: WizardStep) => void
+}
+
+export function Step5ReviewCommit({ state, setStep }: Props) {
+  const router = useRouter()
+  const [summary, setSummary] = useState<SessionSummary | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!state.sessionId) return
+    Promise.all([
+      fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}`).then((r) => r.json()),
+      fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/field-tree`).then((r) => r.json()),
+    ]).then(([sess, tree]) => {
+      setSummary({
+        dataset_name: sess.dataset_name,
+        row_count: sess.row_count,
+        collection_id: sess.collection_id,
+        fields: sess.fields,
+        groups: tree.groups,
+        unassigned_fields: tree.unassigned_fields,
+      })
+      setLoading(false)
+    })
+  }, [state.sessionId])
+
+  async function handleCommit() {
+    if (!state.sessionId) return
+    setBusy(true)
+    setError(null)
+    const res = await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/commit`, {
+      method: "POST",
+    })
+    if (!res.ok) {
+      setError("Commit failed. Please try again.")
+      setBusy(false)
+      return
+    }
+    router.push("/datasets")
+  }
+
+  if (loading || !summary) return <p className="text-muted-foreground text-sm">Loading summary…</p>
+
+  const typeCounts = summary.fields.reduce<Record<string, number>>((acc, f) => {
+    const t = f.override_type ?? f.detected_type
+    acc[t] = (acc[t] ?? 0) + 1
+    return acc
+  }, {})
+
+  const topGroups = summary.groups.filter((g) => g.parent_id === null)
+
+  return (
+    <div className="space-y-4">
+      <h2 className="font-semibold text-base text-foreground">Step 5 — Review &amp; Commit</h2>
+      <p className="text-muted-foreground text-xs">
+        Everything looks good. Review the summary and confirm to write to the database.
+      </p>
+
+      {/* 2×2 summary grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Dataset details */}
+        <div className="rounded-lg border border-border">
+          <div className="flex items-center justify-between border-border border-b bg-muted/40 px-3 py-2 font-bold text-muted-foreground text-xs uppercase tracking-wide">
+            Dataset details
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="font-semibold text-accent text-xs normal-case"
+            >
+              ← Edit
+            </button>
+          </div>
+          <div className="space-y-1 px-3 py-2 text-xs">
+            <div className="flex gap-2">
+              <span className="w-28 text-muted-foreground">Name</span>
+              <span className="font-medium">{summary.dataset_name}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="w-28 text-muted-foreground">Responses</span>
+              <span className="font-medium">{summary.row_count ?? "—"}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="w-28 text-muted-foreground">Collection ID</span>
+              <span className="font-medium">{summary.collection_id ?? "—"}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Fields breakdown */}
+        <div className="rounded-lg border border-border">
+          <div className="flex items-center justify-between border-border border-b bg-muted/40 px-3 py-2 font-bold text-muted-foreground text-xs uppercase tracking-wide">
+            Fields
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              className="font-semibold text-accent text-xs normal-case"
+            >
+              ← Edit
+            </button>
+          </div>
+          <div className="space-y-1 px-3 py-2 text-xs">
+            <div className="flex gap-2">
+              <span className="w-28 text-muted-foreground">Total</span>
+              <span className="font-semibold">{summary.fields.length}</span>
+            </div>
+            {Object.entries(typeCounts).map(([t, n]) => (
+              <div key={t} className="flex gap-2">
+                <span className="w-28 text-muted-foreground">{t}</span>
+                <span className="font-medium">{n}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Group structure */}
+        <div className="col-span-2 rounded-lg border border-border">
+          <div className="flex items-center justify-between border-border border-b bg-muted/40 px-3 py-2 font-bold text-muted-foreground text-xs uppercase tracking-wide">
+            Group structure
+            <button
+              type="button"
+              onClick={() => setStep(4)}
+              className="font-semibold text-accent text-xs normal-case"
+            >
+              ← Edit
+            </button>
+          </div>
+          <div className="space-y-1 px-3 py-2 text-xs">
+            {topGroups.map((g) => (
+              <div key={g.id} className="flex gap-2">
+                <span
+                  className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-accent"
+                  aria-hidden="true"
+                />
+                <span className="font-medium">{g.name}</span>
+              </div>
+            ))}
+            {summary.unassigned_fields.length > 0 && (
+              <div className="flex gap-2 text-muted-foreground italic">
+                <span
+                  className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-muted-foreground"
+                  aria-hidden="true"
+                />
+                <span>
+                  Unassigned ({summary.unassigned_fields.length} field
+                  {summary.unassigned_fields.length !== 1 ? "s" : ""})
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Commit panel */}
+      <div className="flex items-center gap-4 rounded-lg border border-border bg-muted/30 p-4">
+        <span className="text-3xl" aria-hidden="true">
+          🚀
+        </span>
+        <div className="flex-1">
+          <p className="font-bold text-foreground text-sm">Ready to commit</p>
+          <p className="text-muted-foreground text-xs">
+            This will create <strong>{summary.dataset_name}</strong> with{" "}
+            <strong>{summary.row_count ?? "?"} responses</strong> and{" "}
+            <strong>{summary.fields.length} fields</strong>. This action cannot be undone —
+            responses and fields will be written to the database.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleCommit}
+          disabled={busy}
+          className="shrink-0 rounded-lg bg-accent px-6 py-2.5 font-bold text-sm text-white disabled:opacity-40"
+        >
+          {busy ? "Committing…" : "Commit dataset →"}
+        </button>
+      </div>
+
+      {error && <p className="text-destructive text-xs">{error}</p>}
+
+      <div className="flex justify-start">
+        <button
+          type="button"
+          onClick={() => setStep(4)}
+          className="rounded-lg border border-border px-5 py-2 font-semibold text-muted-foreground text-sm hover:bg-muted"
+        >
+          ← Back to Metadata
+        </button>
+      </div>
+    </div>
+  )
+}
