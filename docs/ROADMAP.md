@@ -8,8 +8,8 @@ Five sub-projects, each with its own spec → plan → implementation cycle.
 | 2 | Nomenclature & Data Model | ✅ Complete | [spec](superpowers/specs/2026-04-10-nomenclature-data-model-design.md) | [plan](superpowers/plans/2026-04-10-nomenclature-data-model.md) |
 | 3 | Analytics Engine | ✅ Complete | — | [plan](superpowers/plans/2026-04-10-analytics-engine.md) |
 | 4 | UX Polish | ✅ Complete | — | [plan](superpowers/plans/2026-04-15-ux-polish-iteration-3.md) |
-| 5 | Drag & Drop | ⏳ Pending | — | — |
-| 6 | Data Ingestion & Metadata Editor | ⏳ Pending | — | — |
+| 5 | Drag & Drop | ✅ Complete | — | — |
+| 6 | Data Ingestion & Metadata Editor | ✅ Complete | [spec](superpowers/specs/2026-04-16-data-ingestion-metadata-editor-design.md) | [plan](superpowers/plans/2026-04-17-data-ingestion-metadata-editor.md) |
 | 7 | AI Interface | ⏳ Pending | — | — |
 
 ---
@@ -42,13 +42,13 @@ Bringing the frontend from unstyled prototype to a polished, usable product:
 
 ---
 
-### 5 — Drag & Drop ⏳
+### 5 — Drag & Drop ✅
 Drag fields from the field tree into the Rows, Columns, and Breakdown zones. Drag to reorder fields within a zone. Remove by dragging out.  
 **Done when:** Fields can be dragged from the tree into all zones; chips within a zone can be reordered by drag; +R/+C buttons remain as a keyboard-accessible fallback.
 
 ---
 
-### 6 — Data Ingestion & Metadata Editor ⏳
+### 6 — Data Ingestion & Metadata Editor ✅
 File upload (CSV, SPSS), metadata GUI (field types, display names, multi-response config), template from previous dataset instance. Analytics engine serves as the immediate testbed.  
 **Done when:** Upload a real dataset → configure metadata → query it in the analytics engine.
 
