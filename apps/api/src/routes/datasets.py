@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_session
 from src.errors import DatasetNotFoundError
 from src.models.analytics import FieldTreeOut
-from src.models.dataset import Dataset, DatasetWithFields, FieldOut
+from src.models.dataset import DatasetWithFields, FieldOut
 from src.models.response import ResponsePage
 from src.services import analytics_service, dataset_service
 
@@ -19,34 +18,12 @@ async def list_datasets(
     page_size: int = Query(default=50, ge=1, le=200),
     session: AsyncSession = Depends(get_session),
 ):
-    stmt = select(Dataset)
-    if collection_id is not None:
-        stmt = stmt.where(Dataset.collection_id == collection_id)
-    total = (await session.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
-    items = list(
-        (
-            await session.execute(
-                stmt.order_by(Dataset.id.desc()).offset((page - 1) * page_size).limit(page_size)
-            )
-        )
-        .scalars()
-        .all()
+    from src.repositories import dataset_repo
+
+    total, items = await dataset_repo.list_enriched(
+        session, collection_id=collection_id, page=page, page_size=page_size
     )
-    return {
-        "total": total,
-        "page": page,
-        "page_size": page_size,
-        "items": [
-            {
-                "id": d.id,
-                "name": d.name,
-                "collection_id": d.collection_id,
-                "collected_at": d.collected_at.isoformat() if d.collected_at else None,
-                "created_at": d.created_at.isoformat(),
-            }
-            for d in items
-        ],
-    }
+    return {"total": total, "page": page, "page_size": page_size, "items": items}
 
 
 @router.get("/datasets/{dataset_id}", response_model=DatasetWithFields)

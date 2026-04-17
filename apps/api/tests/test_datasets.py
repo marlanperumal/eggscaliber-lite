@@ -115,3 +115,32 @@ async def test_get_dataset_responses_out_of_bounds_page_returns_empty_items(clie
 async def test_get_dataset_responses_not_found(client):
     response = await client.get("/api/v1/datasets/99999/responses")
     assert response.status_code == 404
+
+
+async def test_list_datasets_includes_collection_and_package(client, db):
+    pkg = Package(name="Tracker", slug="tracker-enriched")
+    db.add(pkg)
+    await db.flush()
+    await db.refresh(pkg)
+    col = Collection(
+        name="Brand Tracker",
+        slug="brand-enriched",
+        package_id=pkg.id,
+        collection_type=CollectionType.survey,
+    )
+    db.add(col)
+    await db.flush()
+    await db.refresh(col)
+    ds = Dataset(name="Q4 2025", slug="q4-2025-enrich", collection_id=col.id, sort_order=0)
+    db.add(ds)
+    await db.flush()
+    resp = await client.get("/api/v1/datasets")
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    matching = [i for i in items if i["name"] == "Q4 2025"]
+    assert len(matching) == 1
+    item = matching[0]
+    assert item["collection_name"] == "Brand Tracker"
+    assert item["package_name"] == "Tracker"
+    assert "response_count" in item
+    assert "field_count" in item
