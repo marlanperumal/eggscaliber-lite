@@ -11,6 +11,8 @@ interface DetectedField {
   detected_type: string
   override_type: string | null
   sort_order: number
+  confidence: string
+  value_sample: string[]
 }
 
 interface Props {
@@ -24,7 +26,7 @@ export function Step2FieldDetection({ state, setStep }: Props) {
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    if (!state.sessionId) return // Cast: endpoint not yet in generated types — use `as never`
+    if (!state.sessionId) return
     ;(api.GET as any)(`/api/v1/uploads/${state.sessionId}`).then(({ data }: any) => {
       if (data) setFields(data.fields)
       setLoading(false)
@@ -44,14 +46,13 @@ export function Step2FieldDetection({ state, setStep }: Props) {
     }
   }
 
-  async function handleNext() {
-    if (!state.sessionId) return
+  async function handleReset(fieldId: number) {
+    await handleOverride(fieldId, null)
+  }
+
+  function handleNext() {
     setBusy(true)
-    if (state.needsReconcile) {
-      setStep(3)
-    } else {
-      setStep(4)
-    }
+    setStep(state.needsReconcile ? 3 : 4)
     setBusy(false)
   }
 
@@ -64,44 +65,80 @@ export function Step2FieldDetection({ state, setStep }: Props) {
         Review auto-detected field types. Override any that are wrong.
       </p>
 
-      <table className="w-full text-sm" data-testid="field-detection-table">
-        <thead>
-          <tr className="border-border border-b text-left font-semibold text-muted-foreground text-xs uppercase tracking-wide">
-            <th className="pr-4 pb-2">#</th>
-            <th className="pr-4 pb-2">Field key</th>
-            <th className="pr-4 pb-2">Detected type</th>
-            <th className="pb-2">Override</th>
-          </tr>
-        </thead>
-        <tbody>
-          {fields.map((f, i) => (
-            <tr key={f.id} className="border-border border-b last:border-0" data-testid="field-row">
-              <td className="py-2 pr-4 text-muted-foreground">{i + 1}</td>
-              <td className="py-2 pr-4 font-mono text-xs">{f.field_key}</td>
-              <td className="py-2 pr-4">
-                <span className="rounded-full bg-muted px-2 py-0.5 font-medium text-xs">
-                  {f.detected_type}
-                </span>
-              </td>
-              <td className="py-2">
-                <select
-                  value={f.override_type ?? ""}
-                  onChange={(e) => handleOverride(f.id, e.target.value || null)}
-                  className="rounded border border-border bg-background px-2 py-1 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-accent"
-                  aria-label={`Override type for ${f.field_key}`}
-                >
-                  <option value="">— keep detected —</option>
-                  {FIELD_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm" data-testid="field-detection-table">
+          <thead>
+            <tr className="border-border border-b text-left font-semibold text-muted-foreground text-xs uppercase tracking-wide">
+              <th className="pr-3 pb-2">#</th>
+              <th className="pr-3 pb-2">Field key</th>
+              <th className="pr-3 pb-2">Detected type</th>
+              <th className="pr-3 pb-2">Confidence</th>
+              <th className="pr-3 pb-2">Sample values</th>
+              <th className="pb-2">Override</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {fields.map((f, i) => (
+              <tr
+                key={f.id}
+                className="border-border border-b last:border-0"
+                data-testid="field-row"
+              >
+                <td className="py-2 pr-3 text-muted-foreground">{i + 1}</td>
+                <td className="py-2 pr-3 font-mono text-xs">{f.field_key}</td>
+                <td className="py-2 pr-3">
+                  <span className="rounded-full bg-muted px-2 py-0.5 font-medium text-xs">
+                    {f.detected_type}
+                  </span>
+                </td>
+                <td className="py-2 pr-3">
+                  <span
+                    className={[
+                      "rounded-full px-2 py-0.5 font-semibold text-xs",
+                      f.confidence === "review"
+                        ? "bg-amber-100 text-amber-800"
+                        : "bg-green-100 text-green-800",
+                    ].join(" ")}
+                    data-testid="confidence-badge"
+                  >
+                    {f.confidence}
+                  </span>
+                </td>
+                <td className="py-2 pr-3 text-muted-foreground text-xs">
+                  {(f.value_sample ?? []).slice(0, 5).join(", ") || "—"}
+                </td>
+                <td className="py-2">
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={f.override_type ?? ""}
+                      onChange={(e) => handleOverride(f.id, e.target.value || null)}
+                      className="rounded border border-border bg-background px-2 py-1 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-accent"
+                      aria-label={`Override type for ${f.field_key}`}
+                    >
+                      <option value="">— keep detected —</option>
+                      {FIELD_TYPES.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                    {f.override_type && (
+                      <button
+                        type="button"
+                        onClick={() => handleReset(f.id)}
+                        className="text-muted-foreground text-xs hover:text-foreground"
+                        aria-label={`Reset ${f.field_key} to detected type`}
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <div className="flex justify-between">
         <button
