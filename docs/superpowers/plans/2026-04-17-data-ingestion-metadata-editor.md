@@ -2745,3 +2745,339 @@ Open `http://localhost:3000/datasets/upload`. Verify:
 git add apps/web/src/app/datasets/upload/
 git commit -m "feat(web): add wizard shell, URL-synced state hook, and step indicator"
 ```
+
+---
+
+### Task 13: Step 1 — File & Hierarchy
+
+File drop zone + package/collection/dataset name form. On "Next", POSTs the file to `/api/v1/uploads`, stores the returned `session_id`, and advances to step 2.
+
+**Files:**
+- Create: `apps/web/src/app/datasets/upload/steps/Step1FileHierarchy.tsx`
+- Modify: `apps/web/src/app/datasets/upload/WizardShell.tsx` (wire in step)
+
+- [ ] **Step 1: Write `apps/web/src/app/datasets/upload/steps/Step1FileHierarchy.tsx`**
+
+```tsx
+"use client"
+import { useRef, useState } from "react"
+import type { WizardState, WizardStep } from "../wizard-types"
+
+interface Props {
+  state: WizardState
+  setStep: (s: WizardStep) => void
+  setSessionId: (id: number) => void
+  setNeedsReconcile: (v: boolean) => void
+}
+
+export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }: Props) {
+  const [file, setFile] = useState<File | null>(null)
+  const [datasetName, setDatasetName] = useState("")
+  const [collectionId, setCollectionId] = useState<string>("")
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const canProceed = file !== null && datasetName.trim().length > 0
+
+  async function handleNext() {
+    if (!file || !canProceed) return
+    setBusy(true)
+    setError(null)
+    const form = new FormData()
+    form.append("file", file)
+    form.append("dataset_name", datasetName)
+    if (collectionId) form.append("collection_id", collectionId)
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/v1/uploads`,
+        { method: "POST", body: form },
+      )
+      if (!res.ok) throw new Error(await res.text())
+      const data = await res.json()
+      setSessionId(data.id)
+      // If collection_id provided, reconciliation may be needed
+      // (backend determines; for now always skip reconcile for new collections)
+      setNeedsReconcile(Boolean(collectionId))
+      setStep(2)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    const f = e.dataTransfer.files[0]
+    if (f?.name.endsWith(".csv")) setFile(f)
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-base font-semibold text-foreground">Step 1 — File &amp; Hierarchy</h2>
+
+      {/* Drop zone */}
+      <div
+        onDrop={handleDrop}
+        onDragOver={(e) => e.preventDefault()}
+        onClick={() => inputRef.current?.click()}
+        className="cursor-pointer rounded-lg border-2 border-dashed border-border p-10 text-center hover:border-accent"
+        data-testid="drop-zone"
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".csv"
+          className="hidden"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+        />
+        {file ? (
+          <p className="text-sm font-medium text-foreground">{file.name}</p>
+        ) : (
+          <>
+            <p className="text-sm font-medium text-muted-foreground">
+              Drag a CSV here or click to browse
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Accepts .csv</p>
+          </>
+        )}
+      </div>
+
+      {/* Metadata fields */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+            Dataset name *
+          </label>
+          <input
+            value={datasetName}
+            onChange={(e) => setDatasetName(e.target.value)}
+            placeholder="e.g. Wave 3"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+            Collection ID (optional)
+          </label>
+          <input
+            value={collectionId}
+            onChange={(e) => setCollectionId(e.target.value)}
+            placeholder="ID of existing collection"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+        </div>
+      </div>
+
+      {error && <p className="text-xs text-destructive">{error}</p>}
+
+      <div className="flex justify-end">
+        <button
+          onClick={handleNext}
+          disabled={!canProceed || busy}
+          className="rounded-lg bg-accent px-6 py-2 text-sm font-semibold text-white disabled:opacity-40"
+        >
+          {busy ? "Uploading…" : "Next →"}
+        </button>
+      </div>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 2: Wire Step1 into `WizardShell.tsx`**
+
+Replace the placeholder `StepContent` body:
+
+```tsx
+import { Step1FileHierarchy } from "./steps/Step1FileHierarchy"
+
+function StepContent(props: ReturnType<typeof useWizardState>) {
+  const { state, setStep, setSessionId, setNeedsReconcile } = props
+  if (state.step === 1) {
+    return <Step1FileHierarchy state={state} setStep={setStep}
+                                setSessionId={setSessionId}
+                                setNeedsReconcile={setNeedsReconcile} />
+  }
+  return (
+    <div className="rounded-lg border border-border p-6">
+      <p className="text-sm text-muted-foreground">Step {state.step} — coming soon.</p>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 3: Verify in browser**
+
+Start `just dev`. Navigate to `http://localhost:3000/datasets/upload`.
+- Drop a CSV file → file name appears in drop zone
+- Fill in dataset name → "Next →" becomes active
+- Click Next → file uploads, step indicator moves to 2
+- Check Network tab: POST `/api/v1/uploads` returns 201 with fields array
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add apps/web/src/app/datasets/upload/steps/Step1FileHierarchy.tsx \
+        apps/web/src/app/datasets/upload/WizardShell.tsx
+git commit -m "feat(web): add wizard Step 1 — file drop zone and hierarchy form"
+```
+
+---
+
+### Task 14: Step 2 — Field Detection review
+
+Table showing every detected field, its type, sample values, and an override dropdown.
+
+**Files:**
+- Create: `apps/web/src/app/datasets/upload/steps/Step2FieldDetection.tsx`
+- Modify: `apps/web/src/app/datasets/upload/WizardShell.tsx`
+
+- [ ] **Step 1: Write `apps/web/src/app/datasets/upload/steps/Step2FieldDetection.tsx`**
+
+```tsx
+"use client"
+import { useEffect, useState } from "react"
+import { api } from "@/lib/api"
+import type { WizardState, WizardStep } from "../wizard-types"
+
+const FIELD_TYPES = ["numeric", "ordinal", "categorical", "multi_response", "identifier", "weight"]
+
+interface DetectedField {
+  id: number
+  field_key: string
+  detected_type: string
+  override_type: string | null
+  sort_order: number
+}
+
+interface Props {
+  state: WizardState
+  setStep: (s: WizardStep) => void
+}
+
+export function Step2FieldDetection({ state, setStep }: Props) {
+  const [fields, setFields] = useState<DetectedField[]>([])
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!state.sessionId) return
+    // Cast: endpoint not yet in generated types — use `as never`
+    ;(api.GET as any)(`/api/v1/uploads/${state.sessionId}`).then(({ data }: any) => {
+      if (data) setFields(data.fields)
+      setLoading(false)
+    })
+  }, [state.sessionId])
+
+  async function handleOverride(fieldId: number, overrideType: string | null) {
+    if (!state.sessionId) return
+    const res: any = await (api.PATCH as any)(
+      `/api/v1/uploads/${state.sessionId}/fields/${fieldId}`,
+      { body: { override_type: overrideType } },
+    )
+    if (res.data) {
+      setFields((prev) => prev.map((f) => f.id === fieldId
+        ? { ...f, override_type: res.data.override_type } : f))
+    }
+  }
+
+  async function handleNext() {
+    if (!state.sessionId) return
+    setBusy(true)
+    if (state.needsReconcile) {
+      setStep(3)
+    } else {
+      setStep(4)
+    }
+    setBusy(false)
+  }
+
+  if (loading) return <p className="text-sm text-muted-foreground">Loading fields…</p>
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-base font-semibold text-foreground">Step 2 — Field Detection</h2>
+      <p className="text-xs text-muted-foreground">
+        Review auto-detected field types. Override any that are wrong.
+      </p>
+
+      <table className="w-full text-sm" data-testid="field-detection-table">
+        <thead>
+          <tr className="border-b border-border text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <th className="pb-2 pr-4">#</th>
+            <th className="pb-2 pr-4">Field key</th>
+            <th className="pb-2 pr-4">Detected type</th>
+            <th className="pb-2">Override</th>
+          </tr>
+        </thead>
+        <tbody>
+          {fields.map((f, i) => (
+            <tr key={f.id} className="border-b border-border last:border-0" data-testid="field-row">
+              <td className="py-2 pr-4 text-muted-foreground">{i + 1}</td>
+              <td className="py-2 pr-4 font-mono text-xs">{f.field_key}</td>
+              <td className="py-2 pr-4">
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+                  {f.detected_type}
+                </span>
+              </td>
+              <td className="py-2">
+                <select
+                  value={f.override_type ?? ""}
+                  onChange={(e) => handleOverride(f.id, e.target.value || null)}
+                  className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                >
+                  <option value="">— keep detected —</option>
+                  {FIELD_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="flex justify-between">
+        <button
+          onClick={() => setStep(1)}
+          className="rounded-lg border border-border px-5 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted"
+        >
+          ← Back
+        </button>
+        <button
+          onClick={handleNext}
+          disabled={busy}
+          className="rounded-lg bg-accent px-6 py-2 text-sm font-semibold text-white disabled:opacity-40"
+        >
+          {busy ? "…" : "Next →"}
+        </button>
+      </div>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 2: Wire Step2 into `WizardShell.tsx`**
+
+```tsx
+import { Step2FieldDetection } from "./steps/Step2FieldDetection"
+
+// Inside StepContent, after step 1 check:
+if (state.step === 2) {
+  return <Step2FieldDetection state={state} setStep={setStep} />
+}
+```
+
+- [ ] **Step 3: Verify in browser**
+
+After completing Step 1, Step 2 should load the detected fields table. Override a type from the dropdown and confirm the UI reflects the change.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add apps/web/src/app/datasets/upload/steps/Step2FieldDetection.tsx \
+        apps/web/src/app/datasets/upload/WizardShell.tsx
+git commit -m "feat(web): add wizard Step 2 — field detection review table"
+```
