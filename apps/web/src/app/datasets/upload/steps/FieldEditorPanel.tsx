@@ -51,45 +51,48 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved, onCancel, 
     e.preventDefault()
     if (!field) return
     setBusy(true)
-    const r1 = await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        display_name: displayName || null,
-        override_type: overrideType || null,
-        sort_order: sortOrder,
-      }),
-    })
-    const newGroupId = groupId ? Number(groupId) : null
-    if (newGroupId !== field.upload_fieldgroup_id) {
-      await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}/move`, {
+    try {
+      const r1 = await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ upload_fieldgroup_id: newGroupId }),
-      })
-    }
-    // Upsert each level
-    for (const lvl of levels) {
-      await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}/levels`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          raw_value: lvl.raw_value,
-          display_label: lvl.display_label,
-          sort_order: lvl.sort_order,
+          display_name: displayName || null,
+          override_type: overrideType || null,
+          sort_order: sortOrder,
         }),
       })
+      const newGroupId = groupId ? Number(groupId) : null
+      if (newGroupId !== field.upload_fieldgroup_id) {
+        await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}/move`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ upload_fieldgroup_id: newGroupId }),
+        })
+      }
+      // Upsert each level
+      for (const lvl of levels) {
+        await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}/levels`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            raw_value: lvl.raw_value,
+            display_label: lvl.display_label,
+            sort_order: lvl.sort_order,
+          }),
+        })
+      }
+      const data = await r1.json()
+      onSaved({
+        ...field,
+        display_name: data.display_name,
+        override_type: data.override_type,
+        sort_order: sortOrder,
+        upload_fieldgroup_id: newGroupId,
+        levels,
+      })
+    } finally {
+      setBusy(false)
     }
-    const data = await r1.json()
-    onSaved({
-      ...field,
-      display_name: data.display_name,
-      override_type: data.override_type,
-      sort_order: sortOrder,
-      upload_fieldgroup_id: newGroupId,
-      levels,
-    })
-    setBusy(false)
   }
 
   // Build flat group path list for selector
@@ -245,7 +248,9 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved, onCancel, 
         </button>
         <button
           type="button"
-          onClick={onDelete}
+          onClick={() => {
+            void onDelete()
+          }}
           className="rounded border border-destructive px-4 py-1.5 text-destructive text-sm hover:bg-destructive/10"
         >
           Delete
