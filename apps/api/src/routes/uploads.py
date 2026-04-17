@@ -7,7 +7,7 @@ from src.models.field import Field, FieldType
 from src.models.level import Level as LiveLevel
 from src.models.reconciliation import ReconciliationGroup, ReconciliationStatus
 from src.repositories import dataset_repo, reconciliation_repo, upload_repo
-from src.services import reconciliation_service, upload_service
+from src.services import commit_service, reconciliation_service, upload_service
 from src.services.upload_service import InvalidFileTypeError
 
 router = APIRouter(tags=["uploads"])
@@ -264,6 +264,18 @@ async def bulk_resolve_rows(
 ):
     resolved = await reconciliation_repo.bulk_resolve(session, session_id, body.ids, body.action)
     return {"resolved": resolved}
+
+
+@router.post("/uploads/{session_id}/commit", status_code=201)
+async def commit_upload_session(session_id: int, session: AsyncSession = Depends(get_session)):
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+    try:
+        dataset_id = await commit_service.commit_upload(session, session_id)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return {"dataset_id": dataset_id}
 
 
 # --- Field tree ---
