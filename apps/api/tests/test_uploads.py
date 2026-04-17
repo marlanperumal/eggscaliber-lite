@@ -247,6 +247,7 @@ async def test_get_upload_session_includes_collection_metadata(client, db):
     body = get_resp.json()
     assert body["collection_name"] == "Meta Collection"
     assert body["package_name"] == "Meta Pkg"
+    assert "collected_at" in body
 
 
 async def test_reconcile_counts_includes_status_counts(client, db):

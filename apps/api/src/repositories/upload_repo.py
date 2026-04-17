@@ -22,6 +22,7 @@ async def get_collection_meta(session: AsyncSession, collection_id: int) -> dict
     return {
         "collection_name": result.name,
         "package_name": package_name,
+        "collected_at": None,
     }
 
 
