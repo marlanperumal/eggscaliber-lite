@@ -53,6 +53,7 @@ class UploadFieldGroupBase(SQLModel):
 class UploadFieldGroup(UploadFieldGroupBase, table=True):
     __tablename__ = "upload_fieldgroup"
     id: int | None = sql_field(default=None, primary_key=True)
+    # created_at intentionally omitted — ephemeral staging rows deleted on commit/abandon
 
 
 class UploadFieldGroupRead(UploadFieldGroupBase):
@@ -82,6 +83,7 @@ class UploadFieldRead(UploadFieldBase):
 
     @property
     def effective_type(self) -> FieldType:
+        """Python-only convenience helper — not serialized in API responses."""
         return self.override_type or self.detected_type
 
 
@@ -98,6 +100,7 @@ class UploadLevelBase(SQLModel):
 class UploadLevel(UploadLevelBase, table=True):
     __tablename__ = "upload_level"
     id: int | None = sql_field(default=None, primary_key=True)
+    # created_at intentionally omitted — ephemeral staging rows deleted on commit/abandon
 
 
 class UploadLevelRead(UploadLevelBase):
