@@ -42,20 +42,29 @@
 |------|---------------|
 | `apps/web/src/app/datasets/page.tsx` | Server component shell for `/datasets` |
 | `apps/web/src/app/datasets/DatasetsPage.tsx` | Client component — dataset list table |
-| `apps/web/src/app/datasets/DatasetsPage.stories.tsx` | Storybook story |
+| `apps/web/src/app/datasets/DatasetsPage.stories.tsx` | Storybook story (Empty + WithData) |
 | `apps/web/src/app/datasets/upload/page.tsx` | Server component shell for `/datasets/upload` |
 | `apps/web/src/app/datasets/upload/WizardShell.tsx` | Step indicator + step router |
+| `apps/web/src/app/datasets/upload/WizardShell.stories.tsx` | Storybook story (step 1, step 4 skip, step 5) |
 | `apps/web/src/app/datasets/upload/wizard-types.ts` | Shared wizard state types |
 | `apps/web/src/app/datasets/upload/useWizardState.ts` | URL-synced wizard state hook |
 | `apps/web/src/app/datasets/upload/steps/Step1FileHierarchy.tsx` | File drop + hierarchy form |
+| `apps/web/src/app/datasets/upload/steps/Step1FileHierarchy.stories.tsx` | Storybook story |
 | `apps/web/src/app/datasets/upload/steps/Step2FieldDetection.tsx` | Detection review table |
+| `apps/web/src/app/datasets/upload/steps/Step2FieldDetection.stories.tsx` | Storybook story |
 | `apps/web/src/app/datasets/upload/steps/Step3Reconciliation.tsx` | 4-tab reconciliation view |
+| `apps/web/src/app/datasets/upload/steps/Step3Reconciliation.stories.tsx` | Storybook story |
 | `apps/web/src/app/datasets/upload/steps/ReconciliationRow.tsx` | Single 8-column grid row |
+| `apps/web/src/app/datasets/upload/steps/ReconciliationRow.stories.tsx` | Storybook story (all 4 group variants) |
 | `apps/web/src/app/datasets/upload/steps/Step4MetadataEditor.tsx` | Split-panel metadata editor |
 | `apps/web/src/app/datasets/upload/steps/FieldTree.tsx` | dnd-kit tree (left panel, tree tab) |
+| `apps/web/src/app/datasets/upload/steps/FieldTree.stories.tsx` | Storybook story |
 | `apps/web/src/app/datasets/upload/steps/FieldList.tsx` | Filterable list (left panel, list tab) |
+| `apps/web/src/app/datasets/upload/steps/FieldList.stories.tsx` | Storybook story |
 | `apps/web/src/app/datasets/upload/steps/FieldEditorPanel.tsx` | Right editor panel |
+| `apps/web/src/app/datasets/upload/steps/FieldEditorPanel.stories.tsx` | Storybook story |
 | `apps/web/src/app/datasets/upload/steps/Step5ReviewCommit.tsx` | Summary grid + commit CTA |
+| `apps/web/src/app/datasets/upload/steps/Step5ReviewCommit.stories.tsx` | Storybook story |
 
 ### Modified frontend files
 | File | Change |
@@ -2379,6 +2388,8 @@ git commit -m "chore(shared): regenerate API types for upload wizard endpoints; 
 
 ---
 
+> **Frontend implementation (Tasks 11–17):** Invoke the `frontend-design` skill before writing each component. Follow its guidance on token usage, component structure, and story patterns for this codebase.
+
 ### Task 11: Datasets page (`/datasets`)
 
 The management page that lists all committed datasets and provides the "Upload dataset" CTA.
@@ -2486,6 +2497,7 @@ export function DatasetsPage() {
 
 ```tsx
 import type { Meta, StoryObj } from "@storybook/react"
+import { beforeEach, vi } from "@storybook/test"
 import { DatasetsPage } from "./DatasetsPage"
 
 const meta: Meta<typeof DatasetsPage> = {
@@ -2496,8 +2508,28 @@ const meta: Meta<typeof DatasetsPage> = {
 export default meta
 type Story = StoryObj<typeof DatasetsPage>
 
-export const Empty: Story = {}
-export const WithData: Story = {}
+const MOCK_DATASETS = [
+  { id: 1, name: "Wave 1", collection_id: 1, collected_at: "2025-01", created_at: "2025-01-15T00:00:00Z" },
+  { id: 2, name: "Wave 2", collection_id: 1, collected_at: "2025-07", created_at: "2025-07-10T00:00:00Z" },
+]
+
+// Empty state — no datasets yet
+export const Empty: Story = {
+  beforeEach() {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ items: [] }), { status: 200 }),
+    )
+  },
+}
+
+// Populated table with two datasets
+export const WithData: Story = {
+  beforeEach() {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ items: MOCK_DATASETS }), { status: 200 }),
+    )
+  },
+}
 ```
 
 - [ ] **Step 4: Verify in browser**
@@ -2536,6 +2568,7 @@ The outer container that shows the step indicator and renders the active step. W
 - Create: `apps/web/src/app/datasets/upload/wizard-types.ts`
 - Create: `apps/web/src/app/datasets/upload/useWizardState.ts`
 - Create: `apps/web/src/app/datasets/upload/WizardShell.tsx`
+- Create: `apps/web/src/app/datasets/upload/WizardShell.stories.tsx`
 - Create: `apps/web/src/app/datasets/upload/useWizardState.test.ts`
 
 - [ ] **Step 1: Write `apps/web/src/app/datasets/upload/wizard-types.ts`**
@@ -2745,7 +2778,56 @@ export default function Page() {
 }
 ```
 
-- [ ] **Step 8: Verify in browser**
+- [ ] **Step 8: Write `apps/web/src/app/datasets/upload/WizardShell.stories.tsx`**
+
+```tsx
+import type { Meta, StoryObj } from "@storybook/react"
+import { WizardShell } from "./WizardShell"
+
+const meta: Meta<typeof WizardShell> = {
+  title: "Datasets/Upload/WizardShell",
+  component: WizardShell,
+  parameters: { layout: "fullscreen" },
+}
+export default meta
+type Story = StoryObj<typeof WizardShell>
+
+// Step 1 — initial state, no session yet
+export const AtStep1: Story = {
+  parameters: {
+    nextjs: {
+      navigation: { pathname: "/datasets/upload", searchParams: new URLSearchParams("step=1") },
+    },
+  },
+}
+
+// Step 4 — reconciliation skipped (new collection upload)
+export const AtStep4ReconcileSkipped: Story = {
+  name: "Step 4 (step 3 skipped — new collection)",
+  parameters: {
+    nextjs: {
+      navigation: {
+        pathname: "/datasets/upload",
+        searchParams: new URLSearchParams("step=4&session=1&reconcile=0"),
+      },
+    },
+  },
+}
+
+// Step 5 — all steps done
+export const AtStep5: Story = {
+  parameters: {
+    nextjs: {
+      navigation: {
+        pathname: "/datasets/upload",
+        searchParams: new URLSearchParams("step=5&session=1&reconcile=1"),
+      },
+    },
+  },
+}
+```
+
+- [ ] **Step 9: Verify in browser**
 
 ```bash
 just web
@@ -2756,11 +2838,19 @@ Open `http://localhost:3000/datasets/upload`. Verify:
 - Step 1 is highlighted
 - No console errors
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 10: Check a11y in Storybook**
+
+```bash
+just storybook
+```
+
+Open `Datasets/Upload/WizardShell` → `AtStep1` story. Run accessibility checks. Fix any violations before committing.
+
+- [ ] **Step 11: Commit**
 
 ```bash
 git add apps/web/src/app/datasets/upload/
-git commit -m "feat(web): add wizard shell, URL-synced state hook, and step indicator"
+git commit -m "feat(web): add wizard shell, URL-synced state hook, step indicator, and WizardShell stories"
 ```
 
 ---
@@ -2771,6 +2861,7 @@ File drop zone + package/collection/dataset name form. On "Next", POSTs the file
 
 **Files:**
 - Create: `apps/web/src/app/datasets/upload/steps/Step1FileHierarchy.tsx`
+- Create: `apps/web/src/app/datasets/upload/steps/Step1FileHierarchy.stories.tsx`
 - Modify: `apps/web/src/app/datasets/upload/WizardShell.tsx` (wire in step)
 
 - [ ] **Step 1: Write `apps/web/src/app/datasets/upload/steps/Step1FileHierarchy.tsx`**
@@ -2925,7 +3016,42 @@ function StepContent(props: ReturnType<typeof useWizardState>) {
 }
 ```
 
-- [ ] **Step 3: Verify in browser**
+- [ ] **Step 3: Write `apps/web/src/app/datasets/upload/steps/Step1FileHierarchy.stories.tsx`**
+
+```tsx
+import type { Meta, StoryObj } from "@storybook/react"
+import { fn } from "@storybook/test"
+import { Step1FileHierarchy } from "./Step1FileHierarchy"
+
+const meta: Meta<typeof Step1FileHierarchy> = {
+  title: "Datasets/Upload/Step1FileHierarchy",
+  component: Step1FileHierarchy,
+}
+export default meta
+type Story = StoryObj<typeof Step1FileHierarchy>
+
+const mockState = { step: 1 as const, sessionId: null, needsReconcile: false }
+
+// Empty form — Next button disabled
+export const Default: Story = {
+  args: {
+    state: mockState,
+    setStep: fn(),
+    setSessionId: fn(),
+    setNeedsReconcile: fn(),
+  },
+}
+```
+
+- [ ] **Step 4: Check a11y in Storybook**
+
+```bash
+just storybook
+```
+
+Open `Datasets/Upload/Step1FileHierarchy` → `Default`. Confirm a11y panel passes. Fix any violations.
+
+- [ ] **Step 5: Verify in browser**
 
 Start `just dev`. Navigate to `http://localhost:3000/datasets/upload`.
 - Drop a CSV file → file name appears in drop zone
@@ -2933,10 +3059,11 @@ Start `just dev`. Navigate to `http://localhost:3000/datasets/upload`.
 - Click Next → file uploads, step indicator moves to 2
 - Check Network tab: POST `/api/v1/uploads` returns 201 with fields array
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add apps/web/src/app/datasets/upload/steps/Step1FileHierarchy.tsx \
+        apps/web/src/app/datasets/upload/steps/Step1FileHierarchy.stories.tsx \
         apps/web/src/app/datasets/upload/WizardShell.tsx
 git commit -m "feat(web): add wizard Step 1 — file drop zone and hierarchy form"
 ```
@@ -2949,6 +3076,7 @@ Table showing every detected field, its type, sample values, and an override dro
 
 **Files:**
 - Create: `apps/web/src/app/datasets/upload/steps/Step2FieldDetection.tsx`
+- Create: `apps/web/src/app/datasets/upload/steps/Step2FieldDetection.stories.tsx`
 - Modify: `apps/web/src/app/datasets/upload/WizardShell.tsx`
 
 - [ ] **Step 1: Write `apps/web/src/app/datasets/upload/steps/Step2FieldDetection.tsx`**
@@ -3087,14 +3215,58 @@ if (state.step === 2) {
 }
 ```
 
-- [ ] **Step 3: Verify in browser**
+- [ ] **Step 3: Write `apps/web/src/app/datasets/upload/steps/Step2FieldDetection.stories.tsx`**
+
+```tsx
+import type { Meta, StoryObj } from "@storybook/react"
+import { beforeEach, fn, vi } from "@storybook/test"
+import { Step2FieldDetection } from "./Step2FieldDetection"
+
+const meta: Meta<typeof Step2FieldDetection> = {
+  title: "Datasets/Upload/Step2FieldDetection",
+  component: Step2FieldDetection,
+}
+export default meta
+type Story = StoryObj<typeof Step2FieldDetection>
+
+const MOCK_FIELDS = [
+  { id: 1, field_key: "respondent_id", detected_type: "identifier", override_type: null, sort_order: 0 },
+  { id: 2, field_key: "gender", detected_type: "categorical", override_type: null, sort_order: 1 },
+  { id: 3, field_key: "age", detected_type: "ordinal", override_type: null, sort_order: 2 },
+  { id: 4, field_key: "brand_awareness", detected_type: "categorical", override_type: null, sort_order: 3 },
+  { id: 5, field_key: "net_promoter_score", detected_type: "numeric", override_type: null, sort_order: 4 },
+]
+
+export const WithFields: Story = {
+  args: {
+    state: { step: 2 as const, sessionId: 1, needsReconcile: false },
+    setStep: fn(),
+  },
+  beforeEach() {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ fields: MOCK_FIELDS }), { status: 200 }),
+    )
+  },
+}
+```
+
+- [ ] **Step 4: Check a11y in Storybook**
+
+```bash
+just storybook
+```
+
+Open `Datasets/Upload/Step2FieldDetection` → `WithFields`. Confirm a11y passes. Fix any violations.
+
+- [ ] **Step 5: Verify in browser**
 
 After completing Step 1, Step 2 should load the detected fields table. Override a type from the dropdown and confirm the UI reflects the change.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add apps/web/src/app/datasets/upload/steps/Step2FieldDetection.tsx \
+        apps/web/src/app/datasets/upload/steps/Step2FieldDetection.stories.tsx \
         apps/web/src/app/datasets/upload/WizardShell.tsx
 git commit -m "feat(web): add wizard Step 2 — field detection review table"
 ```
@@ -3107,7 +3279,9 @@ git commit -m "feat(web): add wizard Step 2 — field detection review table"
 
 **Files:**
 - Create: `apps/web/src/app/datasets/upload/steps/ReconciliationRow.tsx`
+- Create: `apps/web/src/app/datasets/upload/steps/ReconciliationRow.stories.tsx`
 - Create: `apps/web/src/app/datasets/upload/steps/Step3Reconciliation.tsx`
+- Create: `apps/web/src/app/datasets/upload/steps/Step3Reconciliation.stories.tsx`
 - Modify: `apps/web/src/app/datasets/upload/WizardShell.tsx`
 
 - [ ] **Step 1: Write `apps/web/src/app/datasets/upload/steps/ReconciliationRow.tsx`**
@@ -3447,7 +3621,93 @@ if (state.step === 3) {
 }
 ```
 
-- [ ] **Step 4: Verify in browser**
+- [ ] **Step 4: Write `apps/web/src/app/datasets/upload/steps/ReconciliationRow.stories.tsx`**
+
+`ReconciliationRow` is a pure component — stories exercise all four group variants.
+
+```tsx
+import type { Meta, StoryObj } from "@storybook/react"
+import { fn } from "@storybook/test"
+import { ReconciliationRow } from "./ReconciliationRow"
+
+const meta: Meta<typeof ReconciliationRow> = {
+  title: "Datasets/Upload/ReconciliationRow",
+  component: ReconciliationRow,
+}
+export default meta
+type Story = StoryObj<typeof ReconciliationRow>
+
+const base = { checked: false, onCheck: fn(), onAction: fn() }
+
+export const Exact: Story = {
+  args: {
+    ...base,
+    row: { id: 1, group: "exact", status: "auto_accepted", upload_field_id: 1, ref_field_id: 1,
+           confidence: 1, note: null, field_key: "gender", ref_field_key: "gender", field_type: "categorical" },
+  },
+}
+
+export const ProbablePending: Story = {
+  args: {
+    ...base,
+    row: { id: 2, group: "probable", status: "pending", upload_field_id: 2, ref_field_id: 3,
+           confidence: 0.85, note: "key renamed", field_key: "brand_awareness",
+           ref_field_key: "awareness", field_type: "categorical" },
+  },
+}
+
+export const OldOnlyPending: Story = {
+  args: {
+    ...base,
+    row: { id: 3, group: "old_only", status: "pending", upload_field_id: null, ref_field_id: 4,
+           confidence: null, note: null, field_key: undefined, ref_field_key: "region",
+           field_type: "categorical" },
+  },
+}
+
+export const NewOnly: Story = {
+  args: {
+    ...base,
+    row: { id: 4, group: "new_only", status: "auto_accepted", upload_field_id: 5, ref_field_id: null,
+           confidence: null, note: null, field_key: "nps_score", ref_field_key: undefined,
+           field_type: "numeric" },
+  },
+}
+```
+
+- [ ] **Step 5: Write `apps/web/src/app/datasets/upload/steps/Step3Reconciliation.stories.tsx`**
+
+```tsx
+import type { Meta, StoryObj } from "@storybook/react"
+import { fn } from "@storybook/test"
+import { Step3Reconciliation } from "./Step3Reconciliation"
+
+const meta: Meta<typeof Step3Reconciliation> = {
+  title: "Datasets/Upload/Step3Reconciliation",
+  component: Step3Reconciliation,
+  parameters: { layout: "fullscreen" },
+}
+export default meta
+type Story = StoryObj<typeof Step3Reconciliation>
+
+// Pre-trigger state — shows the reference dataset ID input
+export const PreTrigger: Story = {
+  args: {
+    state: { step: 3 as const, sessionId: 1, needsReconcile: true },
+    setStep: fn(),
+  },
+}
+```
+
+- [ ] **Step 6: Check a11y in Storybook**
+
+```bash
+just storybook
+```
+
+Open `Datasets/Upload/ReconciliationRow` — check all four variants. Then check `Datasets/Upload/Step3Reconciliation → PreTrigger`. Fix any a11y violations.
+
+- [ ] **Step 7: Verify in browser**
 
 After Step 2, clicking Next (with `needsReconcile = true`) lands on Step 3.
 - Enter a valid reference dataset ID → "Run reconciliation →" triggers the engine
@@ -3455,11 +3715,13 @@ After Step 2, clicking Next (with `needsReconcile = true`) lands on Step 3.
 - Probable rows show Confirm/Reject buttons; Old-only show Exclude
 - Resolving all pending rows enables the "Next →" button
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add apps/web/src/app/datasets/upload/steps/ReconciliationRow.tsx \
+        apps/web/src/app/datasets/upload/steps/ReconciliationRow.stories.tsx \
         apps/web/src/app/datasets/upload/steps/Step3Reconciliation.tsx \
+        apps/web/src/app/datasets/upload/steps/Step3Reconciliation.stories.tsx \
         apps/web/src/app/datasets/upload/WizardShell.tsx
 git commit -m "feat(web): add wizard Step 3 — reconciliation tabs with virtual list"
 ```
@@ -3472,8 +3734,11 @@ Split-panel layout: 240px left panel (tree or list, toggled by tabs) + flex righ
 
 **Files:**
 - Create: `apps/web/src/app/datasets/upload/steps/FieldTree.tsx`
+- Create: `apps/web/src/app/datasets/upload/steps/FieldTree.stories.tsx`
 - Create: `apps/web/src/app/datasets/upload/steps/FieldList.tsx`
+- Create: `apps/web/src/app/datasets/upload/steps/FieldList.stories.tsx`
 - Create: `apps/web/src/app/datasets/upload/steps/FieldEditorPanel.tsx`
+- Create: `apps/web/src/app/datasets/upload/steps/FieldEditorPanel.stories.tsx`
 - Create: `apps/web/src/app/datasets/upload/steps/Step4MetadataEditor.tsx`
 - Modify: `apps/web/src/app/datasets/upload/WizardShell.tsx`
 
@@ -4012,7 +4277,143 @@ if (state.step === 4) {
 }
 ```
 
-- [ ] **Step 6: Verify in browser**
+- [ ] **Step 6: Write `apps/web/src/app/datasets/upload/steps/FieldTree.stories.tsx`**
+
+`FieldTree` takes all data as props — stories exercise default and selected states.
+
+```tsx
+import type { Meta, StoryObj } from "@storybook/react"
+import { fn } from "@storybook/test"
+import { FieldTree } from "./FieldTree"
+
+const meta: Meta<typeof FieldTree> = {
+  title: "Datasets/Upload/FieldTree",
+  component: FieldTree,
+}
+export default meta
+type Story = StoryObj<typeof FieldTree>
+
+const GROUPS = [
+  { id: 1, name: "Brand Tracker", parent_id: null, sort_order: 0 },
+  { id: 2, name: "Awareness", parent_id: 1, sort_order: 0 },
+  { id: 3, name: "Demographics", parent_id: null, sort_order: 1 },
+]
+
+const FIELDS = [
+  { id: 1, field_key: "brand_awareness", display_name: "Brand Awareness",
+    detected_type: "categorical", override_type: null, upload_fieldgroup_id: 2 },
+  { id: 2, field_key: "gender", display_name: "Gender",
+    detected_type: "categorical", override_type: null, upload_fieldgroup_id: 3 },
+]
+
+const UNASSIGNED = [
+  { id: 3, field_key: "nps_score", display_name: null,
+    detected_type: "numeric", override_type: null, upload_fieldgroup_id: null },
+]
+
+const baseArgs = {
+  groups: GROUPS, fields: FIELDS, unassignedFields: UNASSIGNED,
+  onSelectField: fn(), onMoveField: fn(), onCreateGroup: fn(),
+  onRenameGroup: fn(), onDeleteGroup: fn(),
+}
+
+export const Default: Story = {
+  args: { ...baseArgs, selectedFieldId: null },
+}
+
+export const FieldSelected: Story = {
+  args: { ...baseArgs, selectedFieldId: 1 },
+}
+```
+
+- [ ] **Step 7: Write `apps/web/src/app/datasets/upload/steps/FieldList.stories.tsx`**
+
+```tsx
+import type { Meta, StoryObj } from "@storybook/react"
+import { fn } from "@storybook/test"
+import { FieldList } from "./FieldList"
+import type { FieldNode, GroupNode } from "./FieldTree"
+
+const meta: Meta<typeof FieldList> = {
+  title: "Datasets/Upload/FieldList",
+  component: FieldList,
+}
+export default meta
+type Story = StoryObj<typeof FieldList>
+
+const GROUPS: GroupNode[] = [
+  { id: 1, name: "Brand Tracker", parent_id: null, sort_order: 0 },
+  { id: 2, name: "Demographics", parent_id: null, sort_order: 1 },
+]
+
+const FIELDS: FieldNode[] = [
+  { id: 1, field_key: "brand_awareness", display_name: "Brand Awareness",
+    detected_type: "categorical", override_type: null, upload_fieldgroup_id: 1 },
+  { id: 2, field_key: "gender", display_name: null,
+    detected_type: "categorical", override_type: null, upload_fieldgroup_id: 2 },
+]
+
+const UNASSIGNED: FieldNode[] = [
+  { id: 3, field_key: "nps_score", display_name: null,
+    detected_type: "numeric", override_type: null, upload_fieldgroup_id: null },
+]
+
+export const Default: Story = {
+  args: {
+    fields: FIELDS, groups: GROUPS, unassignedFields: UNASSIGNED,
+    selectedFieldId: null, onSelectField: fn(),
+  },
+}
+```
+
+- [ ] **Step 8: Write `apps/web/src/app/datasets/upload/steps/FieldEditorPanel.stories.tsx`**
+
+```tsx
+import type { Meta, StoryObj } from "@storybook/react"
+import { beforeEach, fn, vi } from "@storybook/test"
+import { FieldEditorPanel } from "./FieldEditorPanel"
+import type { FieldNode, GroupNode } from "./FieldTree"
+
+const meta: Meta<typeof FieldEditorPanel> = {
+  title: "Datasets/Upload/FieldEditorPanel",
+  component: FieldEditorPanel,
+}
+export default meta
+type Story = StoryObj<typeof FieldEditorPanel>
+
+const GROUPS: GroupNode[] = [
+  { id: 1, name: "Brand Tracker", parent_id: null, sort_order: 0 },
+  { id: 2, name: "Demographics", parent_id: null, sort_order: 1 },
+]
+
+const FIELD: FieldNode = {
+  id: 1, field_key: "brand_awareness", display_name: "Brand Awareness",
+  detected_type: "categorical", override_type: null, upload_fieldgroup_id: 1,
+}
+
+export const NoSelection: Story = {
+  args: { sessionId: 1, field: null, groups: GROUPS, onSaved: fn() },
+}
+
+export const FieldSelected: Story = {
+  args: { sessionId: 1, field: FIELD, groups: GROUPS, onSaved: fn() },
+  beforeEach() {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ ...FIELD }), { status: 200 }),
+    )
+  },
+}
+```
+
+- [ ] **Step 9: Check a11y in Storybook**
+
+```bash
+just storybook
+```
+
+Open `Datasets/Upload/FieldTree`, `FieldList`, and `FieldEditorPanel`. Run accessibility checks on each. Fix any violations.
+
+- [ ] **Step 10: Verify in browser**
 
 Navigate to Step 4 via the wizard.
 - Left panel shows tree with "Unassigned" section at bottom
@@ -4022,12 +4423,15 @@ Navigate to Step 4 via the wizard.
 - Save display name → tree reflects updated label
 - Creating a group → appears in tree and in group selector
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
 git add apps/web/src/app/datasets/upload/steps/FieldTree.tsx \
+        apps/web/src/app/datasets/upload/steps/FieldTree.stories.tsx \
         apps/web/src/app/datasets/upload/steps/FieldList.tsx \
+        apps/web/src/app/datasets/upload/steps/FieldList.stories.tsx \
         apps/web/src/app/datasets/upload/steps/FieldEditorPanel.tsx \
+        apps/web/src/app/datasets/upload/steps/FieldEditorPanel.stories.tsx \
         apps/web/src/app/datasets/upload/steps/Step4MetadataEditor.tsx \
         apps/web/src/app/datasets/upload/WizardShell.tsx
 git commit -m "feat(web): add wizard Step 4 — metadata editor with tree/list panel and field editor"
@@ -4041,6 +4445,7 @@ Summary grid showing dataset details, field breakdown, reconciliation summary, a
 
 **Files:**
 - Create: `apps/web/src/app/datasets/upload/steps/Step5ReviewCommit.tsx`
+- Create: `apps/web/src/app/datasets/upload/steps/Step5ReviewCommit.stories.tsx`
 - Modify: `apps/web/src/app/datasets/upload/WizardShell.tsx`
 
 - [ ] **Step 1: Write `apps/web/src/app/datasets/upload/steps/Step5ReviewCommit.tsx`**
@@ -4219,7 +4624,65 @@ if (state.step === 5) {
 }
 ```
 
-- [ ] **Step 3: Verify in browser**
+- [ ] **Step 3: Write `apps/web/src/app/datasets/upload/steps/Step5ReviewCommit.stories.tsx`**
+
+```tsx
+import type { Meta, StoryObj } from "@storybook/react"
+import { beforeEach, fn, vi } from "@storybook/test"
+import { Step5ReviewCommit } from "./Step5ReviewCommit"
+
+const meta: Meta<typeof Step5ReviewCommit> = {
+  title: "Datasets/Upload/Step5ReviewCommit",
+  component: Step5ReviewCommit,
+  parameters: {
+    nextjs: {
+      navigation: { pathname: "/datasets/upload", searchParams: new URLSearchParams("step=5&session=1") },
+    },
+  },
+}
+export default meta
+type Story = StoryObj<typeof Step5ReviewCommit>
+
+const MOCK_SESSION = {
+  dataset_name: "Wave 3", row_count: 847, collection_id: 1,
+  fields: [
+    { detected_type: "categorical", override_type: null },
+    { detected_type: "categorical", override_type: null },
+    { detected_type: "ordinal", override_type: null },
+    { detected_type: "numeric", override_type: null },
+    { detected_type: "identifier", override_type: null },
+  ],
+}
+const MOCK_TREE = {
+  groups: [
+    { id: 1, name: "Brand Tracker", parent_id: null, sort_order: 0 },
+    { id: 2, name: "Demographics", parent_id: null, sort_order: 1 },
+  ],
+  unassigned_fields: [],
+}
+
+export const ReadyToCommit: Story = {
+  args: {
+    state: { step: 5 as const, sessionId: 1, needsReconcile: false },
+    setStep: fn(),
+  },
+  beforeEach() {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify(MOCK_SESSION), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(MOCK_TREE), { status: 200 }))
+  },
+}
+```
+
+- [ ] **Step 4: Check a11y in Storybook**
+
+```bash
+just storybook
+```
+
+Open `Datasets/Upload/Step5ReviewCommit` → `ReadyToCommit`. Run accessibility checks. Fix any violations.
+
+- [ ] **Step 5: Verify in browser**
 
 Navigate through the full wizard to Step 5.
 - Summary grid shows correct dataset name, response count, field type breakdown, and group structure
@@ -4227,10 +4690,11 @@ Navigate through the full wizard to Step 5.
 - "Commit dataset →" calls the API, then redirects to `/datasets`
 - The committed dataset appears in the `/datasets` list
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add apps/web/src/app/datasets/upload/steps/Step5ReviewCommit.tsx \
+        apps/web/src/app/datasets/upload/steps/Step5ReviewCommit.stories.tsx \
         apps/web/src/app/datasets/upload/WizardShell.tsx
 git commit -m "feat(web): add wizard Step 5 — review and commit"
 ```
