@@ -1786,3 +1786,252 @@ git add apps/api/src/routes/uploads.py \
         apps/api/tests/test_reconciliation_api.py
 git commit -m "feat(api): add reconciliation trigger, list, and bulk-resolve endpoints"
 ```
+
+---
+
+### Task 8: Metadata CRUD endpoints (Step 4)
+
+Endpoints that drive the metadata editor: full field+group tree, create/rename/reparent/delete groups, update field metadata (display name, type, sort order, level labels), move field to group.
+
+**Files:**
+- Modify: `apps/api/src/routes/uploads.py`
+- Create: `apps/api/tests/test_metadata_api.py`
+
+- [ ] **Step 1: Write the failing tests**
+
+`apps/api/tests/test_metadata_api.py`:
+
+```python
+import csv, io
+from src.models.collection import Collection, CollectionType
+from src.models.package import Package
+
+
+def _csv(headers, rows):
+    buf = io.StringIO()
+    csv.writer(buf).writerow(headers)
+    for r in rows: csv.writer(buf).writerow(r)
+    return buf.getvalue().encode()
+
+
+async def _session(client):
+    csv_bytes = _csv(["gender", "age"], [["male", "3"]])
+    r = await client.post("/api/v1/uploads",
+                          files={"file": ("f.csv", csv_bytes, "text/csv")},
+                          data={"dataset_name": "W3"})
+    return r.json()
+
+
+async def test_get_field_tree_returns_groups_and_fields(client, db):
+    sess = await _session(client)
+    resp = await client.get(f"/api/v1/uploads/{sess['id']}/field-tree")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "groups" in data
+    assert "unassigned_fields" in data
+    assert len(data["unassigned_fields"]) == 2
+
+
+async def test_create_fieldgroup(client, db):
+    sess = await _session(client)
+    resp = await client.post(f"/api/v1/uploads/{sess['id']}/fieldgroups",
+                             json={"name": "Demographics"})
+    assert resp.status_code == 201
+    assert resp.json()["name"] == "Demographics"
+
+
+async def test_move_field_to_group(client, db):
+    sess = await _session(client)
+    grp = await client.post(f"/api/v1/uploads/{sess['id']}/fieldgroups",
+                            json={"name": "Demo"})
+    grp_id = grp.json()["id"]
+    field_id = sess["fields"][0]["id"]
+    resp = await client.patch(
+        f"/api/v1/uploads/{sess['id']}/fields/{field_id}/move",
+        json={"upload_fieldgroup_id": grp_id},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["upload_fieldgroup_id"] == grp_id
+
+
+async def test_update_field_display_name(client, db):
+    sess = await _session(client)
+    field_id = sess["fields"][0]["id"]
+    resp = await client.patch(
+        f"/api/v1/uploads/{sess['id']}/fields/{field_id}",
+        json={"display_name": "Sex"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["display_name"] == "Sex"
+
+
+async def test_delete_fieldgroup_moves_fields_to_unassigned(client, db):
+    sess = await _session(client)
+    grp = await client.post(f"/api/v1/uploads/{sess['id']}/fieldgroups",
+                            json={"name": "Demo"})
+    grp_id = grp.json()["id"]
+    field_id = sess["fields"][0]["id"]
+    await client.patch(f"/api/v1/uploads/{sess['id']}/fields/{field_id}/move",
+                       json={"upload_fieldgroup_id": grp_id})
+    resp = await client.delete(f"/api/v1/uploads/{sess['id']}/fieldgroups/{grp_id}")
+    assert resp.status_code == 200
+    # Field should now be unassigned
+    tree = await client.get(f"/api/v1/uploads/{sess['id']}/field-tree")
+    unassigned_ids = [f["id"] for f in tree.json()["unassigned_fields"]]
+    assert field_id in unassigned_ids
+```
+
+- [ ] **Step 2: Run — expect failure**
+
+```bash
+just test-api -k test_metadata_api
+```
+
+Expected: 404 on all.
+
+- [ ] **Step 3: Add metadata endpoints to `apps/api/src/routes/uploads.py`**
+
+```python
+# --- Field tree ---
+
+@router.get("/uploads/{session_id}/field-tree")
+async def get_field_tree(session_id: int, session: AsyncSession = Depends(get_session)):
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+    groups = await upload_repo.get_fieldgroups_for_session(session, session_id)
+    fields = await upload_repo.get_fields_for_session(session, session_id)
+
+    def _group_dict(g):
+        return {"id": g.id, "name": g.name, "parent_id": g.parent_id,
+                "sort_order": g.sort_order}
+
+    def _field_dict(f):
+        return {"id": f.id, "field_key": f.field_key, "display_name": f.display_name,
+                "detected_type": f.detected_type.value,
+                "override_type": f.override_type.value if f.override_type else None,
+                "sort_order": f.sort_order,
+                "upload_fieldgroup_id": f.upload_fieldgroup_id}
+
+    assigned_field_ids = {f.id for f in fields if f.upload_fieldgroup_id is not None}
+    return {
+        "groups": [_group_dict(g) for g in groups],
+        "fields": [_field_dict(f) for f in fields if f.id in assigned_field_ids],
+        "unassigned_fields": [_field_dict(f) for f in fields
+                               if f.upload_fieldgroup_id is None],
+    }
+
+
+# --- Field group CRUD ---
+
+class FieldGroupCreate(BaseModel):
+    name: str
+    parent_id: int | None = None
+    sort_order: int = 0
+
+
+class FieldGroupUpdate(BaseModel):
+    name: str | None = None
+    parent_id: int | None = None
+    sort_order: int | None = None
+
+
+@router.post("/uploads/{session_id}/fieldgroups", status_code=201)
+async def create_fieldgroup(
+    session_id: int, body: FieldGroupCreate,
+    session: AsyncSession = Depends(get_session),
+):
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+    grp = await upload_repo.create_upload_fieldgroup(
+        session, upload_session_id=session_id,
+        name=body.name, parent_id=body.parent_id, sort_order=body.sort_order,
+    )
+    return {"id": grp.id, "name": grp.name, "parent_id": grp.parent_id,
+            "sort_order": grp.sort_order}
+
+
+@router.patch("/uploads/{session_id}/fieldgroups/{group_id}")
+async def update_fieldgroup(
+    session_id: int, group_id: int, body: FieldGroupUpdate,
+    session: AsyncSession = Depends(get_session),
+):
+    from sqlalchemy import select
+    from src.models.upload import UploadFieldGroup
+    grp = (await session.execute(
+        select(UploadFieldGroup).where(UploadFieldGroup.id == group_id,
+                                        UploadFieldGroup.upload_session_id == session_id)
+    )).scalars().first()
+    if grp is None:
+        raise HTTPException(status_code=404, detail="Group not found")
+    if body.name is not None:
+        grp.name = body.name
+    if body.parent_id is not None:
+        grp.parent_id = body.parent_id
+    if body.sort_order is not None:
+        grp.sort_order = body.sort_order
+    session.add(grp)
+    await session.flush()
+    return {"id": grp.id, "name": grp.name, "parent_id": grp.parent_id}
+
+
+@router.delete("/uploads/{session_id}/fieldgroups/{group_id}")
+async def delete_fieldgroup(
+    session_id: int, group_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    from sqlalchemy import select, update
+    from src.models.upload import UploadField, UploadFieldGroup
+    grp = (await session.execute(
+        select(UploadFieldGroup).where(UploadFieldGroup.id == group_id,
+                                        UploadFieldGroup.upload_session_id == session_id)
+    )).scalars().first()
+    if grp is None:
+        raise HTTPException(status_code=404, detail="Group not found")
+    # Unassign fields
+    await session.execute(
+        update(UploadField)
+        .where(UploadField.upload_fieldgroup_id == group_id)
+        .values(upload_fieldgroup_id=None)
+    )
+    await session.delete(grp)
+    await session.flush()
+    return {"deleted": group_id}
+
+
+# --- Field move ---
+
+class FieldMove(BaseModel):
+    upload_fieldgroup_id: int | None
+
+
+@router.patch("/uploads/{session_id}/fields/{field_id}/move")
+async def move_field(
+    session_id: int, field_id: int, body: FieldMove,
+    session: AsyncSession = Depends(get_session),
+):
+    f = await upload_repo.get_field_by_id(session, field_id)
+    if f is None or f.upload_session_id != session_id:
+        raise HTTPException(status_code=404, detail="Field not found")
+    f.upload_fieldgroup_id = body.upload_fieldgroup_id
+    session.add(f)
+    await session.flush()
+    return {"id": f.id, "upload_fieldgroup_id": f.upload_fieldgroup_id}
+```
+
+- [ ] **Step 4: Run — expect pass**
+
+```bash
+just test-api -k test_metadata_api
+```
+
+Expected: 5 tests passing.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/api/src/routes/uploads.py \
+        apps/api/tests/test_metadata_api.py
+git commit -m "feat(api): add metadata CRUD endpoints (field tree, groups, field move)"
+```
