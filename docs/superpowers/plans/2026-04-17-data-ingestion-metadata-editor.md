@@ -3446,3 +3446,570 @@ git add apps/web/src/app/datasets/upload/steps/ReconciliationRow.tsx \
         apps/web/src/app/datasets/upload/WizardShell.tsx
 git commit -m "feat(web): add wizard Step 3 — reconciliation tabs with virtual list"
 ```
+
+---
+
+### Task 16: Step 4 — Metadata Editor
+
+Split-panel layout: 240px left panel (tree or list, toggled by tabs) + flex right editor panel. Tree uses dnd-kit for drag-to-reorder and drag-to-reparent. All drag actions have accessible ⋮ menu alternatives.
+
+**Files:**
+- Create: `apps/web/src/app/datasets/upload/steps/FieldTree.tsx`
+- Create: `apps/web/src/app/datasets/upload/steps/FieldList.tsx`
+- Create: `apps/web/src/app/datasets/upload/steps/FieldEditorPanel.tsx`
+- Create: `apps/web/src/app/datasets/upload/steps/Step4MetadataEditor.tsx`
+- Modify: `apps/web/src/app/datasets/upload/WizardShell.tsx`
+
+- [ ] **Step 1: Write `apps/web/src/app/datasets/upload/steps/FieldTree.tsx`**
+
+```tsx
+"use client"
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { ChevronDown, ChevronRight, GripVertical, MoreHorizontal, Plus } from "lucide-react"
+import { useState } from "react"
+
+export interface FieldNode {
+  id: number
+  field_key: string
+  display_name: string | null
+  detected_type: string
+  override_type: string | null
+  upload_fieldgroup_id: number | null
+}
+export interface GroupNode {
+  id: number
+  name: string
+  parent_id: number | null
+  sort_order: number
+}
+
+interface Props {
+  groups: GroupNode[]
+  fields: FieldNode[]
+  unassignedFields: FieldNode[]
+  selectedFieldId: number | null
+  onSelectField: (id: number) => void
+  onMoveField: (fieldId: number, groupId: number | null) => void
+  onCreateGroup: (name: string, parentId: number | null) => void
+  onRenameGroup: (id: number, name: string) => void
+  onDeleteGroup: (id: number) => void
+}
+
+export function FieldTree({
+  groups, fields, unassignedFields,
+  selectedFieldId, onSelectField,
+  onMoveField, onCreateGroup, onRenameGroup, onDeleteGroup,
+}: Props) {
+  const [expanded, setExpanded] = useState<Set<number>>(new Set())
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
+  function toggleExpand(id: number) {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    setActiveId(null)
+    if (!over || active.id === over.id) return
+    // active.id = "field-{id}", over.id = "group-{id}" or "unassigned"
+    const activeStr = String(active.id)
+    const overStr = String(over.id)
+    if (activeStr.startsWith("field-")) {
+      const fieldId = Number(activeStr.replace("field-", ""))
+      const groupId = overStr.startsWith("group-")
+        ? Number(overStr.replace("group-", "")) : null
+      onMoveField(fieldId, groupId)
+    }
+  }
+
+  const rootGroups = groups.filter((g) => g.parent_id === null)
+
+  function renderGroup(group: GroupNode, depth = 0) {
+    const groupFields = fields.filter((f) => f.upload_fieldgroup_id === group.id)
+    const childGroups = groups.filter((g) => g.parent_id === group.id)
+    const isExpanded = expanded.has(group.id)
+
+    return (
+      <div key={group.id}>
+        <div
+          id={`group-${group.id}`}
+          className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-xs hover:bg-muted"
+          style={{ paddingLeft: `${8 + depth * 12}px` }}
+          onClick={() => toggleExpand(group.id)}
+        >
+          <span className="text-muted-foreground">
+            {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          </span>
+          <span className="flex-1 font-semibold text-foreground">{group.name}</span>
+          <button
+            aria-label={`Add field to ${group.name}`}
+            onClick={(e) => { e.stopPropagation(); onCreateGroup("New subgroup", group.id) }}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Plus size={11} />
+          </button>
+          <button
+            aria-label={`Group options for ${group.name}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <MoreHorizontal size={11} />
+          </button>
+        </div>
+
+        {isExpanded && (
+          <div>
+            {childGroups.map((cg) => renderGroup(cg, depth + 1))}
+            {groupFields.map((f) => <FieldLeaf key={f.id} field={f}
+              selected={selectedFieldId === f.id} onSelect={onSelectField} />)}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <DndContext sensors={sensors}
+      onDragStart={(e) => setActiveId(String(e.active.id))}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveId(null)}>
+      <div className="flex flex-col gap-0.5 overflow-auto">
+        <button
+          onClick={() => onCreateGroup("New group", null)}
+          className="mb-1 flex items-center gap-1 rounded px-2 py-1 text-xs font-semibold text-accent hover:bg-muted"
+        >
+          <Plus size={11} /> New group
+        </button>
+        {rootGroups.map((g) => renderGroup(g))}
+        {/* Unassigned */}
+        <div className="mt-2 border-t border-border pt-2">
+          <p className="mb-1 px-2 text-xs font-semibold text-muted-foreground">Unassigned</p>
+          {unassignedFields.map((f) => (
+            <FieldLeaf key={f.id} field={f}
+              selected={selectedFieldId === f.id} onSelect={onSelectField} />
+          ))}
+        </div>
+      </div>
+      <DragOverlay dropAnimation={null}>
+        {activeId?.startsWith("field-") && (
+          <div className="rounded border border-accent bg-background px-2 py-1 text-xs shadow">
+            Moving field…
+          </div>
+        )}
+      </DragOverlay>
+    </DndContext>
+  )
+}
+
+function FieldLeaf({
+  field, selected, onSelect,
+}: { field: FieldNode; selected: boolean; onSelect: (id: number) => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `field-${field.id}`,
+  })
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      onClick={() => onSelect(field.id)}
+      className={[
+        "flex cursor-pointer items-center gap-1 rounded px-3 py-1 text-xs",
+        selected ? "bg-accent/10 font-semibold text-accent" : "text-foreground hover:bg-muted",
+      ].join(" ")}
+      data-testid="field-leaf"
+    >
+      <span {...attributes} {...listeners} className="cursor-grab text-muted-foreground">
+        <GripVertical size={11} />
+      </span>
+      <span className="flex-1 truncate font-mono">{field.display_name ?? field.field_key}</span>
+      <span className="text-muted-foreground">{field.override_type ?? field.detected_type}</span>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 2: Write `apps/web/src/app/datasets/upload/steps/FieldList.tsx`**
+
+Flat list view for the left panel (list tab). Filter pills + sort dropdown.
+
+```tsx
+"use client"
+import { useMemo, useState } from "react"
+import type { FieldNode, GroupNode } from "./FieldTree"
+
+type Filter = "all" | "needs" | "ready"
+
+interface Props {
+  fields: FieldNode[]
+  groups: GroupNode[]
+  unassignedFields: FieldNode[]
+  selectedFieldId: number | null
+  onSelectField: (id: number) => void
+}
+
+export function FieldList({ fields, groups, unassignedFields, selectedFieldId, onSelectField }: Props) {
+  const [filter, setFilter] = useState<Filter>("all")
+  const [sort, setSort] = useState<"key" | "group" | "type">("key")
+
+  const allFields = [...fields, ...unassignedFields]
+  const groupById = Object.fromEntries(groups.map((g) => [g.id, g]))
+
+  const filtered = useMemo(() => {
+    let list = allFields
+    if (filter === "needs") list = list.filter((f) => !f.display_name)
+    if (filter === "ready") list = list.filter((f) => Boolean(f.display_name))
+    if (sort === "key") list = [...list].sort((a, b) => a.field_key.localeCompare(b.field_key))
+    if (sort === "group") list = [...list].sort((a, b) => {
+      const ga = a.upload_fieldgroup_id ? (groupById[a.upload_fieldgroup_id]?.name ?? "") : ""
+      const gb = b.upload_fieldgroup_id ? (groupById[b.upload_fieldgroup_id]?.name ?? "") : ""
+      return ga.localeCompare(gb)
+    })
+    if (sort === "type") list = [...list].sort((a, b) =>
+      (a.override_type ?? a.detected_type).localeCompare(b.override_type ?? b.detected_type))
+    return list
+  }, [allFields, filter, sort, groupById])
+
+  return (
+    <div className="flex flex-col gap-0">
+      {/* Filter pills */}
+      <div className="mb-1 flex gap-1 px-1">
+        {(["all", "needs", "ready"] as Filter[]).map((f) => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={[
+              "rounded-full px-2 py-0.5 text-xs font-semibold",
+              filter === f ? "bg-accent text-white" : "bg-muted text-muted-foreground",
+            ].join(" ")}>
+            {f === "all" ? "All" : f === "needs" ? "⚠ Needs" : "✓ Ready"}
+          </button>
+        ))}
+        <select value={sort} onChange={(e) => setSort(e.target.value as any)}
+          className="ml-auto rounded border border-border bg-background px-1 py-0.5 text-xs text-foreground">
+          <option value="key">Sort: A–Z</option>
+          <option value="group">Sort: Group</option>
+          <option value="type">Sort: Type</option>
+        </select>
+      </div>
+      {filtered.map((f) => {
+        const groupName = f.upload_fieldgroup_id
+          ? groupById[f.upload_fieldgroup_id]?.name : null
+        return (
+          <div key={f.id} onClick={() => onSelectField(f.id)}
+            className={[
+              "flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs",
+              selectedFieldId === f.id ? "bg-accent/10 text-accent" : "hover:bg-muted",
+            ].join(" ")}
+            data-testid="field-list-row">
+            <span className={[
+              "h-1.5 w-1.5 rounded-full shrink-0",
+              f.display_name ? "bg-green-500" : "bg-amber-500",
+            ].join(" ")} />
+            <span className="flex-1 truncate font-mono">{f.field_key}</span>
+            <span className="truncate text-muted-foreground">{groupName ?? "—"}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+```
+
+- [ ] **Step 3: Write `apps/web/src/app/datasets/upload/steps/FieldEditorPanel.tsx`**
+
+```tsx
+"use client"
+import { useEffect, useState } from "react"
+import type { FieldNode, GroupNode } from "./FieldTree"
+
+const FIELD_TYPES = ["numeric", "ordinal", "categorical", "multi_response", "identifier", "weight"]
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+
+interface Props {
+  sessionId: number
+  field: FieldNode | null
+  groups: GroupNode[]
+  onSaved: (updated: FieldNode) => void
+}
+
+export function FieldEditorPanel({ sessionId, field, groups, onSaved }: Props) {
+  const [displayName, setDisplayName] = useState("")
+  const [overrideType, setOverrideType] = useState<string>("")
+  const [groupId, setGroupId] = useState<string>("")
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!field) return
+    setDisplayName(field.display_name ?? "")
+    setOverrideType(field.override_type ?? "")
+    setGroupId(field.upload_fieldgroup_id ? String(field.upload_fieldgroup_id) : "")
+  }, [field])
+
+  if (!field) {
+    return (
+      <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+        Select a field to edit
+      </div>
+    )
+  }
+
+  async function handleSave() {
+    if (!field) return
+    setBusy(true)
+    // Save metadata
+    const r1 = await fetch(
+      `${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          display_name: displayName || null,
+          override_type: overrideType || null,
+        }),
+      },
+    )
+    // Move if group changed
+    const newGroupId = groupId ? Number(groupId) : null
+    if (newGroupId !== field.upload_fieldgroup_id) {
+      await fetch(
+        `${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}/move`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ upload_fieldgroup_id: newGroupId }),
+        },
+      )
+    }
+    const data = await r1.json()
+    onSaved({ ...field, display_name: data.display_name,
+               override_type: data.override_type, upload_fieldgroup_id: newGroupId })
+    setBusy(false)
+  }
+
+  // Build flat group path list for selector
+  const groupPath = (g: GroupNode): string => {
+    const parent = groups.find((p) => p.id === g.parent_id)
+    return parent ? `${groupPath(parent)} › ${g.name}` : g.name
+  }
+
+  return (
+    <div className="flex flex-col gap-4 overflow-auto p-4">
+      {/* Breadcrumb */}
+      <p className="text-xs text-muted-foreground">
+        {groupId ? groups.find((g) => g.id === Number(groupId)) ? groupPath(groups.find((g) => g.id === Number(groupId))!) : "—" : "Unassigned"} › <span className="font-mono font-semibold text-foreground">{field.field_key}</span>
+      </p>
+
+      <div>
+        <label className="mb-1 block text-xs font-semibold text-muted-foreground">Display name</label>
+        <input value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+          placeholder={field.field_key}
+          className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent" />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-semibold text-muted-foreground">Field type</label>
+        <select value={overrideType} onChange={(e) => setOverrideType(e.target.value)}
+          className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent">
+          <option value="">— detected: {field.detected_type} —</option>
+          {FIELD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-semibold text-muted-foreground">Group</label>
+        <select value={groupId} onChange={(e) => setGroupId(e.target.value)}
+          className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent">
+          <option value="">— Unassigned —</option>
+          {groups.map((g) => <option key={g.id} value={g.id}>{groupPath(g)}</option>)}
+        </select>
+      </div>
+
+      <div className="mt-auto flex justify-end gap-2 border-t border-border pt-4">
+        <button onClick={handleSave} disabled={busy}
+          className="rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-white disabled:opacity-40">
+          {busy ? "Saving…" : "Save"}
+        </button>
+      </div>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 4: Write `apps/web/src/app/datasets/upload/steps/Step4MetadataEditor.tsx`**
+
+```tsx
+"use client"
+import { useEffect, useState } from "react"
+import type { WizardState, WizardStep } from "../wizard-types"
+import type { FieldNode, GroupNode } from "./FieldTree"
+import { FieldTree } from "./FieldTree"
+import { FieldList } from "./FieldList"
+import { FieldEditorPanel } from "./FieldEditorPanel"
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+type PanelTab = "tree" | "list"
+
+interface Props {
+  state: WizardState
+  setStep: (s: WizardStep) => void
+}
+
+export function Step4MetadataEditor({ state, setStep }: Props) {
+  const [panelTab, setPanelTab] = useState<PanelTab>("tree")
+  const [groups, setGroups] = useState<GroupNode[]>([])
+  const [fields, setFields] = useState<FieldNode[]>([])
+  const [unassigned, setUnassigned] = useState<FieldNode[]>([])
+  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  async function loadTree() {
+    if (!state.sessionId) return
+    const res = await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/field-tree`)
+    const data = await res.json()
+    setGroups(data.groups)
+    setFields(data.fields)
+    setUnassigned(data.unassigned_fields)
+  }
+
+  useEffect(() => { loadTree().then(() => setLoading(false)) }, [state.sessionId])
+
+  async function handleMoveField(fieldId: number, groupId: number | null) {
+    if (!state.sessionId) return
+    await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/fields/${fieldId}/move`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ upload_fieldgroup_id: groupId }),
+    })
+    await loadTree()
+  }
+
+  async function handleCreateGroup(name: string, parentId: number | null) {
+    if (!state.sessionId) return
+    await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/fieldgroups`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, parent_id: parentId }),
+    })
+    await loadTree()
+  }
+
+  async function handleDeleteGroup(id: number) {
+    if (!state.sessionId) return
+    await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/fieldgroups/${id}`, {
+      method: "DELETE",
+    })
+    await loadTree()
+  }
+
+  const selectedField = [...fields, ...unassigned].find((f) => f.id === selectedFieldId) ?? null
+
+  if (loading) return <p className="text-sm text-muted-foreground">Loading…</p>
+
+  return (
+    <div className="space-y-3">
+      <h2 className="text-base font-semibold text-foreground">Step 4 — Metadata Editor</h2>
+      <div className="flex h-[520px] gap-0 overflow-hidden rounded-lg border border-border">
+
+        {/* Left panel */}
+        <div className="flex w-60 shrink-0 flex-col border-r border-border">
+          {/* Toggle tabs */}
+          <div className="flex border-b border-border">
+            {(["tree", "list"] as PanelTab[]).map((t) => (
+              <button key={t} onClick={() => setPanelTab(t)}
+                className={[
+                  "flex-1 py-2 text-xs font-semibold",
+                  panelTab === t ? "border-b-2 border-accent text-accent" : "text-muted-foreground",
+                ].join(" ")}>
+                {t === "tree" ? "🌲 Tree" : "☰ List"}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 overflow-auto p-1">
+            {panelTab === "tree" ? (
+              <FieldTree
+                groups={groups} fields={fields} unassignedFields={unassigned}
+                selectedFieldId={selectedFieldId} onSelectField={setSelectedFieldId}
+                onMoveField={handleMoveField} onCreateGroup={handleCreateGroup}
+                onRenameGroup={async () => await loadTree()}
+                onDeleteGroup={handleDeleteGroup}
+              />
+            ) : (
+              <FieldList
+                groups={groups} fields={fields} unassignedFields={unassigned}
+                selectedFieldId={selectedFieldId} onSelectField={setSelectedFieldId}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Right editor panel */}
+        <div className="flex-1 overflow-hidden">
+          <FieldEditorPanel
+            sessionId={state.sessionId!}
+            field={selectedField}
+            groups={groups}
+            onSaved={async () => await loadTree()}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-between pt-2">
+        <button onClick={() => setStep(state.needsReconcile ? 3 : 2)}
+          className="rounded-lg border border-border px-5 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted">
+          ← Back
+        </button>
+        <button onClick={() => setStep(5)}
+          className="rounded-lg bg-accent px-6 py-2 text-sm font-semibold text-white">
+          Next →
+        </button>
+      </div>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 5: Wire Step4 into `WizardShell.tsx`**
+
+```tsx
+import { Step4MetadataEditor } from "./steps/Step4MetadataEditor"
+
+// Inside StepContent, after step 3 check:
+if (state.step === 4) {
+  return <Step4MetadataEditor state={state} setStep={setStep} />
+}
+```
+
+- [ ] **Step 6: Verify in browser**
+
+Navigate to Step 4 via the wizard.
+- Left panel shows tree with "Unassigned" section at bottom
+- Clicking "🌲 Tree" / "☰ List" toggles the left panel only — right panel stays
+- Click a field → right panel shows editor with display name + type + group fields
+- Drag a field from Unassigned into a group → it moves in the tree
+- Save display name → tree reflects updated label
+- Creating a group → appears in tree and in group selector
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add apps/web/src/app/datasets/upload/steps/FieldTree.tsx \
+        apps/web/src/app/datasets/upload/steps/FieldList.tsx \
+        apps/web/src/app/datasets/upload/steps/FieldEditorPanel.tsx \
+        apps/web/src/app/datasets/upload/steps/Step4MetadataEditor.tsx \
+        apps/web/src/app/datasets/upload/WizardShell.tsx
+git commit -m "feat(web): add wizard Step 4 — metadata editor with tree/list panel and field editor"
+```
