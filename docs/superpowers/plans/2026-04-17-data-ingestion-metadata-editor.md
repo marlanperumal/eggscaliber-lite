@@ -2035,3 +2035,288 @@ git add apps/api/src/routes/uploads.py \
         apps/api/tests/test_metadata_api.py
 git commit -m "feat(api): add metadata CRUD endpoints (field tree, groups, field move)"
 ```
+
+---
+
+### Task 9: Commit service + endpoint + datasets list
+
+`POST /api/v1/uploads/{id}/commit` — atomic promotion of staging records to live tables.
+`GET /api/v1/datasets` — list all committed datasets (for the `/datasets` page).
+
+**Files:**
+- Create: `apps/api/src/services/commit_service.py`
+- Modify: `apps/api/src/routes/uploads.py`
+- Modify: `apps/api/src/routes/datasets.py`
+- Create: `apps/api/tests/test_commit.py`
+
+- [ ] **Step 1: Write the failing commit test**
+
+`apps/api/tests/test_commit.py`:
+
+```python
+import csv, io
+from src.models.collection import Collection, CollectionType
+from src.models.dataset import Dataset
+from src.models.package import Package
+
+
+def _csv(headers, rows):
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(headers)
+    w.writerows(rows)
+    return buf.getvalue().encode()
+
+
+async def _seed_collection(db):
+    pkg = Package(name="P", slug="p-commit-test")
+    db.add(pkg)
+    await db.flush(); await db.refresh(pkg)
+    col = Collection(name="C", slug="c-commit-test",
+                     package_id=pkg.id, collection_type=CollectionType.survey)
+    db.add(col)
+    await db.flush(); await db.refresh(col)
+    return col
+
+
+async def test_commit_creates_dataset_fields_and_responses(client, db):
+    col = await _seed_collection(db)
+    csv_bytes = _csv(["gender", "age"], [["male", "3"], ["female", "5"]])
+    upload = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "Wave 3", "collection_id": str(col.id)},
+    )
+    sess_id = upload.json()["id"]
+
+    resp = await client.post(f"/api/v1/uploads/{sess_id}/commit")
+    assert resp.status_code == 201
+    data = resp.json()
+    assert "dataset_id" in data
+    dataset_id = data["dataset_id"]
+
+    # Verify dataset exists via existing endpoint
+    ds_resp = await client.get(f"/api/v1/datasets/{dataset_id}")
+    assert ds_resp.status_code == 200
+    ds = ds_resp.json()
+    assert ds["name"] == "Wave 3"
+    assert len(ds["fields"]) == 2
+
+
+async def test_datasets_list_returns_committed(client, db):
+    col = await _seed_collection(db)
+    csv_bytes = _csv(["q1"], [["yes"], ["no"]])
+    upload = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "Wave List Test", "collection_id": str(col.id)},
+    )
+    await client.post(f"/api/v1/uploads/{upload.json()['id']}/commit")
+    resp = await client.get("/api/v1/datasets")
+    assert resp.status_code == 200
+    names = [d["name"] for d in resp.json()["items"]]
+    assert "Wave List Test" in names
+```
+
+- [ ] **Step 2: Run — expect failure**
+
+```bash
+just test-api -k test_commit
+```
+
+Expected: 404 on commit endpoint.
+
+- [ ] **Step 3: Write `apps/api/src/services/commit_service.py`**
+
+```python
+"""Atomically promotes staging records to live tables."""
+
+import csv
+import io
+import re
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.models.dataset import Dataset
+from src.models.field import Field
+from src.models.field_group import FieldGroup
+from src.models.level import Level
+from src.models.response import Response
+from src.models.upload import UploadSessionStatus
+from src.repositories import upload_repo
+
+
+def _slugify(text: str) -> str:
+    s = text.lower()
+    s = re.sub(r"[^a-z0-9]+", "-", s)
+    return s.strip("-") or "unnamed"
+
+
+async def commit_upload(session: AsyncSession, upload_session_id: int) -> int:
+    """Promotes staging → live. Returns new dataset.id."""
+    sess = await upload_repo.get_session_by_id(session, upload_session_id)
+    if sess is None:
+        raise ValueError(f"Upload session {upload_session_id} not found")
+
+    # 1. Create Dataset
+    name = sess.dataset_name or "Untitled"
+    ds = Dataset(
+        name=name,
+        slug=_slugify(name),
+        collection_id=sess.collection_id,
+        collected_at=sess.collected_at,
+    )
+    session.add(ds)
+    await session.flush()
+    await session.refresh(ds)
+
+    # 2. Promote field groups (staging → live), respecting parent hierarchy
+    staging_groups = await upload_repo.get_fieldgroups_for_session(session, upload_session_id)
+    # Sort: roots first, then children (parent_id is None for roots)
+    roots = [g for g in staging_groups if g.parent_id is None]
+    children = [g for g in staging_groups if g.parent_id is not None]
+
+    staging_to_live_group: dict[int, int] = {}  # staging_group.id → live group.id
+
+    for sg in roots:
+        lg = FieldGroup(
+            name=sg.name, slug=_slugify(sg.name),
+            sort_order=sg.sort_order, dataset_id=ds.id, parent_id=None,
+        )
+        session.add(lg)
+        await session.flush()
+        await session.refresh(lg)
+        staging_to_live_group[sg.id] = lg.id
+
+    for sg in children:
+        live_parent_id = staging_to_live_group.get(sg.parent_id)
+        lg = FieldGroup(
+            name=sg.name, slug=_slugify(sg.name),
+            sort_order=sg.sort_order, dataset_id=ds.id, parent_id=live_parent_id,
+        )
+        session.add(lg)
+        await session.flush()
+        await session.refresh(lg)
+        staging_to_live_group[sg.id] = lg.id
+
+    # 3. Promote fields
+    staging_fields = await upload_repo.get_fields_for_session(session, upload_session_id)
+    staging_to_live_field: dict[int, int] = {}
+
+    for sf in staging_fields:
+        live_group_id = (staging_to_live_group.get(sf.upload_fieldgroup_id)
+                         if sf.upload_fieldgroup_id else None)
+        lf = Field(
+            field_key=sf.field_key,
+            display_name=sf.display_name or sf.field_key,
+            field_type=sf.override_type or sf.detected_type,
+            sort_order=sf.sort_order,
+            dataset_id=ds.id,
+            group_id=live_group_id,
+        )
+        session.add(lf)
+        await session.flush()
+        await session.refresh(lf)
+        staging_to_live_field[sf.id] = lf.id
+
+        # 4. Promote levels
+        staging_levels = await upload_repo.get_levels_for_field(session, sf.id)
+        for sl in staging_levels:
+            session.add(Level(
+                value=sl.raw_value,
+                display_label=sl.display_label or sl.raw_value,
+                sort_order=sl.sort_order,
+                field_id=lf.id,
+            ))
+        await session.flush()
+
+    # 5. Stream CSV rows → Response records
+    with open(sess.file_path, "rb") as fh:
+        text = fh.read().decode("utf-8-sig", errors="replace")
+    reader = csv.DictReader(io.StringIO(text))
+    for row in reader:
+        # Build payload keyed by field_key (slugified header)
+        payload = {}
+        for original_key, val in row.items():
+            from src.services.detection_service import slugify_key
+            slug = slugify_key(original_key)
+            payload[slug] = val
+        session.add(Response(dataset_id=ds.id, payload=payload))
+    await session.flush()
+
+    # 6. Mark session committed
+    sess.status = UploadSessionStatus.committed
+    sess.committed_dataset_id = ds.id
+    session.add(sess)
+    await session.flush()
+
+    return ds.id
+```
+
+- [ ] **Step 4: Add commit endpoint to `apps/api/src/routes/uploads.py`**
+
+```python
+from src.services import commit_service
+
+@router.post("/uploads/{session_id}/commit", status_code=201)
+async def commit_upload(session_id: int, session: AsyncSession = Depends(get_session)):
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+    try:
+        dataset_id = await commit_service.commit_upload(session, session_id)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return {"dataset_id": dataset_id}
+```
+
+- [ ] **Step 5: Add `GET /datasets` list to `apps/api/src/routes/datasets.py`**
+
+```python
+from sqlalchemy import select
+from src.models.dataset import Dataset
+
+@router.get("/datasets")
+async def list_datasets(
+    collection_id: int | None = None,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=200),
+    session: AsyncSession = Depends(get_session),
+):
+    from sqlalchemy import func
+    stmt = select(Dataset)
+    if collection_id is not None:
+        stmt = stmt.where(Dataset.collection_id == collection_id)
+    total = (await session.execute(
+        select(func.count()).select_from(stmt.subquery())
+    )).scalar_one()
+    items = list((await session.execute(
+        stmt.order_by(Dataset.id.desc()).offset((page - 1) * page_size).limit(page_size)
+    )).scalars().all())
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "items": [{"id": d.id, "name": d.name, "collection_id": d.collection_id,
+                   "collected_at": d.collected_at.isoformat() if d.collected_at else None,
+                   "created_at": d.created_at.isoformat()} for d in items],
+    }
+```
+
+- [ ] **Step 6: Run — expect pass**
+
+```bash
+just test-api -k "test_commit"
+```
+
+Expected: 2 tests passing.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add apps/api/src/services/commit_service.py \
+        apps/api/src/routes/uploads.py \
+        apps/api/src/routes/datasets.py \
+        apps/api/tests/test_commit.py
+git commit -m "feat(api): add commit service, commit endpoint, and datasets list endpoint"
+```
