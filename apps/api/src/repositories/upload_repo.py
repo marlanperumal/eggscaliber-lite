@@ -110,7 +110,7 @@ async def delete_field(session: AsyncSession, upload_session_id: int, field_id: 
         return False
     await session.execute(sql_delete(UploadLevel).where(UploadLevel.upload_field_id == field_id))
     await session.delete(field)
-    await session.commit()
+    await session.flush()
     return True
 
 
