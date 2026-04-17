@@ -24,7 +24,7 @@
 | `apps/api/src/services/detection_service.py` | CSV heuristics — detects field type from column data |
 | `apps/api/src/services/upload_service.py` | Orchestrates file save, detection, session creation |
 | `apps/api/src/services/reconciliation_service.py` | Exact/probable/new_only/old_only matching engine |
-| `apps/api/src/services/metadata_service.py` | Field metadata + field group CRUD |
+| ~~`apps/api/src/services/metadata_service.py`~~ | _Not created — logic is simple enough to live inline in `routes/uploads.py` (YAGNI)_ |
 | `apps/api/src/services/commit_service.py` | Atomic promotion of staging → live tables |
 | `apps/api/src/routes/uploads.py` | All wizard API endpoints |
 | `apps/api/migrations/versions/<hash>_add_upload_tables.py` | Migration for the 5 new tables |
@@ -1743,16 +1743,20 @@ async def get_reconcile_ids(
     return {"ids": ids}
 
 
+class RowResolve(BaseModel):
+    status: ReconciliationStatus
+    ref_field_id: int | None = None
+
+
 @router.patch("/uploads/{session_id}/reconcile/{row_id}")
 async def resolve_reconcile_row(
     session_id: int,
     row_id: int,
-    body: dict,
+    body: RowResolve,
     session: AsyncSession = Depends(get_session),
 ):
-    status = ReconciliationStatus(body["status"])
     row = await reconciliation_repo.resolve_row(
-        session, row_id, status, ref_field_id=body.get("ref_field_id")
+        session, row_id, body.status, ref_field_id=body.ref_field_id
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Row not found")
@@ -2144,6 +2148,7 @@ from src.models.level import Level
 from src.models.response import Response
 from src.models.upload import UploadSessionStatus
 from src.repositories import upload_repo
+from src.services.detection_service import slugify_key
 
 
 def _slugify(text: str) -> str:
@@ -2238,7 +2243,6 @@ async def commit_upload(session: AsyncSession, upload_session_id: int) -> int:
         # Build payload keyed by field_key (slugified header)
         payload = {}
         for original_key, val in row.items():
-            from src.services.detection_service import slugify_key
             slug = slugify_key(original_key)
             payload[slug] = val
         session.add(Response(dataset_id=ds.id, payload=payload))
@@ -2631,9 +2635,16 @@ export function useWizardState() {
     [params, router],
   )
 
-  const setSessionId = useCallback((id: number) => {
-    setState((prev) => ({ ...prev, sessionId: id }))
-  }, [])
+  const setSessionId = useCallback(
+    (id: number) => {
+      setState((prev) => ({ ...prev, sessionId: id }))
+      // Also persist in URL so the session survives a refresh
+      const p = new URLSearchParams(params.toString())
+      p.set("session", String(id))
+      router.replace(`/datasets/upload?${p.toString()}`)
+    },
+    [params, router],
+  )
 
   const setNeedsReconcile = useCallback((v: boolean) => {
     setState((prev) => ({ ...prev, needsReconcile: v }))
@@ -2661,24 +2672,30 @@ import { STEP_LABELS, type WizardStep } from "./wizard-types"
 
 const STEPS = [1, 2, 3, 4, 5] as const
 
-function StepIndicator({ current }: { current: WizardStep }) {
+function StepIndicator({ current, needsReconcile }: { current: WizardStep; needsReconcile: boolean }) {
   return (
     <div className="mb-6 flex">
-      {STEPS.map((s) => (
-        <div
-          key={s}
-          className={[
-            "flex-1 border-b-2 pb-2 text-center text-xs font-semibold",
-            s === current
-              ? "border-accent text-accent"
-              : s < current
-                ? "border-accent text-muted-foreground opacity-50"
-                : "border-border text-muted-foreground",
-          ].join(" ")}
-        >
-          {s}. {STEP_LABELS[s]}
-        </div>
-      ))}
+      {STEPS.map((s) => {
+        // Step 3 is skipped entirely when uploading into a new collection
+        const isSkipped = s === 3 && !needsReconcile
+        return (
+          <div
+            key={s}
+            className={[
+              "flex-1 border-b-2 pb-2 text-center text-xs font-semibold",
+              isSkipped
+                ? "border-border text-muted-foreground opacity-30 line-through"
+                : s === current
+                  ? "border-accent text-accent"
+                  : s < current
+                    ? "border-accent text-muted-foreground opacity-50"
+                    : "border-border text-muted-foreground",
+            ].join(" ")}
+          >
+            {s}. {STEP_LABELS[s]}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -2692,7 +2709,7 @@ export function WizardShell() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
       <h1 className="mb-4 text-xl font-bold text-foreground">Upload dataset</h1>
-      <StepIndicator current={state.step} />
+      <StepIndicator current={state.step} needsReconcile={state.needsReconcile} />
       <StepContent {...stepProps} />
     </div>
   )
@@ -3472,7 +3489,7 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core"
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
+import { useDraggable, useDroppable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { ChevronDown, ChevronRight, GripVertical, MoreHorizontal, Plus } from "lucide-react"
 import { useState } from "react"
@@ -3618,10 +3635,12 @@ export function FieldTree({
 function FieldLeaf({
   field, selected, onSelect,
 }: { field: FieldNode; selected: boolean; onSelect: (id: number) => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  // useDraggable (not useSortable) — no SortableContext wraps this tree
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `field-${field.id}`,
+    data: { type: "field", fieldId: field.id, groupId: field.upload_fieldgroup_id },
   })
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
+  const style = { transform: CSS.Transform.toString(transform), opacity: isDragging ? 0.4 : 1 }
 
   return (
     <div
@@ -4296,6 +4315,11 @@ All steps contain actual code, commands, and expected outputs.
 - `WizardState`, `WizardStep`, `STEP_LABELS` defined in `wizard-types.ts` (Task 12); used consistently in all step components (Tasks 13–17).
 - `useWizardState` return shape (`state`, `setStep`, `setSessionId`, `setNeedsReconcile`) defined in Task 12; passed through `WizardShell` → step components consistently.
 
-### One gap fixed
+### Fixes applied during holistic review
 
-The `upload_service.py` in Task 4 imports `slugify_key` inline inside `commit_service.py` in Task 9. This import is valid since `detection_service.py` is created in Task 3. No circular imports — all dependency order is forward-only.
+1. **`useWizardState.ts` `setSessionId`** — was not persisting session ID to URL params; fixed to call `router.replace` so the session survives refresh.
+2. **`metadata_service.py`** — listed in file map but never created; crossed out with note (YAGNI — inline logic in `routes/uploads.py` is sufficient).
+3. **`commit_service.py` `slugify_key` import** — was inside the CSV row loop; moved to file-top import.
+4. **`resolve_reconcile_row` `body: dict`** — FastAPI won't validate a raw dict; replaced with typed `RowResolve(BaseModel)`.
+5. **`FieldLeaf` `useSortable`** — no `SortableContext` ancestor exists in the tree; changed to `useDraggable` from `@dnd-kit/core` (matching analytics `FieldTreePanel.tsx` pattern).
+6. **`StepIndicator` skips step 3** — when `needsReconcile` is false the wizard jumps 2→4 but the indicator still showed all 5 steps equally; fixed to accept `needsReconcile` prop and style step 3 as greyed-out + strikethrough when skipped.
