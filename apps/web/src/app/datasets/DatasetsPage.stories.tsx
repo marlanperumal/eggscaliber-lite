@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { vi } from "@storybook/test"
+import { spyOn } from "@storybook/test"
 import { DatasetsPage } from "./DatasetsPage"
 
 const meta: Meta<typeof DatasetsPage> = {
@@ -10,37 +10,57 @@ const meta: Meta<typeof DatasetsPage> = {
 export default meta
 type Story = StoryObj<typeof DatasetsPage>
 
-const MOCK_DATASETS = [
-  {
-    id: 1,
-    name: "Wave 1",
-    collection_id: 1,
-    collected_at: "2025-01",
-    created_at: "2025-01-15T00:00:00Z",
-  },
-  {
-    id: 2,
-    name: "Wave 2",
-    collection_id: 1,
-    collected_at: "2025-07",
-    created_at: "2025-07-10T00:00:00Z",
-  },
+const MOCK_PACKAGES = [
+  { id: 1, name: "Brand Tracker", slug: "brand-tracker", created_at: "2025-01-01T00:00:00Z" },
 ]
+const MOCK_DATASETS = {
+  total: 2,
+  page: 1,
+  page_size: 50,
+  items: [
+    {
+      id: 1,
+      name: "Wave 1",
+      collection_id: 1,
+      collection_name: "Brand Tracker",
+      package_name: "Research",
+      response_count: 512,
+      field_count: 34,
+      collected_at: "2025-01",
+      created_at: "2025-01-15T00:00:00Z",
+      status: "committed",
+    },
+    {
+      id: 2,
+      name: "Wave 2",
+      collection_id: 1,
+      collection_name: "Brand Tracker",
+      package_name: "Research",
+      response_count: 623,
+      field_count: 36,
+      collected_at: "2025-07",
+      created_at: "2025-07-10T00:00:00Z",
+      status: "committed",
+    },
+  ],
+}
 
-// Empty state — no datasets yet
-export const Empty: Story = {
+export const WithData: Story = {
   beforeEach() {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ items: [] }), { status: 200 }),
-    )
+    spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify(MOCK_PACKAGES), { status: 200 }))
+      .mockResolvedValue(new Response(JSON.stringify(MOCK_DATASETS), { status: 200 }))
   },
 }
 
-// Populated table with two datasets
-export const WithData: Story = {
+export const Empty: Story = {
   beforeEach() {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ items: MOCK_DATASETS }), { status: 200 }),
-    )
+    spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify(MOCK_PACKAGES), { status: 200 }))
+      .mockResolvedValue(
+        new Response(JSON.stringify({ total: 0, page: 1, page_size: 50, items: [] }), {
+          status: 200,
+        }),
+      )
   },
 }
