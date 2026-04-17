@@ -17,6 +17,10 @@ interface SessionSummary {
   dataset_name: string | null
   row_count: number | null
   collection_id: number | null
+  collection_name: string | null
+  package_name: string | null
+  collected_at: string | null
+  file_name: string | null
   fields: { detected_type: string; override_type: string | null }[]
   groups: { id: number; name: string; parent_id: number | null }[]
   unassigned_fields: unknown[]
@@ -81,6 +85,10 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
         dataset_name: sess.dataset_name,
         row_count: sess.row_count,
         collection_id: sess.collection_id,
+        collection_name: sess.collection_name ?? null,
+        package_name: sess.package_name ?? null,
+        collected_at: sess.collected_at ?? null,
+        file_name: sess.file_name ?? null,
         fields: sess.fields,
         groups: tree.groups,
         unassigned_fields: tree.unassigned_fields,
@@ -161,6 +169,32 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
               <span className="w-28 text-muted-foreground">Collection ID</span>
               <span className="font-medium">{summary.collection_id ?? "—"}</span>
             </div>
+            {summary.collection_name && (
+              <div className="flex gap-2">
+                <span className="w-28 text-muted-foreground">Collection</span>
+                <span className="font-medium">{summary.collection_name}</span>
+              </div>
+            )}
+            {summary.package_name && (
+              <div className="flex gap-2">
+                <span className="w-28 text-muted-foreground">Package</span>
+                <span className="font-medium">{summary.package_name}</span>
+              </div>
+            )}
+            {summary.collected_at && (
+              <div className="flex gap-2">
+                <span className="w-28 text-muted-foreground">Collected</span>
+                <span className="font-medium">
+                  {new Date(summary.collected_at).toLocaleDateString()}
+                </span>
+              </div>
+            )}
+            {summary.file_name && (
+              <div className="flex gap-2">
+                <span className="w-28 text-muted-foreground">File</span>
+                <span className="font-mono font-medium text-xs">{summary.file_name}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -187,6 +221,21 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
                 <span className="font-medium">{n}</span>
               </div>
             ))}
+            {/* Mini bar chart */}
+            <div className="mt-2 space-y-1">
+              {Object.entries(typeCounts).map(([t, n]) => (
+                <div key={`bar-${t}`} className="flex items-center gap-2">
+                  <span className="w-20 shrink-0 text-muted-foreground text-xs">{t}</span>
+                  <div className="flex-1 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-1.5 rounded-full bg-accent"
+                      style={{ width: `${Math.round((n / summary.fields.length) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="w-6 text-right text-muted-foreground text-xs">{n}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
