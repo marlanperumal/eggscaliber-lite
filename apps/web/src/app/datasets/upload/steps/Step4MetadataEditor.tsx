@@ -99,7 +99,15 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
                 onSelectField={setSelectedFieldId}
                 onMoveField={handleMoveField}
                 onCreateGroup={handleCreateGroup}
-                onRenameGroup={async () => await loadTree()}
+                onRenameGroup={async (id: number, name: string) => {
+                  if (!state.sessionId) return
+                  await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/fieldgroups/${id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name }),
+                  })
+                  await loadTree()
+                }}
                 onDeleteGroup={handleDeleteGroup}
               />
             ) : (

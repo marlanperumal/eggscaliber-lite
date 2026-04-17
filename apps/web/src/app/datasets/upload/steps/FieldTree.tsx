@@ -11,7 +11,7 @@ import {
 } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { ChevronDown, ChevronRight, GripVertical, MoreHorizontal, Plus } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 export interface FieldNode {
   id: number
@@ -40,6 +40,96 @@ interface Props {
   onDeleteGroup: (id: number) => void
 }
 
+function GroupContextMenu({
+  groupId,
+  groupName,
+  onRename,
+  onDelete,
+  onClose,
+}: {
+  groupId: number
+  groupName: string
+  onRename: (id: number, name: string) => void
+  onDelete: (id: number) => void
+  onClose: () => void
+}) {
+  const [renaming, setRenaming] = useState(false)
+  const [nameValue, setNameValue] = useState(groupName)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (renaming) inputRef.current?.focus()
+  }, [renaming])
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener("mousedown", onClickOutside)
+    return () => document.removeEventListener("mousedown", onClickOutside)
+  }, [onClose])
+
+  if (renaming) {
+    return (
+      <div
+        ref={menuRef}
+        className="absolute right-0 top-6 z-50 flex items-center gap-1 rounded-lg border border-border bg-background p-1 shadow-lg"
+      >
+        <input
+          ref={inputRef}
+          value={nameValue}
+          onChange={(e) => setNameValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              onRename(groupId, nameValue)
+              onClose()
+            }
+            if (e.key === "Escape") onClose()
+          }}
+          className="rounded border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-accent"
+          aria-label="Rename group"
+        />
+        <button
+          type="button"
+          onClick={() => {
+            onRename(groupId, nameValue)
+            onClose()
+          }}
+          className="rounded bg-accent px-2 py-1 text-white text-xs"
+        >
+          OK
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      ref={menuRef}
+      className="absolute right-0 top-6 z-50 min-w-32 rounded-lg border border-border bg-background py-1 shadow-lg"
+    >
+      <button
+        type="button"
+        onClick={() => setRenaming(true)}
+        className="flex w-full items-center px-3 py-1.5 text-xs hover:bg-muted"
+      >
+        Rename
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          onDelete(groupId)
+          onClose()
+        }}
+        className="flex w-full items-center px-3 py-1.5 text-destructive text-xs hover:bg-muted"
+      >
+        Delete
+      </button>
+    </div>
+  )
+}
+
 export function FieldTree({
   groups,
   fields,
@@ -48,11 +138,12 @@ export function FieldTree({
   onSelectField,
   onMoveField,
   onCreateGroup,
-  onRenameGroup: _onRenameGroup,
+  onRenameGroup,
   onDeleteGroup,
 }: Props) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   function toggleExpand(id: number) {
@@ -86,7 +177,7 @@ export function FieldTree({
     return (
       <GroupDropZone key={group.id} groupId={group.id}>
         <div
-          className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-xs hover:bg-muted"
+          className="relative flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-xs hover:bg-muted"
           style={{ paddingLeft: `${8 + depth * 12}px` }}
         >
           <button
@@ -112,10 +203,20 @@ export function FieldTree({
           <button
             type="button"
             aria-label={`Group options for ${group.name}`}
+            onClick={() => setOpenMenuId(openMenuId === group.id ? null : group.id)}
             className="text-muted-foreground hover:text-foreground"
           >
             <MoreHorizontal size={11} />
           </button>
+          {openMenuId === group.id && (
+            <GroupContextMenu
+              groupId={group.id}
+              groupName={group.name}
+              onRename={(id, name) => onRenameGroup?.(id, name)}
+              onDelete={onDeleteGroup}
+              onClose={() => setOpenMenuId(null)}
+            />
+          )}
         </div>
 
         {isExpanded && (
