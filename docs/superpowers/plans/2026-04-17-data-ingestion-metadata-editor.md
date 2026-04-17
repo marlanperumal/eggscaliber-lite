@@ -296,3 +296,240 @@ git add apps/api/src/models/upload.py \
         apps/api/migrations/versions/
 git commit -m "feat(api): add upload staging and reconciliation models + migration"
 ```
+
+---
+
+### Task 2: Upload repository
+
+CRUD helpers for the staging tables. No business logic here — just queries.
+
+**Files:**
+- Create: `apps/api/src/repositories/upload_repo.py`
+- Create: `apps/api/tests/test_upload_repo.py`
+
+- [ ] **Step 1: Write the failing tests**
+
+`apps/api/tests/test_upload_repo.py`:
+
+```python
+from src.models.collection import Collection, CollectionType
+from src.models.package import Package
+from src.models.upload import (
+    UploadField,
+    UploadFieldGroup,
+    UploadLevel,
+    UploadSession,
+    UploadSessionStatus,
+)
+from src.models.field import FieldType
+from src.repositories import upload_repo
+
+
+async def _seed_session(db):
+    pkg = Package(name="P", slug="p-upload-repo-test")
+    db.add(pkg)
+    await db.flush()
+    await db.refresh(pkg)
+    col = Collection(name="C", slug="c-upload-repo-test",
+                     package_id=pkg.id, collection_type=CollectionType.survey)
+    db.add(col)
+    await db.flush()
+    await db.refresh(col)
+    sess = UploadSession(
+        file_path="/tmp/test.csv",
+        collection_id=col.id,
+        dataset_name="Wave 3",
+        status=UploadSessionStatus.detecting,
+    )
+    db.add(sess)
+    await db.flush()
+    await db.refresh(sess)
+    return sess
+
+
+async def test_get_session_by_id_returns_session(db):
+    sess = await _seed_session(db)
+    result = await upload_repo.get_session_by_id(db, sess.id)
+    assert result is not None
+    assert result.id == sess.id
+
+
+async def test_get_session_by_id_missing_returns_none(db):
+    result = await upload_repo.get_session_by_id(db, 99999)
+    assert result is None
+
+
+async def test_get_fields_for_session_returns_all(db):
+    sess = await _seed_session(db)
+    db.add(UploadField(upload_session_id=sess.id, field_key="gender",
+                       detected_type=FieldType.categorical))
+    db.add(UploadField(upload_session_id=sess.id, field_key="age",
+                       detected_type=FieldType.numeric))
+    await db.flush()
+    result = await upload_repo.get_fields_for_session(db, sess.id)
+    assert len(result) == 2
+    keys = {f.field_key for f in result}
+    assert keys == {"gender", "age"}
+
+
+async def test_get_levels_for_field_returns_ordered(db):
+    sess = await _seed_session(db)
+    f = UploadField(upload_session_id=sess.id, field_key="gender",
+                    detected_type=FieldType.categorical)
+    db.add(f)
+    await db.flush()
+    await db.refresh(f)
+    db.add(UploadLevel(upload_field_id=f.id, raw_value="male", sort_order=0))
+    db.add(UploadLevel(upload_field_id=f.id, raw_value="female", sort_order=1))
+    await db.flush()
+    result = await upload_repo.get_levels_for_field(db, f.id)
+    assert [lv.raw_value for lv in result] == ["male", "female"]
+```
+
+- [ ] **Step 2: Run — expect failure**
+
+```bash
+just test-api -k test_upload_repo
+```
+
+Expected: `ModuleNotFoundError` on `upload_repo`.
+
+- [ ] **Step 3: Write `apps/api/src/repositories/upload_repo.py`**
+
+```python
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.models.field import FieldType
+from src.models.upload import (
+    UploadField,
+    UploadFieldGroup,
+    UploadLevel,
+    UploadSession,
+    UploadSessionStatus,
+)
+
+
+async def get_session_by_id(session: AsyncSession, session_id: int) -> UploadSession | None:
+    return (
+        (await session.execute(select(UploadSession).where(UploadSession.id == session_id)))
+        .scalars()
+        .first()
+    )
+
+
+async def create_session(session: AsyncSession, **kwargs) -> UploadSession:
+    obj = UploadSession(**kwargs)
+    session.add(obj)
+    await session.flush()
+    await session.refresh(obj)
+    return obj
+
+
+async def update_session_status(
+    session: AsyncSession, session_id: int, status: UploadSessionStatus
+) -> None:
+    obj = await get_session_by_id(session, session_id)
+    if obj:
+        obj.status = status
+        session.add(obj)
+        await session.flush()
+
+
+async def create_upload_field(session: AsyncSession, **kwargs) -> UploadField:
+    obj = UploadField(**kwargs)
+    session.add(obj)
+    await session.flush()
+    await session.refresh(obj)
+    return obj
+
+
+async def get_fields_for_session(
+    session: AsyncSession, session_id: int
+) -> list[UploadField]:
+    return list(
+        (
+            await session.execute(
+                select(UploadField)
+                .where(UploadField.upload_session_id == session_id)
+                .order_by(UploadField.sort_order, UploadField.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+
+async def get_field_by_id(
+    session: AsyncSession, field_id: int
+) -> UploadField | None:
+    return (
+        (await session.execute(select(UploadField).where(UploadField.id == field_id)))
+        .scalars()
+        .first()
+    )
+
+
+async def create_upload_level(session: AsyncSession, **kwargs) -> UploadLevel:
+    obj = UploadLevel(**kwargs)
+    session.add(obj)
+    await session.flush()
+    await session.refresh(obj)
+    return obj
+
+
+async def get_levels_for_field(
+    session: AsyncSession, field_id: int
+) -> list[UploadLevel]:
+    return list(
+        (
+            await session.execute(
+                select(UploadLevel)
+                .where(UploadLevel.upload_field_id == field_id)
+                .order_by(UploadLevel.sort_order)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+
+async def create_upload_fieldgroup(session: AsyncSession, **kwargs) -> UploadFieldGroup:
+    obj = UploadFieldGroup(**kwargs)
+    session.add(obj)
+    await session.flush()
+    await session.refresh(obj)
+    return obj
+
+
+async def get_fieldgroups_for_session(
+    session: AsyncSession, session_id: int
+) -> list[UploadFieldGroup]:
+    return list(
+        (
+            await session.execute(
+                select(UploadFieldGroup)
+                .where(UploadFieldGroup.upload_session_id == session_id)
+                .order_by(UploadFieldGroup.sort_order, UploadFieldGroup.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+```
+
+- [ ] **Step 4: Run — expect pass**
+
+```bash
+just test-api -k test_upload_repo
+```
+
+Expected: 4 tests passing.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/api/src/repositories/upload_repo.py \
+        apps/api/tests/test_upload_repo.py
+git commit -m "feat(api): add upload repository with staging table CRUD"
+```
