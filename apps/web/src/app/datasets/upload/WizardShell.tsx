@@ -1,4 +1,5 @@
 "use client"
+import { Step1FileHierarchy } from "./steps/Step1FileHierarchy"
 import { useWizardState } from "./useWizardState"
 import { STEP_LABELS, type WizardStep } from "./wizard-types"
 
@@ -52,10 +53,20 @@ export function WizardShell() {
 }
 
 function StepContent(props: ReturnType<typeof useWizardState>) {
-  const { state } = props
+  const { state, setStep, setSessionId, setNeedsReconcile } = props
+  if (state.step === 1) {
+    return (
+      <Step1FileHierarchy
+        state={state}
+        setStep={setStep}
+        setSessionId={setSessionId}
+        setNeedsReconcile={setNeedsReconcile}
+      />
+    )
+  }
   return (
     <div className="rounded-lg border border-border p-6">
-      <p className="text-muted-foreground text-sm">Step {state.step} component loads here.</p>
+      <p className="text-muted-foreground text-sm">Step {state.step} — coming soon.</p>
     </div>
   )
 }
