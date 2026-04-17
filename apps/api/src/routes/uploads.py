@@ -562,6 +562,9 @@ async def upsert_level_route(
     body: LevelUpsert,
     session: AsyncSession = Depends(get_session),
 ):
+    f = await upload_repo.get_field_by_id(session, field_id)
+    if f is None or f.upload_session_id != upload_session_id:
+        raise HTTPException(status_code=404, detail="Field not found")
     level = await upload_repo.upsert_level(
         session,
         field_id=field_id,
@@ -583,6 +586,9 @@ async def delete_level_route(
     level_id: int,
     session: AsyncSession = Depends(get_session),
 ):
+    f = await upload_repo.get_field_by_id(session, field_id)
+    if f is None or f.upload_session_id != upload_session_id:
+        raise HTTPException(status_code=404, detail="Field not found")
     deleted = await upload_repo.delete_level(session, field_id, level_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Level not found")
