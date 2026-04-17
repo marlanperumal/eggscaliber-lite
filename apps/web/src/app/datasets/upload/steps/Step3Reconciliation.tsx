@@ -9,8 +9,7 @@ import {
   type ReconStatus,
 } from "./ReconciliationRow"
 
-const TABS: { key: ReconGroup | "all"; label: string }[] = [
-  { key: "all", label: "All" },
+const TABS: { key: ReconGroup; label: string }[] = [
   { key: "exact", label: "Exact" },
   { key: "probable", label: "Probable" },
   { key: "new_only", label: "New only" },
@@ -24,11 +23,15 @@ interface Props {
   setStep: (s: WizardStep) => void
 }
 
+type Counts = Record<ReconGroup, number>
+
 export function Step3Reconciliation({ state, setStep }: Props) {
   const [triggered, setTriggered] = useState(false)
   const [refDatasetId, setRefDatasetId] = useState<string>("")
-  const [activeTab, setActiveTab] = useState<ReconGroup | "all">("all")
+  const [refDatasetName, setRefDatasetName] = useState<string>("")
+  const [activeTab, setActiveTab] = useState<ReconGroup>("exact")
   const [rows, setRows] = useState<ReconRow[]>([])
+  const [counts, setCounts] = useState<Counts>({ exact: 0, probable: 0, new_only: 0, old_only: 0 })
   const [nextCursor, setNextCursor] = useState<number | null>(null)
   const [showAll, setShowAll] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -42,6 +45,27 @@ export function Step3Reconciliation({ state, setStep }: Props) {
     estimateSize: () => 40,
   })
 
+  // Auto-fetch suggested reference when the step mounts
+  useEffect(() => {
+    if (!state.sessionId) return
+    fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/suggested-reference`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.dataset_id) {
+          setRefDatasetId(String(data.dataset_id))
+          setRefDatasetName(data.dataset_name ?? "")
+        }
+      })
+  }, [state.sessionId])
+
+  async function fetchCounts() {
+    if (!state.sessionId) return
+    const data = await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile/counts`).then(
+      (r) => r.json(),
+    )
+    setCounts(data)
+  }
+
   async function triggerReconcile() {
     if (!state.sessionId || !refDatasetId) return
     setBusy(true)
@@ -51,6 +75,7 @@ export function Step3Reconciliation({ state, setStep }: Props) {
       body: JSON.stringify({ reference_dataset_id: Number(refDatasetId) }),
     })
     setTriggered(true)
+    await fetchCounts()
     fetchPage(null)
     setBusy(false)
   }
@@ -58,8 +83,7 @@ export function Step3Reconciliation({ state, setStep }: Props) {
   async function fetchPage(cursor: number | null) {
     if (!state.sessionId) return
     setLoading(true)
-    const params = new URLSearchParams({ page_size: String(PAGE_SIZE) })
-    if (activeTab !== "all") params.set("group", activeTab)
+    const params = new URLSearchParams({ page_size: String(PAGE_SIZE), group: activeTab })
     if (cursor !== null) params.set("after_id", String(cursor))
     const res = await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile?${params}`)
     const data = await res.json()
@@ -70,7 +94,11 @@ export function Step3Reconciliation({ state, setStep }: Props) {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: fetchPage intentionally excluded
   useEffect(() => {
-    if (triggered) fetchPage(null)
+    if (triggered) {
+      setRows([])
+      setSelected(new Set())
+      fetchPage(null)
+    }
   }, [activeTab, triggered])
 
   // Infinite scroll sentinel
@@ -98,6 +126,21 @@ export function Step3Reconciliation({ state, setStep }: Props) {
       body: JSON.stringify({ status }),
     })
     setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, status } : r)))
+    await fetchCounts()
+  }
+
+  async function handleBulkAction(action: ReconStatus) {
+    if (!state.sessionId || selected.size === 0) return
+    setBusy(true)
+    await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile/bulk`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: Array.from(selected), action }),
+    })
+    setRows((prev) => prev.map((r) => (selected.has(r.id) ? { ...r, status: action } : r)))
+    setSelected(new Set())
+    await fetchCounts()
+    setBusy(false)
   }
 
   function handleCheck(id: number, checked: boolean) {
@@ -117,7 +160,10 @@ export function Step3Reconciliation({ state, setStep }: Props) {
       <div className="space-y-4">
         <h2 className="font-semibold text-base text-foreground">Step 3 — Reconciliation</h2>
         <p className="text-muted-foreground text-xs">
-          Enter the ID of the reference dataset to reconcile against.
+          Comparing against the most recent dataset in this collection.
+          {refDatasetName && (
+            <span className="ml-1 font-semibold text-foreground">{refDatasetName}</span>
+          )}
         </p>
         <div>
           <label
@@ -159,26 +205,80 @@ export function Step3Reconciliation({ state, setStep }: Props) {
     <div className="space-y-3">
       <h2 className="font-semibold text-base text-foreground">Step 3 — Reconciliation</h2>
 
-      {/* Tabs */}
+      {/* Tabs with count badges */}
       <div className="flex border-border border-b">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             type="button"
-            onClick={() => setActiveTab(tab.key as ReconGroup | "all")}
+            onClick={() => setActiveTab(tab.key)}
             className={[
-              "px-4 py-2 font-semibold text-xs",
+              "flex items-center gap-1.5 px-4 py-2 font-semibold text-xs",
               activeTab === tab.key
                 ? "border-accent border-b-2 text-accent"
                 : "text-muted-foreground hover:text-foreground",
             ].join(" ")}
           >
             {tab.label}
+            <span
+              className={[
+                "rounded-full px-1.5 py-0.5 text-xs",
+                activeTab === tab.key
+                  ? "bg-accent/20 text-accent"
+                  : "bg-muted text-muted-foreground",
+              ].join(" ")}
+            >
+              {counts[tab.key]}
+            </span>
           </button>
         ))}
       </div>
 
-      {/* Pagination controls at top */}
+      {/* Bulk actions toolbar */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs">
+          <span className="font-semibold text-foreground">{selected.size} selected</span>
+          {activeTab === "probable" && (
+            <>
+              <button
+                type="button"
+                onClick={() => handleBulkAction("confirmed")}
+                disabled={busy}
+                className="rounded bg-green-100 px-2 py-1 font-semibold text-green-800 hover:bg-green-200"
+              >
+                Confirm all
+              </button>
+              <button
+                type="button"
+                onClick={() => handleBulkAction("rejected")}
+                disabled={busy}
+                className="rounded bg-muted px-2 py-1 font-semibold hover:bg-muted/60"
+              >
+                Reject all
+              </button>
+            </>
+          )}
+          {activeTab === "old_only" && (
+            <button
+              type="button"
+              onClick={() => handleBulkAction("excluded")}
+              disabled={busy}
+              className="rounded bg-muted px-2 py-1 font-semibold hover:bg-muted/60"
+            >
+              Exclude all
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            className="ml-auto text-muted-foreground hover:text-foreground"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
+      {/* Pagination controls */}
       <div className="flex items-center gap-3 text-muted-foreground text-xs">
         <span>{rows.length} loaded</span>
         {nextCursor && !showAll && (
@@ -200,7 +300,7 @@ export function Step3Reconciliation({ state, setStep }: Props) {
         {loading && <span>Loading…</span>}
       </div>
 
-      {/* Row list — virtual when showAll, plain list otherwise */}
+      {/* Row list */}
       {showAll ? (
         <div
           ref={parentRef}

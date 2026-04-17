@@ -10,7 +10,7 @@ const meta: Meta<typeof Step3Reconciliation> = {
 export default meta
 type Story = StoryObj<typeof Step3Reconciliation>
 
-// Pre-trigger state — shows the reference dataset ID input
+// Pre-trigger state — shows reference dataset input (auto-populated)
 export const PreTrigger: Story = {
   args: {
     state: { step: 3 as const, sessionId: 1, needsReconcile: true },
