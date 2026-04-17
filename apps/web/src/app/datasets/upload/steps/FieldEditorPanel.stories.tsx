@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { fn, vi } from "@storybook/test"
+import { fn, spyOn } from "@storybook/test"
 import { FieldEditorPanel } from "./FieldEditorPanel"
 import type { FieldNode, GroupNode } from "./FieldTree"
 
@@ -31,7 +31,7 @@ export const NoSelection: Story = {
 export const FieldSelected: Story = {
   args: { sessionId: 1, field: FIELD, groups: GROUPS, onSaved: fn() },
   beforeEach() {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ ...FIELD }), { status: 200 }),
     )
   },

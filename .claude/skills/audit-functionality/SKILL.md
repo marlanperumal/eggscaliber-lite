@@ -13,10 +13,13 @@ Systematically walk every requirement in a spec and verify it works in the real 
 
 ## Step 1: Locate the spec
 
-Ask the user if they haven't pointed you at one. Valid sources:
-- A plan file (`docs/superpowers/plans/*.md`)
-- A roadmap or sub-project spec (`docs/ROADMAP.md`, `docs/specs/`)
+**Always use the original design spec, not an implementation plan.** Plans describe intended changes; specs describe required behaviour. If you're given a plan, trace it back to the spec it was derived from.
+
+Valid sources (in priority order):
+- Design spec (`docs/superpowers/specs/*.md`) — **preferred**
+- Roadmap (`docs/ROADMAP.md`, `docs/specs/`)
 - A Linear issue or Confluence page
+- An implementation plan (`docs/superpowers/plans/*.md`) — only when no spec exists
 
 Read it fully before doing anything else.
 
@@ -35,19 +38,28 @@ If the spec has explicit task lists (checkboxes), start there. Expand vague item
 
 ## Step 3: Audit each requirement
 
-For each item, do at least one of:
+Use all available evidence. For each item, use at least one of:
 
 | Evidence type | When to use |
 |---|---|
-| Read the component/route file | UI behaviour, API shape |
-| Grep for the relevant identifier | Confirm it exists and is wired up |
-| Read the test file | Verify there's a test that exercises it |
-| Read the Storybook story | Confirm the UI state is reachable |
+| **Live browser** (Playwright MCP) | UI behaviour, layout, visible state, interactions |
+| **Live API call** (`curl`) | Endpoint shape, response fields, status codes |
+| **Storybook** (navigate to story URL) | Edge-case UI states, loading/empty/error states |
+| Read the component/route file | Cross-check what code claims to do |
+| Grep for the relevant identifier | Confirm wiring — call site must actually exist |
+| Read the test file | Verify test exercises the right behaviour |
+
+**For live verification:**
+1. Check if dev servers are running (`curl http://localhost:8000/health` / `curl http://localhost:3000`)
+2. Start them with `just dev` / `just api` / `just storybook` if not
+3. Use Playwright MCP to navigate pages and take screenshots
+4. Make real API calls and inspect response shapes
 
 **Rules:**
 - Never mark something as ✅ because it "probably works" or "was in the plan". Verify it.
 - If a file doesn't exist, the feature doesn't exist. No assumptions.
 - If the code exists but the spec says it should do X and the code does Y, that's a gap.
+- Code-only verification is insufficient for UI requirements — always check in the browser.
 
 ---
 
@@ -83,7 +95,6 @@ Let the user choose. Don't auto-proceed into implementation without confirmation
 
 ## What this skill does NOT do
 
-- Does not run the app or execute tests — it audits by reading code
 - Does not audit test coverage comprehensively — use a dedicated test audit for that
 - Does not re-audit items already marked ✅ unless the user asks
 
@@ -93,7 +104,10 @@ Let the user choose. Don't auto-proceed into implementation without confirmation
 
 | Mistake | Fix |
 |---|---|
-| Marking ✅ because the task was in a completed plan | The plan was the intention. Verify the code. |
+| Auditing the plan instead of the spec | Plans describe intended changes. Specs describe required behaviour. Use the spec. |
+| Marking ✅ because the task was in a completed plan | The plan was the intention. Verify the live app. |
+| Code-only verification for UI requirements | Reading the component isn't enough. Load it in the browser. |
 | Grepping for a function name and calling it done | Read the call site — is it actually invoked correctly? |
 | Auditing only the frontend or only the backend | A feature needs both ends. Check each layer. |
-| Skipping Storybook stories | Stories reveal whether UI states are actually reachable |
+| Skipping Storybook stories | Stories reveal whether edge-case UI states are actually reachable |
+| Assuming writes persist without checking | Verify the DB session commits (get_session pattern, middleware, etc.) |
