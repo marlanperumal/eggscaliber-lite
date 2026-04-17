@@ -115,6 +115,7 @@ async def override_field(
         "override_type": f.override_type.value if f.override_type else None,
         "display_name": f.display_name,
         "sort_order": f.sort_order,
+        "upload_fieldgroup_id": f.upload_fieldgroup_id,
     }
 
 
