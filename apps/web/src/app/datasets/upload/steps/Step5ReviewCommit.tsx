@@ -5,6 +5,14 @@ import type { WizardState, WizardStep } from "../wizard-types"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 
+interface ReconSummary {
+  reference_dataset_name: string | null
+  exact: number
+  confirmed: number
+  new_only: number
+  excluded: number
+}
+
 interface SessionSummary {
   dataset_name: string | null
   row_count: number | null
@@ -12,6 +20,8 @@ interface SessionSummary {
   fields: { detected_type: string; override_type: string | null }[]
   groups: { id: number; name: string; parent_id: number | null }[]
   unassigned_fields: unknown[]
+  recon: ReconSummary | null
+  excluded_field_keys: string[]
 }
 
 interface Props {
@@ -31,7 +41,39 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
     Promise.all([
       fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}`).then((r) => r.json()),
       fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/field-tree`).then((r) => r.json()),
-    ]).then(([sess, tree]) => {
+      state.needsReconcile
+        ? Promise.all([
+            fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile/counts`).then((r) =>
+              r.json(),
+            ),
+            fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/suggested-reference`).then((r) =>
+              r.json(),
+            ),
+            fetch(
+              `${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile?group=old_only&page_size=100`,
+            ).then((r) => r.json()),
+          ])
+        : Promise.resolve(null),
+    ]).then(([sess, tree, reconData]) => {
+      let recon: ReconSummary | null = null
+      let excludedKeys: string[] = []
+      if (reconData) {
+        const [counts, suggested, oldOnlyPage] = reconData as [
+          Record<string, number>,
+          { dataset_name: string | null },
+          { items: Array<{ status: string; field_key: string | null }> },
+        ]
+        recon = {
+          reference_dataset_name: suggested.dataset_name,
+          exact: counts.exact ?? 0,
+          confirmed: counts.confirmed ?? 0,
+          new_only: counts.new_only ?? 0,
+          excluded: counts.old_only ?? 0,
+        }
+        excludedKeys = oldOnlyPage.items
+          .filter((r) => r.status === "excluded" && r.field_key)
+          .map((r) => r.field_key as string)
+      }
       setSummary({
         dataset_name: sess.dataset_name,
         row_count: sess.row_count,
@@ -39,10 +81,12 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
         fields: sess.fields,
         groups: tree.groups,
         unassigned_fields: tree.unassigned_fields,
+        recon,
+        excluded_field_keys: excludedKeys,
       })
       setLoading(false)
     })
-  }, [state.sessionId])
+  }, [state.sessionId, state.needsReconcile])
 
   async function handleCommit() {
     if (!state.sessionId) return
@@ -75,6 +119,17 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
       <p className="text-muted-foreground text-xs">
         Everything looks good. Review the summary and confirm to write to the database.
       </p>
+
+      {/* Warning box */}
+      {summary.excluded_field_keys.length > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
+          <p className="mb-1 font-semibold">⚠ Excluded fields from reference dataset</p>
+          <p>
+            The following fields from the reference dataset are absent in this upload and will not
+            be tracked: <span className="font-mono">{summary.excluded_field_keys.join(", ")}</span>
+          </p>
+        </div>
+      )}
 
       {/* 2×2 summary grid */}
       <div className="grid grid-cols-2 gap-3">
@@ -132,40 +187,82 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
           </div>
         </div>
 
-        {/* Group structure */}
-        <div className="col-span-2 rounded-lg border border-border">
-          <div className="flex items-center justify-between border-border border-b bg-muted/40 px-3 py-2 font-bold text-muted-foreground text-xs uppercase tracking-wide">
-            Group structure
-            <button
-              type="button"
-              onClick={() => setStep(4)}
-              className="font-semibold text-accent text-xs normal-case"
-            >
-              ← Edit
-            </button>
+        {/* Reconciliation summary (only when reconciliation ran) */}
+        {summary.recon && (
+          <div className="rounded-lg border border-border">
+            <div className="flex items-center justify-between border-border border-b bg-muted/40 px-3 py-2 font-bold text-muted-foreground text-xs uppercase tracking-wide">
+              Reconciliation
+              <button
+                type="button"
+                onClick={() => setStep(3)}
+                className="font-semibold text-accent text-xs normal-case"
+              >
+                ← Edit
+              </button>
+            </div>
+            <div className="space-y-1 px-3 py-2 text-xs">
+              {summary.recon.reference_dataset_name && (
+                <div className="flex gap-2">
+                  <span className="w-28 text-muted-foreground">Reference</span>
+                  <span className="font-medium">{summary.recon.reference_dataset_name}</span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <span className="w-28 text-muted-foreground">✓ Exact</span>
+                <span className="font-medium">{summary.recon.exact}</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="w-28 text-muted-foreground">✓ Confirmed</span>
+                <span className="font-medium">{summary.recon.confirmed}</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="w-28 text-muted-foreground">+ New fields</span>
+                <span className="font-medium">{summary.recon.new_only}</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="w-28 text-muted-foreground">— Excluded</span>
+                <span className="font-medium">{summary.recon.excluded}</span>
+              </div>
+            </div>
           </div>
-          <div className="space-y-1 px-3 py-2 text-xs">
-            {topGroups.map((g) => (
-              <div key={g.id} className="flex gap-2">
-                <span
-                  className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-accent"
-                  aria-hidden="true"
-                />
-                <span className="font-medium">{g.name}</span>
-              </div>
-            ))}
-            {summary.unassigned_fields.length > 0 && (
-              <div className="flex gap-2 text-muted-foreground italic">
-                <span
-                  className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-muted-foreground"
-                  aria-hidden="true"
-                />
-                <span>
-                  Unassigned ({summary.unassigned_fields.length} field
-                  {summary.unassigned_fields.length !== 1 ? "s" : ""})
-                </span>
-              </div>
-            )}
+        )}
+
+        {/* Group structure */}
+        <div className={summary.recon ? "" : "col-span-2"}>
+          <div className="rounded-lg border border-border">
+            <div className="flex items-center justify-between border-border border-b bg-muted/40 px-3 py-2 font-bold text-muted-foreground text-xs uppercase tracking-wide">
+              Group structure
+              <button
+                type="button"
+                onClick={() => setStep(4)}
+                className="font-semibold text-accent text-xs normal-case"
+              >
+                ← Edit
+              </button>
+            </div>
+            <div className="space-y-1 px-3 py-2 text-xs">
+              {topGroups.map((g) => (
+                <div key={g.id} className="flex gap-2">
+                  <span
+                    className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-accent"
+                    aria-hidden="true"
+                  />
+                  <span className="font-medium">{g.name}</span>
+                </div>
+              ))}
+              {summary.unassigned_fields.length > 0 && (
+                <div className="flex gap-2 text-muted-foreground italic">
+                  <span
+                    className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <span>
+                    Unassigned ({summary.unassigned_fields.length} field
+                    {summary.unassigned_fields.length !== 1 ? "s" : ""})
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

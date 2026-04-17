@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { fn, vi } from "@storybook/test"
+import { fn, spyOn } from "@storybook/test"
 import { Step5ReviewCommit } from "./Step5ReviewCommit"
 
 const meta: Meta<typeof Step5ReviewCommit> = {
@@ -37,6 +37,27 @@ const MOCK_TREE = {
   ],
   unassigned_fields: [],
 }
+const MOCK_COUNTS = { exact: 12, probable: 0, new_only: 3, old_only: 1 }
+const MOCK_SUGGESTED = { dataset_id: 5, dataset_name: "Wave 2" }
+const MOCK_OLD_ONLY = {
+  items: [{ status: "excluded", field_key: "legacy_brand_score" }],
+  next_cursor: null,
+}
+
+export const WithReconciliation: Story = {
+  args: {
+    state: { step: 5 as const, sessionId: 1, needsReconcile: true },
+    setStep: fn(),
+  },
+  beforeEach() {
+    spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify(MOCK_SESSION), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(MOCK_TREE), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(MOCK_COUNTS), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(MOCK_SUGGESTED), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(MOCK_OLD_ONLY), { status: 200 }))
+  },
+}
 
 export const ReadyToCommit: Story = {
   args: {
@@ -44,7 +65,7 @@ export const ReadyToCommit: Story = {
     setStep: fn(),
   },
   beforeEach() {
-    vi.spyOn(globalThis, "fetch")
+    spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response(JSON.stringify(MOCK_SESSION), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify(MOCK_TREE), { status: 200 }))
   },
