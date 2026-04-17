@@ -75,6 +75,8 @@ async def create_upload_session(
             field_key=det.field_key,
             detected_type=det.detected_type,
             sort_order=i,
+            confidence=det.confidence,
+            value_sample=det.distinct_values[:5] if det.distinct_values else None,
         )
         # Store distinct values as levels for ordinal/categorical
         if det.detected_type in (FieldType.ordinal, FieldType.categorical):
@@ -93,6 +95,8 @@ async def create_upload_session(
                 "detected_type": uf.detected_type.value,
                 "override_type": None,
                 "sort_order": uf.sort_order,
+                "confidence": uf.confidence,
+                "value_sample": uf.value_sample or [],
             }
         )
 

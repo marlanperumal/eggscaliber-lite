@@ -1,6 +1,9 @@
 from datetime import UTC, date, datetime
 from enum import StrEnum
+from typing import Any
 
+from sqlalchemy import Column
+from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB
 from sqlmodel import Field as sql_field  # noqa: N813
 from sqlmodel import SQLModel
 
@@ -71,6 +74,10 @@ class UploadFieldBase(SQLModel):
     override_type: FieldType | None = None
     sort_order: int = 0
     upload_fieldgroup_id: int | None = sql_field(default=None, foreign_key="upload_fieldgroup.id")
+    confidence: str = "high"
+    value_sample: list[Any] | None = sql_field(
+        default=None, sa_column=Column(PG_JSONB, nullable=True)
+    )
 
 
 class UploadField(UploadFieldBase, table=True):

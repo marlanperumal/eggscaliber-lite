@@ -99,3 +99,36 @@ async def test_patch_field_invalid_type_returns_422(client, db):
         json={"override_type": "not_a_type"},
     )
     assert resp.status_code == 422
+
+
+async def test_upload_field_includes_confidence_and_value_sample(client, db):
+    csv_bytes = _make_csv(
+        ["respondent_id", "gender", "score"],
+        [["1", "male", "3"], ["2", "female", "5"], ["3", "male", "3"]],
+    )
+    response = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("w.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "Wave X"},
+    )
+    assert response.status_code == 201
+    fields = {f["field_key"]: f for f in response.json()["fields"]}
+    assert fields["respondent_id"]["confidence"] == "high"
+    assert fields["gender"]["confidence"] == "high"
+    assert "male" in fields["gender"]["value_sample"]
+    assert len(fields["gender"]["value_sample"]) <= 5
+
+
+async def test_get_upload_session_includes_confidence(client, db):
+    csv_bytes = _make_csv(["id", "cat"], [["1", "a"], ["2", "b"]])
+    resp = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "Test"},
+    )
+    sid = resp.json()["id"]
+    get_resp = await client.get(f"/api/v1/uploads/{sid}")
+    assert get_resp.status_code == 200
+    fields = {f["field_key"]: f for f in get_resp.json()["fields"]}
+    assert "confidence" in fields["cat"]
+    assert "value_sample" in fields["cat"]

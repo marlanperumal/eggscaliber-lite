@@ -50,6 +50,8 @@ async def get_upload_session(session_id: int, session: AsyncSession = Depends(ge
             "override_type": f.override_type.value if f.override_type else None,
             "sort_order": f.sort_order,
             "upload_fieldgroup_id": f.upload_fieldgroup_id,
+            "confidence": f.confidence,
+            "value_sample": f.value_sample or [],
         }
         for f in fields
     ]
