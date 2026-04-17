@@ -13,13 +13,23 @@ import { CSS } from "@dnd-kit/utilities"
 import { ChevronDown, ChevronRight, GripVertical, MoreHorizontal, Plus } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
+export interface Level {
+  id: number
+  raw_value: string
+  display_label: string | null
+  sort_order: number
+  is_inherited: boolean
+}
+
 export interface FieldNode {
   id: number
   field_key: string
   display_name: string | null
   detected_type: string
   override_type: string | null
+  sort_order: number
   upload_fieldgroup_id: number | null
+  levels: Level[]
 }
 export interface GroupNode {
   id: number

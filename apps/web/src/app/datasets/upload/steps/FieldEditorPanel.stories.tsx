@@ -21,18 +21,57 @@ const FIELD: FieldNode = {
   display_name: "Brand Awareness",
   detected_type: "categorical",
   override_type: null,
+  sort_order: 1,
   upload_fieldgroup_id: 1,
+  levels: [],
 }
 
 export const NoSelection: Story = {
-  args: { sessionId: 1, field: null, groups: GROUPS, onSaved: fn() },
+  args: {
+    sessionId: 1,
+    field: null,
+    groups: GROUPS,
+    onSaved: fn(),
+    onCancel: fn(),
+    onDelete: fn(),
+  },
 }
 
 export const FieldSelected: Story = {
-  args: { sessionId: 1, field: FIELD, groups: GROUPS, onSaved: fn() },
+  args: {
+    sessionId: 1,
+    field: FIELD,
+    groups: GROUPS,
+    onSaved: fn(),
+    onCancel: fn(),
+    onDelete: fn(),
+  },
   beforeEach() {
     spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ ...FIELD }), { status: 200 }),
     )
+  },
+}
+
+export const WithLevels: Story = {
+  args: {
+    sessionId: 1,
+    field: {
+      id: 10,
+      field_key: "gender",
+      display_name: "Gender",
+      detected_type: "categorical",
+      override_type: null,
+      sort_order: 2,
+      upload_fieldgroup_id: null,
+      levels: [
+        { id: 1, raw_value: "M", display_label: "Male", sort_order: 0, is_inherited: false },
+        { id: 2, raw_value: "F", display_label: "Female", sort_order: 1, is_inherited: false },
+      ],
+    },
+    groups: [],
+    onSaved: async () => {},
+    onCancel: () => {},
+    onDelete: async () => {},
   },
 }

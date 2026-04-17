@@ -11,6 +11,8 @@ Five sub-projects, each with its own spec → plan → implementation cycle.
 | 5 | Drag & Drop | ✅ Complete | — | — |
 | 6 | Data Ingestion & Metadata Editor | ✅ Complete | [spec](superpowers/specs/2026-04-16-data-ingestion-metadata-editor-design.md) | [plan](superpowers/plans/2026-04-17-data-ingestion-metadata-editor.md) |
 | 7 | AI Interface | ⏳ Pending | — | — |
+| 8 | Full AuthN & AuthZ | ⏳ Pending | — | — |
+| 9 | MCP Interface | ⏳ Pending | — | — |
 
 ---
 
@@ -55,3 +57,29 @@ File upload (CSV, SPSS), metadata GUI (field types, display names, multi-respons
 ### 7 — AI Interface ⏳
 NL query → PydanticAI identifies relevant data sources → executes queries in parallel → streams structured results (text + tables + charts) to frontend via Vercel AI SDK. Responses grounded in real data only — no LLM world knowledge.  
 **Done when:** Ask "how has X changed over 5 years?" → receive a cited, data-grounded response with tables and charts.
+
+---
+
+### 8 — Full AuthN & AuthZ ⏳
+Multi-tenant identity layer: users belong to organisations; organisations have groups that control access to packages. Roles: application super-user, organisation admin, regular user.
+
+- **Registration & login** — individual and organisation sign-up flows, email/password auth, JWT sessions
+- **Forgot password & email verification** — transactional email via a mailer service (architected for reuse in future notification flows)
+- **Organisation invite flow** — admins invite users by email; invite tokens expire
+- **Access control** — packages are granted to organisation groups; group membership gates analytics access
+- **Account management** — users manage personal profile/password; org admins manage users, subscriptions, and group assignments
+- **Mailer service** — standalone service (e.g. SMTP / SendGrid / Resend) wired up for auth flows and ready for future notifications
+
+**Done when:** A user can register, join an org, be assigned to a group, and access only the packages that group is entitled to — end-to-end in production.
+
+---
+
+### 9 — MCP Interface ⏳
+Expose application functionality as an MCP server so users can interact with Eggscaliber as an alternative to the web frontend — querying datasets, running analytics, and navigating the data hierarchy from any MCP-compatible client (Claude Desktop, Claude Code, etc.).
+
+- **Auth-aware MCP tools** — tools respect the same AuthN/AuthZ layer as the REST API (sub-project 8 prerequisite)
+- **Analytics tools** — run crosstabs, trends, and field-tree queries via MCP
+- **Dataset & package browsing** — list packages, datasets, fields
+- **Streaming results** — tables and structured data returned in a format MCP clients can render
+
+**Done when:** A user can authenticate and run a full analytics query against their entitled packages from a Claude Code or Claude Desktop session.

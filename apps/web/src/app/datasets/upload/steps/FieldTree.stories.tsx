@@ -22,7 +22,9 @@ const FIELDS = [
     display_name: "Brand Awareness",
     detected_type: "categorical",
     override_type: null,
+    sort_order: 0,
     upload_fieldgroup_id: 2,
+    levels: [],
   },
   {
     id: 2,
@@ -30,7 +32,9 @@ const FIELDS = [
     display_name: "Gender",
     detected_type: "categorical",
     override_type: null,
+    sort_order: 1,
     upload_fieldgroup_id: 3,
+    levels: [],
   },
 ]
 
@@ -41,7 +45,9 @@ const UNASSIGNED = [
     display_name: null,
     detected_type: "numeric",
     override_type: null,
+    sort_order: 2,
     upload_fieldgroup_id: null,
+    levels: [],
   },
 ]
 

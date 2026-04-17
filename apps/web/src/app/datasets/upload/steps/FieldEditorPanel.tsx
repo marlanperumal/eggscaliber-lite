@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from "react"
-import type { FieldNode, GroupNode } from "./FieldTree"
+import type { FieldNode, GroupNode, Level } from "./FieldTree"
 
 const FIELD_TYPES = ["numeric", "ordinal", "categorical", "multi_response", "identifier", "weight"]
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
@@ -10,12 +10,16 @@ interface Props {
   field: FieldNode | null
   groups: GroupNode[]
   onSaved: (updated: FieldNode) => void
+  onCancel: () => void
+  onDelete: () => Promise<void>
 }
 
-export function FieldEditorPanel({ sessionId, field, groups, onSaved }: Props) {
+export function FieldEditorPanel({ sessionId, field, groups, onSaved, onCancel, onDelete }: Props) {
   const [displayName, setDisplayName] = useState("")
   const [overrideType, setOverrideType] = useState<string>("")
   const [groupId, setGroupId] = useState<string>("")
+  const [sortOrder, setSortOrder] = useState<number>(0)
+  const [levels, setLevels] = useState<Level[]>([])
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -23,6 +27,8 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved }: Props) {
     setDisplayName(field.display_name ?? "")
     setOverrideType(field.override_type ?? "")
     setGroupId(field.upload_fieldgroup_id ? String(field.upload_fieldgroup_id) : "")
+    setSortOrder(field.sort_order)
+    setLevels(field.levels ?? [])
   }, [field])
 
   if (!field) {
@@ -33,7 +39,16 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved }: Props) {
     )
   }
 
-  async function handleSave() {
+  async function handleDeleteLevel(levelId: number) {
+    if (!field) return
+    await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}/levels/${levelId}`, {
+      method: "DELETE",
+    })
+    setLevels((prev) => prev.filter((l) => l.id !== levelId))
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
     if (!field) return
     setBusy(true)
     const r1 = await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}`, {
@@ -42,6 +57,7 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved }: Props) {
       body: JSON.stringify({
         display_name: displayName || null,
         override_type: overrideType || null,
+        sort_order: sortOrder,
       }),
     })
     const newGroupId = groupId ? Number(groupId) : null
@@ -52,12 +68,26 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved }: Props) {
         body: JSON.stringify({ upload_fieldgroup_id: newGroupId }),
       })
     }
+    // Upsert each level
+    for (const lvl of levels) {
+      await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}/levels`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          raw_value: lvl.raw_value,
+          display_label: lvl.display_label,
+          sort_order: lvl.sort_order,
+        }),
+      })
+    }
     const data = await r1.json()
     onSaved({
       ...field,
       display_name: data.display_name,
       override_type: data.override_type,
+      sort_order: sortOrder,
       upload_fieldgroup_id: newGroupId,
+      levels,
     })
     setBusy(false)
   }
@@ -69,9 +99,12 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved }: Props) {
   }
 
   const selectedGroup = groupId ? groups.find((g) => g.id === Number(groupId)) : null
+  const effectiveType = overrideType || field.detected_type
+  const showLevels =
+    field.levels.length > 0 || effectiveType === "categorical" || effectiveType === "ordinal"
 
   return (
-    <div className="flex flex-col gap-4 overflow-auto p-4">
+    <form onSubmit={handleSave} className="flex flex-col gap-4 overflow-auto p-4">
       {/* Breadcrumb */}
       <p className="text-muted-foreground text-xs">
         {selectedGroup ? groupPath(selectedGroup) : "Unassigned"} ›{" "}
@@ -93,6 +126,32 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved }: Props) {
           className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
         />
       </div>
+
+      {/* Status chip */}
+      <div className="flex items-center gap-2">
+        <span className="text-muted-foreground text-xs">Status</span>
+        <span
+          className={[
+            "rounded-full px-2 py-0.5 font-semibold text-xs",
+            field.override_type || field.display_name
+              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+              : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+          ].join(" ")}
+        >
+          {field.override_type || field.display_name ? "✓ Ready" : "⚠ Needs review"}
+        </span>
+      </div>
+
+      {/* Sort order */}
+      <label className="flex flex-col gap-1">
+        <span className="text-muted-foreground text-xs">Sort order</span>
+        <input
+          type="number"
+          value={sortOrder}
+          onChange={(e) => setSortOrder(Number(e.target.value))}
+          className="w-24 rounded border border-border bg-background px-2 py-1 text-sm"
+        />
+      </label>
 
       <div>
         <label
@@ -138,16 +197,60 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved }: Props) {
         </select>
       </div>
 
-      <div className="mt-auto flex justify-end gap-2 border-border border-t pt-4">
+      {showLevels && (
+        <div className="space-y-1">
+          <span className="text-muted-foreground text-xs">Levels</span>
+          <div className="space-y-1 rounded border border-border p-2">
+            {levels.map((lvl, i) => (
+              <div key={lvl.id} className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={lvl.display_label ?? lvl.raw_value}
+                  onChange={(e) =>
+                    setLevels((prev) =>
+                      prev.map((l, j) => (j === i ? { ...l, display_label: e.target.value } : l)),
+                    )
+                  }
+                  placeholder={lvl.raw_value}
+                  className="flex-1 rounded border border-border bg-background px-2 py-0.5 text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleDeleteLevel(lvl.id)}
+                  className="text-muted-foreground hover:text-destructive"
+                  aria-label="Remove level"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2 pt-2">
         <button
           type="button"
-          onClick={handleSave}
+          onClick={onCancel}
+          className="rounded border border-border px-4 py-1.5 text-muted-foreground text-sm hover:bg-muted"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
           disabled={busy}
-          className="rounded-lg bg-accent px-5 py-2 font-semibold text-sm text-white disabled:opacity-40"
+          className="flex-1 rounded bg-accent px-4 py-1.5 font-semibold text-sm text-white disabled:opacity-40"
         >
           {busy ? "Saving…" : "Save"}
         </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="rounded border border-destructive px-4 py-1.5 text-destructive text-sm hover:bg-destructive/10"
+        >
+          Delete
+        </button>
       </div>
-    </div>
+    </form>
   )
 }

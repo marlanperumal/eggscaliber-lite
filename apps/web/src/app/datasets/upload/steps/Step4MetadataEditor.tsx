@@ -129,6 +129,16 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
             field={selectedField}
             groups={groups}
             onSaved={async () => await loadTree()}
+            onCancel={() => setSelectedFieldId(null)}
+            onDelete={async () => {
+              if (!state.sessionId || !selectedFieldId) return
+              await fetch(
+                `${API_BASE}/api/v1/uploads/${state.sessionId}/fields/${selectedFieldId}`,
+                { method: "DELETE" },
+              )
+              setSelectedFieldId(null)
+              await loadTree()
+            }}
           />
         </div>
       </div>
