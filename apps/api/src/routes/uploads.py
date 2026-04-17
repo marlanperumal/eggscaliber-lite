@@ -264,3 +264,168 @@ async def bulk_resolve_rows(
 ):
     resolved = await reconciliation_repo.bulk_resolve(session, session_id, body.ids, body.action)
     return {"resolved": resolved}
+
+
+# --- Field tree ---
+
+
+@router.get("/uploads/{session_id}/field-tree")
+async def get_field_tree(session_id: int, session: AsyncSession = Depends(get_session)):
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+    groups = await upload_repo.get_fieldgroups_for_session(session, session_id)
+    fields = await upload_repo.get_fields_for_session(session, session_id)
+
+    def _group_dict(g):
+        return {"id": g.id, "name": g.name, "parent_id": g.parent_id, "sort_order": g.sort_order}
+
+    def _field_dict(f):
+        return {
+            "id": f.id,
+            "field_key": f.field_key,
+            "display_name": f.display_name,
+            "detected_type": f.detected_type.value,
+            "override_type": f.override_type.value if f.override_type else None,
+            "sort_order": f.sort_order,
+            "upload_fieldgroup_id": f.upload_fieldgroup_id,
+        }
+
+    return {
+        "groups": [_group_dict(g) for g in groups],
+        "fields": [_field_dict(f) for f in fields if f.upload_fieldgroup_id is not None],
+        "unassigned_fields": [_field_dict(f) for f in fields if f.upload_fieldgroup_id is None],
+    }
+
+
+# --- Field group CRUD ---
+
+
+class FieldGroupCreate(BaseModel):
+    name: str
+    parent_id: int | None = None
+    sort_order: int = 0
+
+
+class FieldGroupUpdate(BaseModel):
+    name: str | None = None
+    parent_id: int | None = None
+    sort_order: int | None = None
+
+
+@router.post("/uploads/{session_id}/fieldgroups", status_code=201)
+async def create_fieldgroup(
+    session_id: int,
+    body: FieldGroupCreate,
+    session: AsyncSession = Depends(get_session),
+):
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+    grp = await upload_repo.create_upload_fieldgroup(
+        session,
+        upload_session_id=session_id,
+        name=body.name,
+        parent_id=body.parent_id,
+        sort_order=body.sort_order,
+    )
+    return {
+        "id": grp.id,
+        "name": grp.name,
+        "parent_id": grp.parent_id,
+        "sort_order": grp.sort_order,
+    }
+
+
+@router.patch("/uploads/{session_id}/fieldgroups/{group_id}")
+async def update_fieldgroup(
+    session_id: int,
+    group_id: int,
+    body: FieldGroupUpdate,
+    session: AsyncSession = Depends(get_session),
+):
+    from sqlalchemy import select
+
+    from src.models.upload import UploadFieldGroup
+
+    grp = (
+        (
+            await session.execute(
+                select(UploadFieldGroup).where(
+                    UploadFieldGroup.id == group_id,
+                    UploadFieldGroup.upload_session_id == session_id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if grp is None:
+        raise HTTPException(status_code=404, detail="Group not found")
+    if body.name is not None:
+        grp.name = body.name
+    if body.parent_id is not None:
+        grp.parent_id = body.parent_id
+    if body.sort_order is not None:
+        grp.sort_order = body.sort_order
+    session.add(grp)
+    await session.flush()
+    return {"id": grp.id, "name": grp.name, "parent_id": grp.parent_id}
+
+
+@router.delete("/uploads/{session_id}/fieldgroups/{group_id}")
+async def delete_fieldgroup(
+    session_id: int,
+    group_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    from sqlalchemy import select, update
+
+    from src.models.upload import UploadField, UploadFieldGroup
+
+    grp = (
+        (
+            await session.execute(
+                select(UploadFieldGroup).where(
+                    UploadFieldGroup.id == group_id,
+                    UploadFieldGroup.upload_session_id == session_id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if grp is None:
+        raise HTTPException(status_code=404, detail="Group not found")
+    # Unassign fields
+    await session.execute(
+        update(UploadField)
+        .where(UploadField.upload_fieldgroup_id == group_id)
+        .values(upload_fieldgroup_id=None)
+    )
+    await session.delete(grp)
+    await session.flush()
+    return {"deleted": group_id}
+
+
+# --- Field move ---
+
+
+class FieldMove(BaseModel):
+    upload_fieldgroup_id: int | None
+
+
+@router.patch("/uploads/{session_id}/fields/{field_id}/move")
+async def move_field(
+    session_id: int,
+    field_id: int,
+    body: FieldMove,
+    session: AsyncSession = Depends(get_session),
+):
+    f = await upload_repo.get_field_by_id(session, field_id)
+    if f is None or f.upload_session_id != session_id:
+        raise HTTPException(status_code=404, detail="Field not found")
+    f.upload_fieldgroup_id = body.upload_fieldgroup_id
+    session.add(f)
+    await session.flush()
+    return {"id": f.id, "upload_fieldgroup_id": f.upload_fieldgroup_id}
