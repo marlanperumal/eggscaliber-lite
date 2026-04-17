@@ -4013,3 +4013,289 @@ git add apps/web/src/app/datasets/upload/steps/FieldTree.tsx \
         apps/web/src/app/datasets/upload/WizardShell.tsx
 git commit -m "feat(web): add wizard Step 4 — metadata editor with tree/list panel and field editor"
 ```
+
+---
+
+### Task 17: Step 5 — Review & Commit
+
+Summary grid showing dataset details, field breakdown, reconciliation summary, and group structure. Commit CTA calls `POST /api/v1/uploads/{id}/commit` and redirects to `/datasets`.
+
+**Files:**
+- Create: `apps/web/src/app/datasets/upload/steps/Step5ReviewCommit.tsx`
+- Modify: `apps/web/src/app/datasets/upload/WizardShell.tsx`
+
+- [ ] **Step 1: Write `apps/web/src/app/datasets/upload/steps/Step5ReviewCommit.tsx`**
+
+```tsx
+"use client"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import type { WizardState, WizardStep } from "../wizard-types"
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+
+interface SessionSummary {
+  dataset_name: string | null
+  row_count: number | null
+  collection_id: number | null
+  fields: { detected_type: string; override_type: string | null }[]
+  groups: { id: number; name: string; parent_id: number | null }[]
+  unassigned_fields: unknown[]
+}
+
+interface Props {
+  state: WizardState
+  setStep: (s: WizardStep) => void
+}
+
+export function Step5ReviewCommit({ state, setStep }: Props) {
+  const router = useRouter()
+  const [summary, setSummary] = useState<SessionSummary | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!state.sessionId) return
+    Promise.all([
+      fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}`).then((r) => r.json()),
+      fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/field-tree`).then((r) => r.json()),
+    ]).then(([sess, tree]) => {
+      setSummary({
+        dataset_name: sess.dataset_name,
+        row_count: sess.row_count,
+        collection_id: sess.collection_id,
+        fields: sess.fields,
+        groups: tree.groups,
+        unassigned_fields: tree.unassigned_fields,
+      })
+      setLoading(false)
+    })
+  }, [state.sessionId])
+
+  async function handleCommit() {
+    if (!state.sessionId) return
+    setBusy(true)
+    setError(null)
+    const res = await fetch(
+      `${API_BASE}/api/v1/uploads/${state.sessionId}/commit`,
+      { method: "POST" },
+    )
+    if (!res.ok) {
+      setError("Commit failed. Please try again.")
+      setBusy(false)
+      return
+    }
+    router.push("/datasets")
+  }
+
+  if (loading || !summary) return <p className="text-sm text-muted-foreground">Loading summary…</p>
+
+  const typeCounts = summary.fields.reduce<Record<string, number>>((acc, f) => {
+    const t = f.override_type ?? f.detected_type
+    acc[t] = (acc[t] ?? 0) + 1
+    return acc
+  }, {})
+
+  const topGroups = summary.groups.filter((g) => g.parent_id === null)
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-base font-semibold text-foreground">Step 5 — Review &amp; Commit</h2>
+      <p className="text-xs text-muted-foreground">
+        Everything looks good. Review the summary and confirm to write to the database.
+      </p>
+
+      {/* 2×2 summary grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Dataset details */}
+        <div className="rounded-lg border border-border">
+          <div className="flex items-center justify-between border-b border-border bg-muted/40 px-3 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+            Dataset details
+            <button onClick={() => setStep(1)} className="text-xs font-semibold normal-case text-accent">← Edit</button>
+          </div>
+          <div className="space-y-1 px-3 py-2 text-xs">
+            <div className="flex gap-2"><span className="w-28 text-muted-foreground">Name</span><span className="font-medium">{summary.dataset_name}</span></div>
+            <div className="flex gap-2"><span className="w-28 text-muted-foreground">Responses</span><span className="font-medium">{summary.row_count ?? "—"}</span></div>
+            <div className="flex gap-2"><span className="w-28 text-muted-foreground">Collection ID</span><span className="font-medium">{summary.collection_id ?? "—"}</span></div>
+          </div>
+        </div>
+
+        {/* Fields breakdown */}
+        <div className="rounded-lg border border-border">
+          <div className="flex items-center justify-between border-b border-border bg-muted/40 px-3 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+            Fields
+            <button onClick={() => setStep(2)} className="text-xs font-semibold normal-case text-accent">← Edit</button>
+          </div>
+          <div className="space-y-1 px-3 py-2 text-xs">
+            <div className="flex gap-2"><span className="w-28 text-muted-foreground">Total</span><span className="font-semibold">{summary.fields.length}</span></div>
+            {Object.entries(typeCounts).map(([t, n]) => (
+              <div key={t} className="flex gap-2"><span className="w-28 text-muted-foreground">{t}</span><span className="font-medium">{n}</span></div>
+            ))}
+          </div>
+        </div>
+
+        {/* Group structure */}
+        <div className="col-span-2 rounded-lg border border-border">
+          <div className="flex items-center justify-between border-b border-border bg-muted/40 px-3 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+            Group structure
+            <button onClick={() => setStep(4)} className="text-xs font-semibold normal-case text-accent">← Edit</button>
+          </div>
+          <div className="space-y-1 px-3 py-2 text-xs">
+            {topGroups.map((g) => (
+              <div key={g.id} className="flex gap-2">
+                <span className="h-2 w-2 rounded-full bg-accent shrink-0 mt-0.5" />
+                <span className="font-medium">{g.name}</span>
+              </div>
+            ))}
+            {summary.unassigned_fields.length > 0 && (
+              <div className="flex gap-2 text-muted-foreground italic">
+                <span className="h-2 w-2 rounded-full bg-muted-foreground shrink-0 mt-0.5" />
+                <span>Unassigned ({summary.unassigned_fields.length} field{summary.unassigned_fields.length !== 1 ? "s" : ""})</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Commit panel */}
+      <div className="flex items-center gap-4 rounded-lg border border-border bg-muted/30 p-4">
+        <span className="text-3xl">🚀</span>
+        <div className="flex-1">
+          <p className="text-sm font-bold text-foreground">Ready to commit</p>
+          <p className="text-xs text-muted-foreground">
+            This will create <strong>{summary.dataset_name}</strong> with{" "}
+            <strong>{summary.row_count ?? "?"} responses</strong> and{" "}
+            <strong>{summary.fields.length} fields</strong>.{" "}
+            This action cannot be undone — responses and fields will be written to the database.
+          </p>
+        </div>
+        <button onClick={handleCommit} disabled={busy}
+          className="shrink-0 rounded-lg bg-accent px-6 py-2.5 text-sm font-bold text-white disabled:opacity-40">
+          {busy ? "Committing…" : "Commit dataset →"}
+        </button>
+      </div>
+
+      {error && <p className="text-xs text-destructive">{error}</p>}
+
+      <div className="flex justify-start">
+        <button onClick={() => setStep(4)}
+          className="rounded-lg border border-border px-5 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted">
+          ← Back to Metadata
+        </button>
+      </div>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 2: Wire Step5 into `WizardShell.tsx`**
+
+```tsx
+import { Step5ReviewCommit } from "./steps/Step5ReviewCommit"
+
+// Inside StepContent, after step 4 check:
+if (state.step === 5) {
+  return <Step5ReviewCommit state={state} setStep={setStep} />
+}
+```
+
+- [ ] **Step 3: Verify in browser**
+
+Navigate through the full wizard to Step 5.
+- Summary grid shows correct dataset name, response count, field type breakdown, and group structure
+- "← Edit" links on each card navigate back to the correct step
+- "Commit dataset →" calls the API, then redirects to `/datasets`
+- The committed dataset appears in the `/datasets` list
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add apps/web/src/app/datasets/upload/steps/Step5ReviewCommit.tsx \
+        apps/web/src/app/datasets/upload/WizardShell.tsx
+git commit -m "feat(web): add wizard Step 5 — review and commit"
+```
+
+---
+
+### Task 18: Navigation link to /datasets
+
+Add a "Datasets" link to the home page so users can reach the new page.
+
+**Files:**
+- Modify: `apps/web/src/app/page.tsx` (or `HomePage.tsx` — check which has the nav)
+
+- [ ] **Step 1: Find where navigation links live**
+
+```bash
+grep -n "analytics\|href" apps/web/src/app/HomePage.tsx | head -20
+```
+
+- [ ] **Step 2: Add Datasets link**
+
+In `apps/web/src/app/HomePage.tsx`, add a link to `/datasets` near the existing analytics link. Follow the exact same link pattern already used:
+
+```tsx
+<Link href="/datasets" className={/* same className as existing nav links */}>
+  Datasets
+</Link>
+```
+
+- [ ] **Step 3: Verify in browser**
+
+Open `http://localhost:3000`. Confirm "Datasets" link is visible and routes correctly to `/datasets`.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add apps/web/src/app/HomePage.tsx apps/web/src/app/page.tsx
+git commit -m "feat(web): add Datasets nav link to home page"
+```
+
+---
+
+## Self-Review
+
+### Spec coverage check
+
+| Spec section | Covered by task(s) |
+|---|---|
+| `/datasets` management page | Task 11 |
+| Step 1: File & Hierarchy | Task 13 |
+| Step 2: Field Detection | Task 14 |
+| Step 3: Reconciliation (4 groups, tabs, virtual list, bulk ops) | Tasks 6, 7, 15 |
+| Step 4: Metadata editor tree/list/editor | Tasks 8, 16 |
+| Step 5: Review & Commit | Tasks 9, 17 |
+| Upload staging models + migration | Task 1 |
+| Upload repository | Task 2 |
+| Field detection heuristics | Task 3 |
+| Upload service (file save + detection orchestration) | Task 4 |
+| Field override endpoint | Task 5 |
+| Reconciliation engine (exact/probable/new/old) | Task 6 |
+| Reconciliation API (trigger, list, IDs, resolve, bulk) | Task 7 |
+| Metadata CRUD (field tree, groups, field move) | Task 8 |
+| Commit service (atomic promotion) | Task 9 |
+| Datasets list endpoint | Task 9 |
+| TypeScript type regeneration | Task 10 |
+| `@tanstack/react-virtual` dependency | Task 10 |
+| CORS allow PATCH/DELETE | Task 4 |
+| Nav link | Task 18 |
+| SPSS stretch goal | Not in this plan — add in a separate task when implementing |
+
+### Placeholder scan — none found
+
+All steps contain actual code, commands, and expected outputs.
+
+### Type consistency check
+
+- `UploadSession`, `UploadField`, `UploadLevel`, `UploadFieldGroup`, `ReconciliationRow` defined in Task 1; used consistently in Tasks 2–9.
+- `DetectedField`, `detect_fields`, `slugify_key` defined in Task 3; used in Task 4 (`upload_service.py`).
+- `classify_row`, `edit_distance`, `level_overlap` defined in Task 6; used in Task 7 (route handler).
+- `commit_upload` defined in Task 9 (`commit_service.py`); called in Task 9 route handler.
+- Frontend: `FieldNode`, `GroupNode` defined in `FieldTree.tsx` (Task 16); imported and reused in `FieldList.tsx`, `FieldEditorPanel.tsx`, `Step4MetadataEditor.tsx` — consistent throughout.
+- `WizardState`, `WizardStep`, `STEP_LABELS` defined in `wizard-types.ts` (Task 12); used consistently in all step components (Tasks 13–17).
+- `useWizardState` return shape (`state`, `setStep`, `setSessionId`, `setNeedsReconcile`) defined in Task 12; passed through `WizardShell` → step components consistently.
+
+### One gap fixed
+
+The `upload_service.py` in Task 4 imports `slugify_key` inline inside `commit_service.py` in Task 9. This import is valid since `detection_service.py` is created in Task 3. No circular imports — all dependency order is forward-only.
