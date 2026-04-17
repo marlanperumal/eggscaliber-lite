@@ -1,6 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.models.collection import Collection
+from src.models.package import Package
 from src.models.upload import (
     UploadField,
     UploadFieldGroup,
@@ -11,9 +13,6 @@ from src.models.upload import (
 
 
 async def get_collection_meta(session: AsyncSession, collection_id: int) -> dict | None:
-    from src.models.collection import Collection
-    from src.models.package import Package
-
     result = await session.get(Collection, collection_id)
     if result is None:
         return None
@@ -22,7 +21,6 @@ async def get_collection_meta(session: AsyncSession, collection_id: int) -> dict
     return {
         "collection_name": result.name,
         "package_name": package_name,
-        "collected_at": None,
     }
 
 

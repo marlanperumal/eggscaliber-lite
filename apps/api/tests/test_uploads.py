@@ -239,7 +239,11 @@ async def test_get_upload_session_includes_collection_metadata(client, db):
     resp = await client.post(
         "/api/v1/uploads",
         files={"file": ("survey2.csv", csv_bytes, "text/csv")},
-        data={"dataset_name": "Test Meta", "collection_id": str(col.id)},
+        data={
+            "dataset_name": "Test Meta",
+            "collection_id": str(col.id),
+            "collected_at": "2024-03-15",
+        },
     )
     sid = resp.json()["id"]
     get_resp = await client.get(f"/api/v1/uploads/{sid}")
@@ -247,7 +251,7 @@ async def test_get_upload_session_includes_collection_metadata(client, db):
     body = get_resp.json()
     assert body["collection_name"] == "Meta Collection"
     assert body["package_name"] == "Meta Pkg"
-    assert "collected_at" in body
+    assert body["collected_at"] == "2024-03-15"
 
 
 async def test_reconcile_counts_includes_status_counts(client, db):

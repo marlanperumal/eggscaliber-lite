@@ -1,3 +1,6 @@
+import os
+from datetime import date
+
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +25,7 @@ async def create_upload(
     session: AsyncSession = Depends(get_session),
 ):
     content = await file.read()
+    collected_at_date: date | None = date.fromisoformat(collected_at) if collected_at else None
     try:
         result = await upload_service.create_upload_session(
             session,
@@ -30,6 +34,7 @@ async def create_upload(
             content_type=file.content_type or "",
             dataset_name=dataset_name,
             collection_id=collection_id,
+            collected_at=collected_at_date,
         )
     except InvalidFileTypeError:
         raise HTTPException(status_code=422, detail="Only CSV files are accepted") from None
@@ -38,8 +43,6 @@ async def create_upload(
 
 @router.get("/uploads/{session_id}")
 async def get_upload_session(session_id: int, session: AsyncSession = Depends(get_session)):
-    import os
-
     sess = await upload_repo.get_session_by_id(session, session_id)
     if sess is None:
         raise HTTPException(status_code=404, detail="Upload session not found")
@@ -68,6 +71,7 @@ async def get_upload_session(session_id: int, session: AsyncSession = Depends(ge
         "collection_name": collection_meta.get("collection_name"),
         "package_name": collection_meta.get("package_name"),
         "collected_at": sess.collected_at.isoformat() if sess.collected_at else None,
+        # strip the upload_{pid}_ prefix added by upload_service
         "file_name": os.path.basename(sess.file_path).split("_", 2)[-1],
         "row_count": sess.row_count,
         "fields": field_list,
