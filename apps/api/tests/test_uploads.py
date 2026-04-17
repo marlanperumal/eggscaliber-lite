@@ -205,6 +205,50 @@ async def test_reconcile_counts(client, db):
     assert isinstance(data["status_counts"], dict)
 
 
+async def test_get_upload_session_includes_file_name(client, db):
+    csv_bytes = _make_csv(["id"], [["1"]])
+    resp = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("survey.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "Test"},
+    )
+    sid = resp.json()["id"]
+    get_resp = await client.get(f"/api/v1/uploads/{sid}")
+    assert get_resp.status_code == 200
+    body = get_resp.json()
+    assert "file_name" in body
+    assert body["file_name"] == "survey.csv"
+
+
+async def test_get_upload_session_includes_collection_metadata(client, db):
+    pkg = Package(name="Meta Pkg", slug="meta-pkg-test")
+    db.add(pkg)
+    await db.flush()
+    await db.refresh(pkg)
+    col = Collection(
+        name="Meta Collection",
+        slug="meta-col-test",
+        package_id=pkg.id,
+        collection_type=CollectionType.survey,
+    )
+    db.add(col)
+    await db.flush()
+    await db.refresh(col)
+
+    csv_bytes = _make_csv(["id"], [["1"]])
+    resp = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("survey2.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "Test Meta", "collection_id": str(col.id)},
+    )
+    sid = resp.json()["id"]
+    get_resp = await client.get(f"/api/v1/uploads/{sid}")
+    assert get_resp.status_code == 200
+    body = get_resp.json()
+    assert body["collection_name"] == "Meta Collection"
+    assert body["package_name"] == "Meta Pkg"
+
+
 async def test_reconcile_counts_includes_status_counts(client, db):
     from tests.test_reconciliation_api import _seed_ref_dataset, _upload
 

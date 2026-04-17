@@ -38,6 +38,8 @@ async def create_upload(
 
 @router.get("/uploads/{session_id}")
 async def get_upload_session(session_id: int, session: AsyncSession = Depends(get_session)):
+    import os
+
     sess = await upload_repo.get_session_by_id(session, session_id)
     if sess is None:
         raise HTTPException(status_code=404, detail="Upload session not found")
@@ -55,11 +57,18 @@ async def get_upload_session(session_id: int, session: AsyncSession = Depends(ge
         }
         for f in fields
     ]
+    collection_meta: dict = {}
+    if sess.collection_id:
+        collection_meta = await upload_repo.get_collection_meta(session, sess.collection_id) or {}
     return {
         "id": sess.id,
         "status": sess.status.value,
         "dataset_name": sess.dataset_name,
         "collection_id": sess.collection_id,
+        "collection_name": collection_meta.get("collection_name"),
+        "package_name": collection_meta.get("package_name"),
+        "collected_at": sess.collected_at.isoformat() if sess.collected_at else None,
+        "file_name": os.path.basename(sess.file_path).split("_", 2)[-1],
         "row_count": sess.row_count,
         "fields": field_list,
     }

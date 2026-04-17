@@ -10,6 +10,21 @@ from src.models.upload import (
 )
 
 
+async def get_collection_meta(session: AsyncSession, collection_id: int) -> dict | None:
+    from src.models.collection import Collection
+    from src.models.package import Package
+
+    result = await session.get(Collection, collection_id)
+    if result is None:
+        return None
+    pkg = await session.get(Package, result.package_id)
+    package_name = pkg.name if pkg else None
+    return {
+        "collection_name": result.name,
+        "package_name": package_name,
+    }
+
+
 async def get_session_by_id(session: AsyncSession, session_id: int) -> UploadSession | None:
     return (
         (await session.execute(select(UploadSession).where(UploadSession.id == session_id)))
