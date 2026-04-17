@@ -1034,3 +1034,168 @@ git add apps/api/src/errors.py \
         apps/api/tests/test_uploads.py
 git commit -m "feat(api): add file upload endpoint with CSV parsing and field detection"
 ```
+
+---
+
+### Task 5: Field override + session detail endpoints
+
+`GET /api/v1/uploads/{id}` — fetch session + fields (Step 2 page load / resume).
+`PATCH /api/v1/uploads/{id}/fields/{field_id}` — override a field's type (Step 2 inline edit).
+
+**Files:**
+- Modify: `apps/api/src/routes/uploads.py`
+- Modify: `apps/api/tests/test_uploads.py`
+
+- [ ] **Step 1: Write the failing tests** (append to `test_uploads.py`)
+
+```python
+async def _create_session(client, headers=None, rows=None):
+    headers = headers or ["respondent_id", "gender"]
+    rows = rows or [["1", "male"], ["2", "female"]]
+    csv_bytes = _make_csv(headers, rows)
+    resp = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "Wave 3"},
+    )
+    assert resp.status_code == 201
+    return resp.json()
+
+
+async def test_get_upload_session_returns_fields(client, db):
+    sess = await _create_session(client)
+    resp = await client.get(f"/api/v1/uploads/{sess['id']}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["id"] == sess["id"]
+    assert len(data["fields"]) == 2
+
+
+async def test_get_upload_session_not_found(client):
+    resp = await client.get("/api/v1/uploads/99999")
+    assert resp.status_code == 404
+
+
+async def test_patch_field_override_type(client, db):
+    sess = await _create_session(client, headers=["rating"], rows=[[str(i)] for i in range(1, 6)])
+    field_id = sess["fields"][0]["id"]
+    resp = await client.patch(
+        f"/api/v1/uploads/{sess['id']}/fields/{field_id}",
+        json={"override_type": "categorical"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["override_type"] == "categorical"
+
+
+async def test_patch_field_invalid_type_returns_422(client, db):
+    sess = await _create_session(client)
+    field_id = sess["fields"][0]["id"]
+    resp = await client.patch(
+        f"/api/v1/uploads/{sess['id']}/fields/{field_id}",
+        json={"override_type": "not_a_type"},
+    )
+    assert resp.status_code == 422
+```
+
+- [ ] **Step 2: Run — expect failure**
+
+```bash
+just test-api -k "test_get_upload_session or test_patch_field"
+```
+
+Expected: 404 or attribute errors.
+
+- [ ] **Step 3: Add the two endpoints to `apps/api/src/routes/uploads.py`**
+
+```python
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.database import get_session
+from src.errors import UploadSessionNotFoundError
+from src.models.field import FieldType
+from src.repositories import upload_repo
+from src.services import upload_service
+from src.services.upload_service import InvalidFileTypeError
+
+router = APIRouter(tags=["uploads"])
+
+
+# --- existing POST /uploads handler (unchanged) ---
+
+
+@router.get("/uploads/{session_id}")
+async def get_upload_session(session_id: int, session: AsyncSession = Depends(get_session)):
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+    fields = await upload_repo.get_fields_for_session(session, session_id)
+    field_list = [
+        {
+            "id": f.id,
+            "field_key": f.field_key,
+            "detected_type": f.detected_type.value,
+            "override_type": f.override_type.value if f.override_type else None,
+            "sort_order": f.sort_order,
+            "upload_fieldgroup_id": f.upload_fieldgroup_id,
+        }
+        for f in fields
+    ]
+    return {
+        "id": sess.id,
+        "status": sess.status.value,
+        "dataset_name": sess.dataset_name,
+        "collection_id": sess.collection_id,
+        "row_count": sess.row_count,
+        "fields": field_list,
+    }
+
+
+class FieldOverride(BaseModel):
+    override_type: FieldType | None = None
+    display_name: str | None = None
+
+
+@router.patch("/uploads/{session_id}/fields/{field_id}")
+async def override_field(
+    session_id: int,
+    field_id: int,
+    body: FieldOverride,
+    session: AsyncSession = Depends(get_session),
+):
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+    f = await upload_repo.get_field_by_id(session, field_id)
+    if f is None or f.upload_session_id != session_id:
+        raise HTTPException(status_code=404, detail="Field not found")
+    if body.override_type is not None:
+        f.override_type = body.override_type
+    if body.display_name is not None:
+        f.display_name = body.display_name
+    session.add(f)
+    await session.flush()
+    return {
+        "id": f.id,
+        "field_key": f.field_key,
+        "detected_type": f.detected_type.value,
+        "override_type": f.override_type.value if f.override_type else None,
+    }
+```
+
+- [ ] **Step 4: Run — expect pass**
+
+```bash
+just test-api -k test_uploads
+```
+
+Expected: all upload tests passing.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/api/src/routes/uploads.py \
+        apps/api/tests/test_uploads.py
+git commit -m "feat(api): add GET session detail and PATCH field override endpoints"
+```
