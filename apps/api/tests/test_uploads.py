@@ -200,5 +200,23 @@ async def test_reconcile_counts(client, db):
     counts_resp = await client.get(f"/api/v1/uploads/{sess['id']}/reconcile/counts")
     assert counts_resp.status_code == 200
     data = counts_resp.json()
-    assert set(data.keys()) == {"exact", "probable", "new_only", "old_only"}
-    assert all(isinstance(v, int) for v in data.values())
+    assert {"exact", "probable", "new_only", "old_only"}.issubset(data.keys())
+    assert "status_counts" in data
+    assert isinstance(data["status_counts"], dict)
+
+
+async def test_reconcile_counts_includes_status_counts(client, db):
+    from tests.test_reconciliation_api import _seed_ref_dataset, _upload
+
+    col, ref_ds = await _seed_ref_dataset(db)
+    sess = await _upload(client, col.id)
+    await client.post(
+        f"/api/v1/uploads/{sess['id']}/reconcile",
+        json={"reference_dataset_id": ref_ds.id},
+    )
+    resp = await client.get(f"/api/v1/uploads/{sess['id']}/reconcile/counts")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "status_counts" in body
+    assert isinstance(body["status_counts"], dict)
+    assert len(body["status_counts"]) >= 1

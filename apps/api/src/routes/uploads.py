@@ -282,7 +282,9 @@ async def get_reconcile_counts(session_id: int, session: AsyncSession = Depends(
     sess = await upload_repo.get_session_by_id(session, session_id)
     if sess is None:
         raise HTTPException(status_code=404, detail="Upload session not found")
-    return await reconciliation_repo.get_counts_by_group(session, session_id)
+    group_counts = await reconciliation_repo.get_counts_by_group(session, session_id)
+    status_counts = await reconciliation_repo.get_status_counts(session, session_id)
+    return {**group_counts, "status_counts": status_counts}
 
 
 @router.get("/uploads/{session_id}/suggested-reference")

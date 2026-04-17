@@ -59,20 +59,23 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
       let excludedKeys: string[] = []
       if (reconData) {
         const [counts, suggested, oldOnlyPage] = reconData as [
-          Record<string, number>,
+          Record<string, number | Record<string, number>>,
           { dataset_name: string | null },
-          { items: Array<{ status: string; field_key: string | null }> },
+          {
+            items: Array<{ status: string; field_key: string | null; ref_field_key: string | null }>
+          },
         ]
+        const statusCounts = (counts.status_counts ?? {}) as Record<string, number>
         recon = {
           reference_dataset_name: suggested.dataset_name,
-          exact: counts.exact ?? 0,
-          confirmed: counts.confirmed ?? 0,
-          new_only: counts.new_only ?? 0,
-          excluded: counts.old_only ?? 0,
+          exact: (counts.exact as number) ?? 0,
+          confirmed: (counts.confirmed as number) ?? 0,
+          new_only: (counts.new_only as number) ?? 0,
+          excluded: statusCounts.excluded ?? 0,
         }
         excludedKeys = oldOnlyPage.items
-          .filter((r) => r.status === "excluded" && r.field_key)
-          .map((r) => r.field_key as string)
+          .filter((r) => r.status === "excluded" && r.ref_field_key)
+          .map((r) => r.ref_field_key as string)
       }
       setSummary({
         dataset_name: sess.dataset_name,

@@ -87,6 +87,18 @@ async def get_counts_by_group(
     return base
 
 
+async def get_status_counts(
+    session: AsyncSession,
+    upload_session_id: int,
+) -> dict[str, int]:
+    result = await session.execute(
+        select(ReconciliationRow.status, func.count(ReconciliationRow.id).label("cnt"))
+        .where(ReconciliationRow.upload_session_id == upload_session_id)
+        .group_by(ReconciliationRow.status)
+    )
+    return {row.status: row.cnt for row in result}
+
+
 async def bulk_resolve(
     session: AsyncSession,
     upload_session_id: int,
