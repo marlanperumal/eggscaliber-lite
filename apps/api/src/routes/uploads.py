@@ -207,10 +207,37 @@ async def list_reconcile_rows(
     page_size: int = 50,
     session: AsyncSession = Depends(get_session),
 ):
+    from sqlalchemy import select
+
+    from src.models.upload import UploadField
+
     rows = await reconciliation_repo.get_rows_page(
         session, session_id, group=group, after_id=after_id, page_size=page_size
     )
     next_cursor = rows[-1].id if len(rows) == page_size else None
+
+    upload_field_ids = [r.upload_field_id for r in rows if r.upload_field_id]
+    ref_field_ids = [r.ref_field_id for r in rows if r.ref_field_id]
+
+    uf_map: dict[int, UploadField] = {}
+    rf_map: dict[int, Field] = {}
+
+    if upload_field_ids:
+        ufs = list(
+            (await session.execute(select(UploadField).where(UploadField.id.in_(upload_field_ids))))
+            .scalars()
+            .all()
+        )
+        uf_map = {u.id: u for u in ufs if u.id}
+
+    if ref_field_ids:
+        rfs = list(
+            (await session.execute(select(Field).where(Field.id.in_(ref_field_ids))))
+            .scalars()
+            .all()
+        )
+        rf_map = {f.id: f for f in rfs if f.id}
+
     return {
         "items": [
             {
@@ -219,6 +246,18 @@ async def list_reconcile_rows(
                 "status": r.status,
                 "upload_field_id": r.upload_field_id,
                 "ref_field_id": r.ref_field_id,
+                "field_key": uf_map[r.upload_field_id].field_key
+                if r.upload_field_id and r.upload_field_id in uf_map
+                else None,
+                "field_type": (
+                    uf_map[r.upload_field_id].override_type
+                    or uf_map[r.upload_field_id].detected_type
+                ).value
+                if r.upload_field_id and r.upload_field_id in uf_map
+                else None,
+                "ref_field_key": rf_map[r.ref_field_id].field_key
+                if r.ref_field_id and r.ref_field_id in rf_map
+                else None,
                 "confidence": r.confidence,
                 "note": r.note,
             }

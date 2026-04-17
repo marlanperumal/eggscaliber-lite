@@ -96,3 +96,20 @@ async def test_bulk_resolve_rows(client, db):
     )
     assert resp.status_code == 200
     assert resp.json()["resolved"] == len(ids)
+
+
+async def test_reconcile_list_includes_field_keys(client, db):
+    col, ref_ds = await _seed_ref_dataset(db)
+    sess = await _upload(client, col.id)
+    await client.post(
+        f"/api/v1/uploads/{sess['id']}/reconcile", json={"reference_dataset_id": ref_ds.id}
+    )
+    resp = await client.get(f"/api/v1/uploads/{sess['id']}/reconcile")
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert len(items) > 0
+    for item in items:
+        if item["upload_field_id"] is not None:
+            assert item.get("field_key") is not None
+        if item["ref_field_id"] is not None:
+            assert item.get("ref_field_key") is not None
