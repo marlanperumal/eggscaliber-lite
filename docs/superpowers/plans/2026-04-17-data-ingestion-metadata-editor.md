@@ -1199,3 +1199,303 @@ git add apps/api/src/routes/uploads.py \
         apps/api/tests/test_uploads.py
 git commit -m "feat(api): add GET session detail and PATCH field override endpoints"
 ```
+
+---
+
+### Task 6: Reconciliation engine + repository
+
+The engine compares upload fields against a reference dataset's fields and assigns each to one of four groups (exact / probable / new_only / old_only). The repository handles cursor-based pagination of the resulting rows.
+
+**Files:**
+- Create: `apps/api/src/services/reconciliation_service.py`
+- Create: `apps/api/src/repositories/reconciliation_repo.py`
+- Create: `apps/api/tests/test_reconciliation_service.py`
+
+- [ ] **Step 1: Write the failing service tests**
+
+`apps/api/tests/test_reconciliation_service.py`:
+
+```python
+from src.models.field import Field, FieldType
+from src.models.level import Level
+from src.models.reconciliation import ReconciliationGroup
+from src.services.reconciliation_service import (
+    classify_row,
+    edit_distance,
+    level_overlap,
+)
+
+
+def _field(key, levels=None):
+    f = Field(field_key=key, display_name=key, field_type=FieldType.categorical,
+               dataset_id=1, id=1)
+    lvls = [Level(value=v, display_label=v, sort_order=i, field_id=1, id=i)
+            for i, v in enumerate(levels or [])]
+    return f, lvls
+
+
+def test_edit_distance_identical():
+    assert edit_distance("gender", "gender") == 0
+
+
+def test_edit_distance_one_char_change():
+    assert edit_distance("gender", "Gender") == 1
+
+
+def test_edit_distance_renamed():
+    assert edit_distance("sex", "gender") > 2
+
+
+def test_level_overlap_identical_sets():
+    assert level_overlap({"male", "female"}, {"male", "female"}) == 1.0
+
+
+def test_level_overlap_partial():
+    assert level_overlap({"a", "b", "c"}, {"a", "b"}) == pytest.approx(2 / 3, abs=0.01)
+
+
+def test_level_overlap_no_overlap():
+    assert level_overlap({"a", "b"}, {"c", "d"}) == 0.0
+
+
+def test_classify_exact_same_key_same_levels():
+    f_new, lvls_new = _field("gender", ["male", "female"])
+    f_ref, lvls_ref = _field("gender", ["male", "female"])
+    result = classify_row(f_new, lvls_new, f_ref, lvls_ref)
+    assert result.group == ReconciliationGroup.exact
+
+
+def test_classify_probable_key_close():
+    f_new, lvls_new = _field("q_gender", ["male", "female"])
+    f_ref, lvls_ref = _field("gender", ["male", "female"])
+    result = classify_row(f_new, lvls_new, f_ref, lvls_ref)
+    assert result.group == ReconciliationGroup.probable
+
+
+def test_classify_new_only_when_no_ref():
+    f_new, lvls_new = _field("new_field", [])
+    result = classify_row(f_new, lvls_new, None, [])
+    assert result.group == ReconciliationGroup.new_only
+
+
+import pytest
+```
+
+- [ ] **Step 2: Run — expect failure**
+
+```bash
+just test-api -k test_reconciliation_service
+```
+
+Expected: `ModuleNotFoundError`.
+
+- [ ] **Step 3: Write `apps/api/src/services/reconciliation_service.py`**
+
+```python
+"""Reconciliation engine — pure functions, no DB access."""
+
+from dataclasses import dataclass
+
+from src.models.field import Field
+from src.models.level import Level
+from src.models.reconciliation import ReconciliationGroup, ReconciliationStatus
+
+_EDIT_DIST_THRESHOLD = 3
+_LEVEL_OVERLAP_THRESHOLD = 0.5
+
+
+@dataclass
+class ClassifyResult:
+    group: ReconciliationGroup
+    status: ReconciliationStatus
+    confidence: float | None
+    note: str
+
+
+def edit_distance(a: str, b: str) -> int:
+    """Levenshtein distance (case-sensitive)."""
+    if a == b:
+        return 0
+    la, lb = len(a), len(b)
+    prev = list(range(lb + 1))
+    for i, ca in enumerate(a, 1):
+        curr = [i] + [0] * lb
+        for j, cb in enumerate(b, 1):
+            curr[j] = min(prev[j] + 1, curr[j - 1] + 1,
+                          prev[j - 1] + (0 if ca == cb else 1))
+        prev = curr
+    return prev[lb]
+
+
+def level_overlap(new_vals: set[str], ref_vals: set[str]) -> float:
+    if not new_vals and not ref_vals:
+        return 1.0
+    if not new_vals or not ref_vals:
+        return 0.0
+    return len(new_vals & ref_vals) / len(new_vals | ref_vals)
+
+
+def classify_row(
+    new_field: Field,
+    new_levels: list[Level],
+    ref_field: Field | None,
+    ref_levels: list[Level],
+) -> ClassifyResult:
+    if ref_field is None:
+        return ClassifyResult(
+            group=ReconciliationGroup.new_only,
+            status=ReconciliationStatus.auto_accepted,
+            confidence=None,
+            note="No matching field in reference dataset",
+        )
+
+    new_vals = {lv.value for lv in new_levels}
+    ref_vals = {lv.value for lv in ref_levels}
+    key_dist = edit_distance(new_field.field_key, ref_field.field_key)
+    overlap = level_overlap(new_vals, ref_vals)
+
+    keys_match = new_field.field_key == ref_field.field_key
+    levels_match = (not new_vals and not ref_vals) or overlap >= 0.9
+
+    if keys_match and levels_match:
+        return ClassifyResult(
+            group=ReconciliationGroup.exact,
+            status=ReconciliationStatus.auto_accepted,
+            confidence=1.0,
+            note="Exact key and level match",
+        )
+
+    if key_dist < _EDIT_DIST_THRESHOLD or overlap >= _LEVEL_OVERLAP_THRESHOLD:
+        confidence = round(max((1 - key_dist / 10), overlap), 2)
+        parts = []
+        if key_dist > 0:
+            parts.append(f"key differs by {key_dist} char(s)")
+        if 0 < overlap < 0.9:
+            parts.append(f"{int(overlap * 100)}% level overlap")
+        return ClassifyResult(
+            group=ReconciliationGroup.probable,
+            status=ReconciliationStatus.pending,
+            confidence=confidence,
+            note=", ".join(parts) or "Probable match",
+        )
+
+    return ClassifyResult(
+        group=ReconciliationGroup.new_only,
+        status=ReconciliationStatus.auto_accepted,
+        confidence=None,
+        note="No close match found in reference dataset",
+    )
+```
+
+- [ ] **Step 4: Write `apps/api/src/repositories/reconciliation_repo.py`**
+
+```python
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.models.reconciliation import ReconciliationGroup, ReconciliationRow, ReconciliationStatus
+
+
+async def create_row(session: AsyncSession, **kwargs) -> ReconciliationRow:
+    obj = ReconciliationRow(**kwargs)
+    session.add(obj)
+    await session.flush()
+    await session.refresh(obj)
+    return obj
+
+
+async def bulk_create_rows(
+    session: AsyncSession, rows: list[dict]
+) -> list[ReconciliationRow]:
+    objs = [ReconciliationRow(**r) for r in rows]
+    session.add_all(objs)
+    await session.flush()
+    return objs
+
+
+async def get_rows_page(
+    session: AsyncSession,
+    upload_session_id: int,
+    group: ReconciliationGroup | None = None,
+    after_id: int | None = None,
+    page_size: int = 50,
+) -> list[ReconciliationRow]:
+    stmt = select(ReconciliationRow).where(
+        ReconciliationRow.upload_session_id == upload_session_id
+    )
+    if group is not None:
+        stmt = stmt.where(ReconciliationRow.group == group)
+    if after_id is not None:
+        stmt = stmt.where(ReconciliationRow.id > after_id)
+    stmt = stmt.order_by(ReconciliationRow.id).limit(page_size)
+    return list((await session.execute(stmt)).scalars().all())
+
+
+async def get_all_ids(
+    session: AsyncSession,
+    upload_session_id: int,
+    group: ReconciliationGroup | None = None,
+) -> list[int]:
+    stmt = select(ReconciliationRow.id).where(
+        ReconciliationRow.upload_session_id == upload_session_id
+    )
+    if group is not None:
+        stmt = stmt.where(ReconciliationRow.group == group)
+    return list((await session.execute(stmt)).scalars().all())
+
+
+async def resolve_row(
+    session: AsyncSession, row_id: int, status: ReconciliationStatus,
+    ref_field_id: int | None = None,
+) -> ReconciliationRow | None:
+    row = (
+        (await session.execute(
+            select(ReconciliationRow).where(ReconciliationRow.id == row_id)
+        )).scalars().first()
+    )
+    if row:
+        row.status = status
+        if ref_field_id is not None:
+            row.ref_field_id = ref_field_id
+        session.add(row)
+        await session.flush()
+    return row
+
+
+async def bulk_resolve(
+    session: AsyncSession,
+    upload_session_id: int,
+    row_ids: list[int],
+    status: ReconciliationStatus,
+) -> int:
+    rows = list(
+        (await session.execute(
+            select(ReconciliationRow).where(
+                ReconciliationRow.upload_session_id == upload_session_id,
+                ReconciliationRow.id.in_(row_ids),
+            )
+        )).scalars().all()
+    )
+    for row in rows:
+        row.status = status
+        session.add(row)
+    await session.flush()
+    return len(rows)
+```
+
+- [ ] **Step 5: Run — expect pass**
+
+```bash
+just test-api -k test_reconciliation_service
+```
+
+Expected: all reconciliation service tests passing.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add apps/api/src/services/reconciliation_service.py \
+        apps/api/src/repositories/reconciliation_repo.py \
+        apps/api/tests/test_reconciliation_service.py
+git commit -m "feat(api): add reconciliation engine and repository"
+```
