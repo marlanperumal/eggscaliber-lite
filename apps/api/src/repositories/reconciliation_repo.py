@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.reconciliation import ReconciliationGroup, ReconciliationRow, ReconciliationStatus
@@ -66,6 +66,25 @@ async def resolve_row(
         session.add(row)
         await session.flush()
     return row
+
+
+async def get_counts_by_group(
+    session: AsyncSession,
+    upload_session_id: int,
+) -> dict[str, int]:
+    rows = list(
+        (
+            await session.execute(
+                select(ReconciliationRow.group, func.count().label("n"))
+                .where(ReconciliationRow.upload_session_id == upload_session_id)
+                .group_by(ReconciliationRow.group)
+            )
+        ).all()
+    )
+    base: dict[str, int] = {"exact": 0, "probable": 0, "new_only": 0, "old_only": 0}
+    for group, count in rows:
+        base[group.value if hasattr(group, "value") else group] = count
+    return base
 
 
 async def bulk_resolve(

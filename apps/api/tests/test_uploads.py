@@ -1,6 +1,9 @@
 import csv
 import io
 
+from src.models.collection import Collection, CollectionType
+from src.models.dataset import Dataset
+from src.models.package import Package
 from src.models.upload import UploadSessionStatus
 
 
@@ -132,3 +135,70 @@ async def test_get_upload_session_includes_confidence(client, db):
     fields = {f["field_key"]: f for f in get_resp.json()["fields"]}
     assert "confidence" in fields["cat"]
     assert "value_sample" in fields["cat"]
+
+
+async def _seed_collection_with_datasets(db):
+    pkg = Package(name="Pkg SR", slug="pkg-sr-test")
+    db.add(pkg)
+    await db.flush()
+    await db.refresh(pkg)
+    col = Collection(
+        name="Col SR",
+        slug="col-sr-test",
+        package_id=pkg.id,
+        collection_type=CollectionType.survey,
+    )
+    db.add(col)
+    await db.flush()
+    await db.refresh(col)
+    ds1 = Dataset(name="W1", slug="w1-sr-test", collection_id=col.id, sort_order=0)
+    ds2 = Dataset(name="W2", slug="w2-sr-test", collection_id=col.id, sort_order=1)
+    db.add(ds1)
+    db.add(ds2)
+    await db.flush()
+    await db.refresh(ds2)
+    return col, ds2
+
+
+async def test_suggested_reference_returns_most_recent_dataset(client, db):
+    col, ds2 = await _seed_collection_with_datasets(db)
+    csv_bytes = _make_csv(["id"], [["1"]])
+    resp = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "Wave 3", "collection_id": str(col.id)},
+    )
+    sid = resp.json()["id"]
+    ref_resp = await client.get(f"/api/v1/uploads/{sid}/suggested-reference")
+    assert ref_resp.status_code == 200
+    assert ref_resp.json()["dataset_id"] == ds2.id
+    assert ref_resp.json()["dataset_name"] == "W2"
+
+
+async def test_suggested_reference_no_collection_returns_null(client, db):
+    csv_bytes = _make_csv(["id"], [["1"]])
+    resp = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "Standalone"},
+    )
+    sid = resp.json()["id"]
+    ref_resp = await client.get(f"/api/v1/uploads/{sid}/suggested-reference")
+    assert ref_resp.status_code == 200
+    assert ref_resp.json()["dataset_id"] is None
+
+
+async def test_reconcile_counts(client, db):
+    from tests.test_reconciliation_api import _seed_ref_dataset, _upload
+
+    col, ref_ds = await _seed_ref_dataset(db)
+    sess = await _upload(client, col.id)
+    await client.post(
+        f"/api/v1/uploads/{sess['id']}/reconcile",
+        json={"reference_dataset_id": ref_ds.id},
+    )
+    counts_resp = await client.get(f"/api/v1/uploads/{sess['id']}/reconcile/counts")
+    assert counts_resp.status_code == 200
+    data = counts_resp.json()
+    assert set(data.keys()) == {"exact", "probable", "new_only", "old_only"}
+    assert all(isinstance(v, int) for v in data.values())

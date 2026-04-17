@@ -238,6 +238,42 @@ async def get_reconcile_ids(
     return {"ids": ids}
 
 
+@router.get("/uploads/{session_id}/reconcile/counts")
+async def get_reconcile_counts(session_id: int, session: AsyncSession = Depends(get_session)):
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+    return await reconciliation_repo.get_counts_by_group(session, session_id)
+
+
+@router.get("/uploads/{session_id}/suggested-reference")
+async def get_suggested_reference(session_id: int, session: AsyncSession = Depends(get_session)):
+    from sqlalchemy import select
+
+    from src.models.dataset import Dataset
+
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+    if sess.collection_id is None:
+        return {"dataset_id": None, "dataset_name": None}
+    ds = (
+        (
+            await session.execute(
+                select(Dataset)
+                .where(Dataset.collection_id == sess.collection_id)
+                .order_by(Dataset.id.desc())
+                .limit(1)
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if ds is None:
+        return {"dataset_id": None, "dataset_name": None}
+    return {"dataset_id": ds.id, "dataset_name": ds.name}
+
+
 class RowResolve(BaseModel):
     status: ReconciliationStatus
     ref_field_id: int | None = None
