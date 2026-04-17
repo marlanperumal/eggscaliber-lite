@@ -96,7 +96,10 @@ async def get_status_counts(
         .where(ReconciliationRow.upload_session_id == upload_session_id)
         .group_by(ReconciliationRow.status)
     )
-    return {row.status: row.cnt for row in result}
+    return {
+        (row.status.value if hasattr(row.status, "value") else row.status): row.cnt
+        for row in result
+    }
 
 
 async def bulk_resolve(
