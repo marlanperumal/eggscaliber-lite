@@ -254,6 +254,39 @@ async def test_get_upload_session_includes_collection_metadata(client, db):
     assert body["collected_at"] == "2024-03-15"
 
 
+async def test_patch_field_sort_order(client, db):
+    csv_bytes = _make_csv(["a", "b"], [["1", "2"]])
+    resp = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "T"},
+    )
+    sess = resp.json()
+    field_id = sess["fields"][0]["id"]
+    patch = await client.patch(
+        f"/api/v1/uploads/{sess['id']}/fields/{field_id}",
+        json={"sort_order": 99},
+    )
+    assert patch.status_code == 200
+    assert patch.json()["sort_order"] == 99
+
+
+async def test_delete_field(client, db):
+    csv_bytes = _make_csv(["x", "y"], [["1", "2"]])
+    resp = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "T"},
+    )
+    sess = resp.json()
+    field_id = sess["fields"][0]["id"]
+    del_resp = await client.delete(f"/api/v1/uploads/{sess['id']}/fields/{field_id}")
+    assert del_resp.status_code == 204
+    get_resp = await client.get(f"/api/v1/uploads/{sess['id']}")
+    remaining_ids = [f["id"] for f in get_resp.json()["fields"]]
+    assert field_id not in remaining_ids
+
+
 async def test_reconcile_counts_includes_status_counts(client, db):
     from tests.test_reconciliation_api import _seed_ref_dataset, _upload
 

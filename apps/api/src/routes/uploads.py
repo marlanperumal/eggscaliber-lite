@@ -81,6 +81,8 @@ async def get_upload_session(session_id: int, session: AsyncSession = Depends(ge
 class FieldOverride(BaseModel):
     override_type: FieldType | None = None
     display_name: str | None = None
+    upload_fieldgroup_id: int | None = None
+    sort_order: int | None = None
 
 
 @router.patch("/uploads/{session_id}/fields/{field_id}")
@@ -100,6 +102,10 @@ async def override_field(
         f.override_type = body.override_type
     if body.display_name is not None:
         f.display_name = body.display_name
+    if body.upload_fieldgroup_id is not None:
+        f.upload_fieldgroup_id = body.upload_fieldgroup_id
+    if body.sort_order is not None:
+        f.sort_order = body.sort_order
     session.add(f)
     await session.flush()
     return {
@@ -108,7 +114,19 @@ async def override_field(
         "detected_type": f.detected_type.value,
         "override_type": f.override_type.value if f.override_type else None,
         "display_name": f.display_name,
+        "sort_order": f.sort_order,
     }
+
+
+@router.delete("/uploads/{upload_session_id}/fields/{field_id}", status_code=204)
+async def delete_field(
+    upload_session_id: int,
+    field_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    deleted = await upload_repo.delete_field(session, upload_session_id, field_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Field not found")
 
 
 class ReconcileTrigger(BaseModel):

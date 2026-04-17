@@ -102,6 +102,18 @@ async def get_levels_for_field(session: AsyncSession, field_id: int) -> list[Upl
     )
 
 
+async def delete_field(session: AsyncSession, upload_session_id: int, field_id: int) -> bool:
+    from sqlalchemy import delete as sql_delete
+
+    field = await session.get(UploadField, field_id)
+    if field is None or field.upload_session_id != upload_session_id:
+        return False
+    await session.execute(sql_delete(UploadLevel).where(UploadLevel.upload_field_id == field_id))
+    await session.delete(field)
+    await session.commit()
+    return True
+
+
 async def create_upload_fieldgroup(session: AsyncSession, **kwargs) -> UploadFieldGroup:
     obj = UploadFieldGroup(**kwargs)
     session.add(obj)
