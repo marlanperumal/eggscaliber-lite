@@ -58,5 +58,28 @@ export const Default: Story = {
     unassignedFields: UNASSIGNED,
     selectedFieldId: null,
     onSelectField: fn(),
+    onMoveField: fn(),
+  },
+}
+
+export const WithContextMenu: Story = {
+  args: {
+    fields: [
+      {
+        id: 1,
+        field_key: "brand_awareness",
+        display_name: "Brand Awareness",
+        detected_type: "categorical",
+        override_type: null,
+        sort_order: 0,
+        upload_fieldgroup_id: 1,
+        levels: [],
+      },
+    ],
+    groups: GROUPS,
+    unassignedFields: UNASSIGNED,
+    selectedFieldId: null,
+    onSelectField: fn(),
+    onMoveField: fn(),
   },
 }
