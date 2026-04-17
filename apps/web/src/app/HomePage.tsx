@@ -20,9 +20,12 @@ export function HomePage() {
             Cross-tab, trend, and breakdown analysis across datasets. Configure queries visually,
             get results instantly.
           </p>
-          <div className="mt-2">
+          <div className="mt-2 flex flex-wrap gap-3">
             <Button asChild size="lg">
               <Link href="/analytics">Open Analytics →</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link href="/datasets">Datasets</Link>
             </Button>
           </div>
         </div>
