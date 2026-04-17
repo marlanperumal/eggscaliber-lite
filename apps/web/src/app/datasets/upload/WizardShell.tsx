@@ -1,6 +1,7 @@
 "use client"
 import { Step1FileHierarchy } from "./steps/Step1FileHierarchy"
 import { Step2FieldDetection } from "./steps/Step2FieldDetection"
+import { Step3Reconciliation } from "./steps/Step3Reconciliation"
 import { useWizardState } from "./useWizardState"
 import { STEP_LABELS, type WizardStep } from "./wizard-types"
 
@@ -67,6 +68,9 @@ function StepContent(props: ReturnType<typeof useWizardState>) {
   }
   if (state.step === 2) {
     return <Step2FieldDetection state={state} setStep={setStep} />
+  }
+  if (state.step === 3) {
+    return <Step3Reconciliation state={state} setStep={setStep} />
   }
   return (
     <div className="rounded-lg border border-border p-6">
