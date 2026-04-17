@@ -3,9 +3,11 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_session
-from src.models.field import FieldType
-from src.repositories import upload_repo
-from src.services import upload_service
+from src.models.field import Field, FieldType
+from src.models.level import Level as LiveLevel
+from src.models.reconciliation import ReconciliationGroup, ReconciliationStatus
+from src.repositories import dataset_repo, reconciliation_repo, upload_repo
+from src.services import reconciliation_service, upload_service
 from src.services.upload_service import InvalidFileTypeError
 
 router = APIRouter(tags=["uploads"])
@@ -92,3 +94,173 @@ async def override_field(
         "override_type": f.override_type.value if f.override_type else None,
         "display_name": f.display_name,
     }
+
+
+class ReconcileTrigger(BaseModel):
+    reference_dataset_id: int
+
+
+class BulkResolve(BaseModel):
+    ids: list[int]
+    action: ReconciliationStatus  # confirmed | rejected | excluded
+
+
+@router.post("/uploads/{session_id}/reconcile")
+async def trigger_reconcile(
+    session_id: int,
+    body: ReconcileTrigger,
+    session: AsyncSession = Depends(get_session),
+):
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+
+    # Load new fields + levels
+    new_fields = await upload_repo.get_fields_for_session(session, session_id)
+    new_levels_by_field: dict[int, list] = {}
+    for f in new_fields:
+        new_levels_by_field[f.id] = await upload_repo.get_levels_for_field(session, f.id)
+
+    # Load reference fields + levels
+    ref_fields_raw = await dataset_repo.get_fields_with_levels(session, body.reference_dataset_id)
+    # ref_fields_raw: list[tuple[Field, list[Level]]]
+    ref_by_key = {f.field_key: (f, lvls) for f, lvls in ref_fields_raw}
+
+    rows_to_create: list[dict] = []
+    matched_ref_keys: set[str] = set()
+
+    for uf in new_fields:
+        # Make a transient Field for classification
+        stub = Field(
+            field_key=uf.field_key,
+            display_name=uf.field_key,
+            field_type=uf.override_type or uf.detected_type,
+            dataset_id=0,
+        )
+
+        best_ref = None
+        best_ref_lvls: list = []
+        # Try exact key match first
+        if uf.field_key in ref_by_key:
+            best_ref, best_ref_lvls = ref_by_key[uf.field_key]
+        else:
+            # Find closest by edit distance
+            for key, (rf, rl) in ref_by_key.items():
+                d = reconciliation_service.edit_distance(uf.field_key, key)
+                if d < 4:
+                    best_ref, best_ref_lvls = rf, rl
+                    break
+
+        # Convert UploadLevel to stub Level objects for classify_row
+        upload_lvls = new_levels_by_field.get(uf.id, [])
+        stub_lvls = [
+            LiveLevel(
+                value=ul.raw_value, display_label=ul.raw_value, sort_order=ul.sort_order, field_id=0
+            )
+            for ul in upload_lvls
+        ]
+
+        result = reconciliation_service.classify_row(stub, stub_lvls, best_ref, best_ref_lvls)
+        if best_ref:
+            matched_ref_keys.add(best_ref.field_key)
+        rows_to_create.append(
+            {
+                "upload_session_id": session_id,
+                "upload_field_id": uf.id,
+                "ref_field_id": best_ref.id if best_ref else None,
+                "group": result.group,
+                "status": result.status,
+                "confidence": result.confidence,
+                "note": result.note,
+            }
+        )
+
+    # Old-only: reference fields not matched
+    for key, (rf, _) in ref_by_key.items():
+        if key not in matched_ref_keys:
+            rows_to_create.append(
+                {
+                    "upload_session_id": session_id,
+                    "upload_field_id": None,
+                    "ref_field_id": rf.id,
+                    "group": ReconciliationGroup.old_only,
+                    "status": ReconciliationStatus.pending,
+                    "confidence": None,
+                    "note": "Present in reference, absent in new file",
+                }
+            )
+
+    await reconciliation_repo.bulk_create_rows(session, rows_to_create)
+    sess.reference_dataset_id = body.reference_dataset_id
+    session.add(sess)
+    await session.flush()
+    return {"total": len(rows_to_create)}
+
+
+@router.get("/uploads/{session_id}/reconcile")
+async def list_reconcile_rows(
+    session_id: int,
+    group: ReconciliationGroup | None = None,
+    after_id: int | None = None,
+    page_size: int = 50,
+    session: AsyncSession = Depends(get_session),
+):
+    rows = await reconciliation_repo.get_rows_page(
+        session, session_id, group=group, after_id=after_id, page_size=page_size
+    )
+    next_cursor = rows[-1].id if len(rows) == page_size else None
+    return {
+        "items": [
+            {
+                "id": r.id,
+                "group": r.group,
+                "status": r.status,
+                "upload_field_id": r.upload_field_id,
+                "ref_field_id": r.ref_field_id,
+                "confidence": r.confidence,
+                "note": r.note,
+            }
+            for r in rows
+        ],
+        "next_cursor": next_cursor,
+    }
+
+
+@router.get("/uploads/{session_id}/reconcile/ids")
+async def get_reconcile_ids(
+    session_id: int,
+    group: ReconciliationGroup | None = None,
+    session: AsyncSession = Depends(get_session),
+):
+    ids = await reconciliation_repo.get_all_ids(session, session_id, group=group)
+    return {"ids": ids}
+
+
+class RowResolve(BaseModel):
+    status: ReconciliationStatus
+    ref_field_id: int | None = None
+
+
+@router.patch("/uploads/{session_id}/reconcile/{row_id}")
+async def resolve_reconcile_row(
+    session_id: int,
+    row_id: int,
+    body: RowResolve,
+    session: AsyncSession = Depends(get_session),
+):
+    row = await reconciliation_repo.resolve_row(
+        session, row_id, body.status, ref_field_id=body.ref_field_id
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Row not found")
+    return {"id": row.id, "status": row.status}
+
+
+@router.post("/uploads/{session_id}/reconcile/bulk")
+async def bulk_resolve_rows(
+    session_id: int,
+    body: BulkResolve,
+    session: AsyncSession = Depends(get_session),
+):
+    resolved = await reconciliation_repo.bulk_resolve(session, session_id, body.ids, body.action)
+    return {"resolved": resolved}
