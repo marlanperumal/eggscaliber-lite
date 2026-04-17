@@ -2320,3 +2320,203 @@ git add apps/api/src/services/commit_service.py \
         apps/api/tests/test_commit.py
 git commit -m "feat(api): add commit service, commit endpoint, and datasets list endpoint"
 ```
+
+---
+
+### Task 10: Regenerate TypeScript types + install react-virtual
+
+All backend endpoints are complete. Generate the typed API client the frontend will use, and install the one new frontend dependency.
+
+**Files:**
+- Modified (auto-generated): `packages/shared/api.d.ts`
+
+- [ ] **Step 1: Start the API server so the OpenAPI spec can be fetched**
+
+```bash
+just api
+```
+
+Keep it running in a terminal. Wait for "Application startup complete."
+
+- [ ] **Step 2: Regenerate types**
+
+In a second terminal:
+
+```bash
+just generate-types
+```
+
+Expected: `packages/shared/api.d.ts` updated with new paths for `/api/v1/uploads`, `/api/v1/uploads/{session_id}`, `/api/v1/uploads/{session_id}/reconcile`, etc.
+
+Verify the new paths are present:
+
+```bash
+grep "uploads" packages/shared/api.d.ts | head -20
+```
+
+Expected: at least 5 upload-related path entries.
+
+- [ ] **Step 3: Install `@tanstack/react-virtual`**
+
+```bash
+just add-web-dep @tanstack/react-virtual
+```
+
+Verify it appears in `apps/web/package.json`.
+
+- [ ] **Step 4: Stop the API server** (Ctrl+C in the terminal running `just api`)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add packages/shared/api.d.ts apps/web/package.json pnpm-lock.yaml
+git commit -m "chore(shared): regenerate API types for upload wizard endpoints; add react-virtual"
+```
+
+---
+
+### Task 11: Datasets page (`/datasets`)
+
+The management page that lists all committed datasets and provides the "Upload dataset" CTA.
+
+**Files:**
+- Create: `apps/web/src/app/datasets/page.tsx`
+- Create: `apps/web/src/app/datasets/DatasetsPage.tsx`
+- Create: `apps/web/src/app/datasets/DatasetsPage.stories.tsx`
+
+- [ ] **Step 1: Write `apps/web/src/app/datasets/page.tsx`**
+
+```tsx
+import { DatasetsPage } from "./DatasetsPage"
+
+export const metadata = { title: "Datasets" }
+
+export default function Page() {
+  return <DatasetsPage />
+}
+```
+
+- [ ] **Step 2: Write `apps/web/src/app/datasets/DatasetsPage.tsx`**
+
+```tsx
+"use client"
+import { useEffect, useState } from "react"
+import Link from "next/link"
+import { api } from "@/lib/api"
+
+type DatasetItem = {
+  id: number
+  name: string
+  collection_id: number
+  collected_at: string | null
+  created_at: string
+}
+
+export function DatasetsPage() {
+  const [items, setItems] = useState<DatasetItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.GET("/api/v1/datasets" as never).then(({ data }: any) => {
+      if (data) setItems(data.items)
+      setLoading(false)
+    })
+  }, [])
+
+  return (
+    <div className="mx-auto max-w-5xl px-6 py-8">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-foreground">Datasets</h1>
+        <Link
+          href="/datasets/upload"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+        >
+          Upload dataset
+        </Link>
+      </div>
+
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : items.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border py-16 text-center">
+          <p className="text-sm font-medium text-muted-foreground">No datasets yet.</p>
+          <Link href="/datasets/upload" className="mt-3 inline-block text-sm font-semibold text-accent">
+            Upload your first dataset →
+          </Link>
+        </div>
+      ) : (
+        <table className="w-full text-sm" data-testid="datasets-table">
+          <thead>
+            <tr className="border-b border-border text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <th className="pb-2 pr-4">Name</th>
+              <th className="pb-2 pr-4">Collected</th>
+              <th className="pb-2 pr-4">Uploaded</th>
+              <th className="pb-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((d) => (
+              <tr key={d.id} className="border-b border-border last:border-0" data-testid="dataset-row">
+                <td className="py-3 pr-4 font-medium text-foreground">{d.name}</td>
+                <td className="py-3 pr-4 text-muted-foreground">{d.collected_at ?? "—"}</td>
+                <td className="py-3 pr-4 text-muted-foreground">
+                  {new Date(d.created_at).toLocaleDateString()}
+                </td>
+                <td className="py-3 text-right">
+                  <Link href={`/datasets/upload?session=resume&dataset=${d.id}`}
+                    className="text-xs font-semibold text-accent hover:underline">
+                    View
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
+```
+
+- [ ] **Step 3: Write `apps/web/src/app/datasets/DatasetsPage.stories.tsx`**
+
+```tsx
+import type { Meta, StoryObj } from "@storybook/react"
+import { DatasetsPage } from "./DatasetsPage"
+
+const meta: Meta<typeof DatasetsPage> = {
+  title: "Datasets/DatasetsPage",
+  component: DatasetsPage,
+  parameters: { layout: "fullscreen" },
+}
+export default meta
+type Story = StoryObj<typeof DatasetsPage>
+
+export const Empty: Story = {}
+export const WithData: Story = {}
+```
+
+- [ ] **Step 4: Verify in browser**
+
+```bash
+just web
+```
+
+Open `http://localhost:3000/datasets`. Verify:
+- Empty state renders with "Upload your first dataset →" link
+- "Upload dataset" button links to `/datasets/upload`
+
+- [ ] **Step 5: Check a11y in Storybook**
+
+```bash
+just storybook
+```
+
+Open `Datasets/DatasetsPage` story. Run accessibility checks (A11y panel). Fix any violations.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add apps/web/src/app/datasets/
+git commit -m "feat(web): add /datasets management page with dataset list"
+```
