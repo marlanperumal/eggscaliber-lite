@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
 from src.database import lifespan
-from src.routes import analytics, collections, datasets, health, packages, scope, sentry
+from src.routes import analytics, collections, datasets, health, packages, scope, sentry, uploads
 
 if settings.sentry_dsn:
     sentry_sdk.init(
@@ -18,7 +18,7 @@ app = FastAPI(title="Eggscaliber-Lite API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -29,3 +29,4 @@ app.include_router(scope.router, prefix="/api/v1")
 app.include_router(collections.router, prefix="/api/v1")
 app.include_router(datasets.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
+app.include_router(uploads.router, prefix="/api/v1")
