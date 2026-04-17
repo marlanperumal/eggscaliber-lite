@@ -117,6 +117,7 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
                 unassignedFields={unassigned}
                 selectedFieldId={selectedFieldId}
                 onSelectField={setSelectedFieldId}
+                onMoveField={handleMoveField}
               />
             )}
           </div>
