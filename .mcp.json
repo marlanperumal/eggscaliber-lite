@@ -7,6 +7,13 @@
     "eggscaliber": {
       "type": "http",
       "url": "http://localhost:8000/mcp"
+    },
+    "postgres": {
+      "command": "uvx",
+      "args": ["postgres-mcp", "--access-mode=restricted"],
+      "env": {
+        "DATABASE_URI": "postgresql://postgres:postgres@localhost:5432/eggscaliber_dev"
+      }
     }
   }
 }
