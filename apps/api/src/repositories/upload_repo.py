@@ -102,6 +102,48 @@ async def get_levels_for_field(session: AsyncSession, field_id: int) -> list[Upl
     )
 
 
+async def upsert_level(
+    session: AsyncSession,
+    field_id: int,
+    raw_value: str,
+    display_label: str | None,
+    sort_order: int,
+    is_inherited: bool = False,
+) -> UploadLevel:
+    result = await session.execute(
+        select(UploadLevel).where(
+            UploadLevel.upload_field_id == field_id,
+            UploadLevel.raw_value == raw_value,
+        )
+    )
+    level = result.scalar_one_or_none()
+    if level is None:
+        level = UploadLevel(
+            upload_field_id=field_id,
+            raw_value=raw_value,
+            display_label=display_label,
+            sort_order=sort_order,
+            is_inherited=is_inherited,
+        )
+        session.add(level)
+    else:
+        level.display_label = display_label
+        level.sort_order = sort_order
+        level.is_inherited = is_inherited
+    await session.flush()
+    await session.refresh(level)
+    return level
+
+
+async def delete_level(session: AsyncSession, field_id: int, level_id: int) -> bool:
+    level = await session.get(UploadLevel, level_id)
+    if level is None or level.upload_field_id != field_id:
+        return False
+    await session.delete(level)
+    await session.flush()
+    return True
+
+
 async def delete_field(session: AsyncSession, upload_session_id: int, field_id: int) -> bool:
     from sqlalchemy import delete as sql_delete
 

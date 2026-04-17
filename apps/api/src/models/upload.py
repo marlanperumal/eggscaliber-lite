@@ -102,6 +102,7 @@ class UploadLevelBase(SQLModel):
     raw_value: str
     display_label: str | None = None
     sort_order: int = 0
+    is_inherited: bool = False
 
 
 class UploadLevel(UploadLevelBase, table=True):

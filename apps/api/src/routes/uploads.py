@@ -1,3 +1,4 @@
+import asyncio
 import os
 from datetime import date
 
@@ -403,7 +404,8 @@ async def get_field_tree(session_id: int, session: AsyncSession = Depends(get_se
     def _group_dict(g):
         return {"id": g.id, "name": g.name, "parent_id": g.parent_id, "sort_order": g.sort_order}
 
-    def _field_dict(f):
+    async def _field_to_dict(f) -> dict:
+        levels = await upload_repo.get_levels_for_field(session, f.id)
         return {
             "id": f.id,
             "field_key": f.field_key,
@@ -412,12 +414,24 @@ async def get_field_tree(session_id: int, session: AsyncSession = Depends(get_se
             "override_type": f.override_type.value if f.override_type else None,
             "sort_order": f.sort_order,
             "upload_fieldgroup_id": f.upload_fieldgroup_id,
+            "levels": [
+                {
+                    "id": lvl.id,
+                    "raw_value": lvl.raw_value,
+                    "display_label": lvl.display_label,
+                    "sort_order": lvl.sort_order,
+                    "is_inherited": lvl.is_inherited,
+                }
+                for lvl in levels
+            ],
         }
+
+    field_dicts = await asyncio.gather(*[_field_to_dict(f) for f in fields])
 
     return {
         "groups": [_group_dict(g) for g in groups],
-        "fields": [_field_dict(f) for f in fields if f.upload_fieldgroup_id is not None],
-        "unassigned_fields": [_field_dict(f) for f in fields if f.upload_fieldgroup_id is None],
+        "fields": [d for d in field_dicts if d["upload_fieldgroup_id"] is not None],
+        "unassigned_fields": [d for d in field_dicts if d["upload_fieldgroup_id"] is None],
     }
 
 
@@ -529,6 +543,49 @@ async def delete_fieldgroup(
     await session.delete(grp)
     await session.flush()
     return {"deleted": group_id}
+
+
+# --- Levels CRUD ---
+
+
+class LevelUpsert(BaseModel):
+    raw_value: str
+    display_label: str | None = None
+    sort_order: int = 0
+    is_inherited: bool = False
+
+
+@router.put("/uploads/{upload_session_id}/fields/{field_id}/levels", status_code=200)
+async def upsert_level_route(
+    upload_session_id: int,
+    field_id: int,
+    body: LevelUpsert,
+    session: AsyncSession = Depends(get_session),
+):
+    level = await upload_repo.upsert_level(
+        session,
+        field_id=field_id,
+        raw_value=body.raw_value,
+        display_label=body.display_label,
+        sort_order=body.sort_order,
+        is_inherited=body.is_inherited,
+    )
+    return level
+
+
+@router.delete(
+    "/uploads/{upload_session_id}/fields/{field_id}/levels/{level_id}",
+    status_code=204,
+)
+async def delete_level_route(
+    upload_session_id: int,
+    field_id: int,
+    level_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    deleted = await upload_repo.delete_level(session, field_id, level_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Level not found")
 
 
 # --- Field move ---

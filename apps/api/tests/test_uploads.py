@@ -287,6 +287,42 @@ async def test_delete_field(client, db):
     assert field_id not in remaining_ids
 
 
+async def test_field_tree_includes_levels(client, db):
+    csv_bytes = _make_csv(["cat"], [["a"], ["b"], ["a"]])
+    resp = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "T"},
+    )
+    sid = resp.json()["id"]
+    tree = await client.get(f"/api/v1/uploads/{sid}/field-tree")
+    assert tree.status_code == 200
+    all_fields = tree.json()["fields"] + tree.json()["unassigned_fields"]
+    cat_field = next(f for f in all_fields if f["field_key"] == "cat")
+    assert "levels" in cat_field
+
+
+async def test_upsert_and_delete_level(client, db):
+    csv_bytes = _make_csv(["x"], [["1"]])
+    resp = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "T"},
+    )
+    sid = resp.json()["id"]
+    field_id = resp.json()["fields"][0]["id"]
+
+    put_resp = await client.put(
+        f"/api/v1/uploads/{sid}/fields/{field_id}/levels",
+        json={"raw_value": "1", "display_label": "One", "sort_order": 0},
+    )
+    assert put_resp.status_code == 200
+    level_id = put_resp.json()["id"]
+
+    del_resp = await client.delete(f"/api/v1/uploads/{sid}/fields/{field_id}/levels/{level_id}")
+    assert del_resp.status_code == 204
+
+
 async def test_reconcile_counts_includes_status_counts(client, db):
     from tests.test_reconciliation_api import _seed_ref_dataset, _upload
 
