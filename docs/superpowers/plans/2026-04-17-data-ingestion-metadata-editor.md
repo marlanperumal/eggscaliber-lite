@@ -2520,3 +2520,228 @@ Open `Datasets/DatasetsPage` story. Run accessibility checks (A11y panel). Fix a
 git add apps/web/src/app/datasets/
 git commit -m "feat(web): add /datasets management page with dataset list"
 ```
+
+---
+
+### Task 12: Wizard shell + state types
+
+The outer container that shows the step indicator and renders the active step. Wizard state (session ID + current step) lives in URL params so the page is resumable on refresh.
+
+**Files:**
+- Create: `apps/web/src/app/datasets/upload/page.tsx`
+- Create: `apps/web/src/app/datasets/upload/wizard-types.ts`
+- Create: `apps/web/src/app/datasets/upload/useWizardState.ts`
+- Create: `apps/web/src/app/datasets/upload/WizardShell.tsx`
+- Create: `apps/web/src/app/datasets/upload/useWizardState.test.ts`
+
+- [ ] **Step 1: Write `apps/web/src/app/datasets/upload/wizard-types.ts`**
+
+```ts
+export type WizardStep = 1 | 2 | 3 | 4 | 5
+
+export interface WizardState {
+  step: WizardStep
+  sessionId: number | null
+  /** true when collection already has datasets — triggers reconciliation step */
+  needsReconcile: boolean
+}
+
+export const STEP_LABELS: Record<WizardStep, string> = {
+  1: "File & Hierarchy",
+  2: "Field Detection",
+  3: "Reconciliation",
+  4: "Metadata",
+  5: "Review & Commit",
+}
+```
+
+- [ ] **Step 2: Write the failing hook test**
+
+`apps/web/src/app/datasets/upload/useWizardState.test.ts`:
+
+```ts
+import { renderHook, act } from "@testing-library/react"
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import { useWizardState } from "./useWizardState"
+
+// Mock Next.js router and searchParams
+const pushMock = vi.fn()
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: pushMock }),
+  useSearchParams: () => new URLSearchParams("step=1"),
+}))
+
+describe("useWizardState", () => {
+  beforeEach(() => pushMock.mockClear())
+
+  it("starts at step 1 with no session", () => {
+    const { result } = renderHook(() => useWizardState())
+    expect(result.current.state.step).toBe(1)
+    expect(result.current.state.sessionId).toBeNull()
+  })
+
+  it("setStep updates URL", () => {
+    const { result } = renderHook(() => useWizardState())
+    act(() => result.current.setStep(2))
+    expect(pushMock).toHaveBeenCalledWith(expect.stringContaining("step=2"))
+  })
+
+  it("setSessionId stores id in state", () => {
+    const { result } = renderHook(() => useWizardState())
+    act(() => result.current.setSessionId(42))
+    expect(result.current.state.sessionId).toBe(42)
+  })
+})
+```
+
+- [ ] **Step 3: Run — expect failure**
+
+```bash
+just test-web -t "useWizardState"
+```
+
+Expected: `Cannot find module './useWizardState'`.
+
+- [ ] **Step 4: Write `apps/web/src/app/datasets/upload/useWizardState.ts`**
+
+```ts
+"use client"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useState, useCallback } from "react"
+import type { WizardState, WizardStep } from "./wizard-types"
+
+export function useWizardState() {
+  const router = useRouter()
+  const params = useSearchParams()
+  const stepParam = Number(params.get("step") ?? "1") as WizardStep
+
+  const [state, setState] = useState<WizardState>({
+    step: stepParam,
+    sessionId: params.get("session") ? Number(params.get("session")) : null,
+    needsReconcile: params.get("reconcile") === "1",
+  })
+
+  const setStep = useCallback(
+    (step: WizardStep) => {
+      setState((prev) => ({ ...prev, step }))
+      const p = new URLSearchParams(params.toString())
+      p.set("step", String(step))
+      router.push(`/datasets/upload?${p.toString()}`)
+    },
+    [params, router],
+  )
+
+  const setSessionId = useCallback((id: number) => {
+    setState((prev) => ({ ...prev, sessionId: id }))
+  }, [])
+
+  const setNeedsReconcile = useCallback((v: boolean) => {
+    setState((prev) => ({ ...prev, needsReconcile: v }))
+  }, [])
+
+  return { state, setStep, setSessionId, setNeedsReconcile }
+}
+```
+
+- [ ] **Step 5: Run — expect pass**
+
+```bash
+just test-web -t "useWizardState"
+```
+
+Expected: 3 tests passing.
+
+- [ ] **Step 6: Write `apps/web/src/app/datasets/upload/WizardShell.tsx`**
+
+```tsx
+"use client"
+import { Suspense } from "react"
+import { useWizardState } from "./useWizardState"
+import { STEP_LABELS, type WizardStep } from "./wizard-types"
+
+const STEPS = [1, 2, 3, 4, 5] as const
+
+function StepIndicator({ current }: { current: WizardStep }) {
+  return (
+    <div className="mb-6 flex">
+      {STEPS.map((s) => (
+        <div
+          key={s}
+          className={[
+            "flex-1 border-b-2 pb-2 text-center text-xs font-semibold",
+            s === current
+              ? "border-accent text-accent"
+              : s < current
+                ? "border-accent text-muted-foreground opacity-50"
+                : "border-border text-muted-foreground",
+          ].join(" ")}
+        >
+          {s}. {STEP_LABELS[s]}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export function WizardShell() {
+  const { state, setStep, setSessionId, setNeedsReconcile } = useWizardState()
+
+  // Lazy import each step so only the active step is bundled on load
+  const stepProps = { state, setStep, setSessionId, setNeedsReconcile }
+
+  return (
+    <div className="mx-auto max-w-4xl px-6 py-8">
+      <h1 className="mb-4 text-xl font-bold text-foreground">Upload dataset</h1>
+      <StepIndicator current={state.step} />
+      <StepContent {...stepProps} />
+    </div>
+  )
+}
+
+function StepContent(props: ReturnType<typeof useWizardState>) {
+  const { state } = props
+  // Each step component imported inline in Task 13–17
+  return (
+    <div className="rounded-lg border border-border p-6">
+      <p className="text-sm text-muted-foreground">
+        Step {state.step} component loads here.
+      </p>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 7: Write `apps/web/src/app/datasets/upload/page.tsx`**
+
+```tsx
+import { Suspense } from "react"
+import { WizardShell } from "./WizardShell"
+
+export const metadata = { title: "Upload dataset" }
+
+export default function Page() {
+  return (
+    <Suspense>
+      <WizardShell />
+    </Suspense>
+  )
+}
+```
+
+- [ ] **Step 8: Verify in browser**
+
+```bash
+just web
+```
+
+Open `http://localhost:3000/datasets/upload`. Verify:
+- Step indicator renders all 5 steps
+- Step 1 is highlighted
+- No console errors
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add apps/web/src/app/datasets/upload/
+git commit -m "feat(web): add wizard shell, URL-synced state hook, and step indicator"
+```
