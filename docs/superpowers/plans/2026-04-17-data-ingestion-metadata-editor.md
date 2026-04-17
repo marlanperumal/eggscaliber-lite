@@ -1499,3 +1499,290 @@ git add apps/api/src/services/reconciliation_service.py \
         apps/api/tests/test_reconciliation_service.py
 git commit -m "feat(api): add reconciliation engine and repository"
 ```
+
+---
+
+### Task 7: Reconciliation API endpoints
+
+Five endpoints that drive Step 3 of the wizard: trigger reconciliation, list rows (cursor-paginated), fetch all IDs (for select-all bulk ops), resolve a single row, bulk resolve.
+
+**Files:**
+- Modify: `apps/api/src/routes/uploads.py`
+- Create: `apps/api/tests/test_reconciliation_api.py`
+
+- [ ] **Step 1: Write the failing tests**
+
+`apps/api/tests/test_reconciliation_api.py`:
+
+```python
+import csv, io
+from src.models.collection import Collection, CollectionType
+from src.models.dataset import Dataset
+from src.models.field import Field, FieldType
+from src.models.level import Level
+from src.models.package import Package
+from src.models.reconciliation import ReconciliationGroup, ReconciliationStatus
+
+
+def _csv(headers, rows):
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(headers)
+    w.writerows(rows)
+    return buf.getvalue().encode()
+
+
+async def _seed_ref_dataset(db):
+    pkg = Package(name="P", slug="p-recon-api-test")
+    db.add(pkg)
+    await db.flush(); await db.refresh(pkg)
+    col = Collection(name="C", slug="c-recon-api-test",
+                     package_id=pkg.id, collection_type=CollectionType.survey)
+    db.add(col)
+    await db.flush(); await db.refresh(col)
+    ds = Dataset(name="Wave 2", slug="wave-2-recon-test", collection_id=col.id)
+    db.add(ds)
+    await db.flush(); await db.refresh(ds)
+    f = Field(field_key="gender", display_name="Gender",
+              field_type=FieldType.categorical, dataset_id=ds.id)
+    db.add(f)
+    await db.flush(); await db.refresh(f)
+    db.add(Level(value="male", display_label="Male", sort_order=0, field_id=f.id))
+    db.add(Level(value="female", display_label="Female", sort_order=1, field_id=f.id))
+    await db.flush()
+    return col, ds
+
+
+async def _upload(client, col_id):
+    csv_bytes = _csv(["gender", "age"], [["male", "3"], ["female", "5"]])
+    resp = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "Wave 3", "collection_id": str(col_id)},
+    )
+    assert resp.status_code == 201
+    return resp.json()
+
+
+async def test_trigger_reconciliation_creates_rows(client, db):
+    col, ref_ds = await _seed_ref_dataset(db)
+    sess = await _upload(client, col.id)
+    resp = await client.post(
+        f"/api/v1/uploads/{sess['id']}/reconcile",
+        json={"reference_dataset_id": ref_ds.id},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] >= 2  # gender (exact/probable) + age (new_only)
+
+
+async def test_list_reconciliation_rows_paginated(client, db):
+    col, ref_ds = await _seed_ref_dataset(db)
+    sess = await _upload(client, col.id)
+    await client.post(f"/api/v1/uploads/{sess['id']}/reconcile",
+                      json={"reference_dataset_id": ref_ds.id})
+    resp = await client.get(f"/api/v1/uploads/{sess['id']}/reconcile?page_size=1")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["items"]) == 1
+    assert "next_cursor" in data
+
+
+async def test_bulk_resolve_rows(client, db):
+    col, ref_ds = await _seed_ref_dataset(db)
+    sess = await _upload(client, col.id)
+    await client.post(f"/api/v1/uploads/{sess['id']}/reconcile",
+                      json={"reference_dataset_id": ref_ds.id})
+    ids_resp = await client.get(f"/api/v1/uploads/{sess['id']}/reconcile/ids")
+    ids = ids_resp.json()["ids"]
+    resp = await client.post(
+        f"/api/v1/uploads/{sess['id']}/reconcile/bulk",
+        json={"ids": ids, "action": "excluded"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["resolved"] == len(ids)
+```
+
+- [ ] **Step 2: Run — expect failure**
+
+```bash
+just test-api -k test_reconciliation_api
+```
+
+Expected: 404 (endpoints not yet defined).
+
+- [ ] **Step 3: Add reconciliation endpoints to `apps/api/src/routes/uploads.py`**
+
+Append these handlers (keep existing handlers above):
+
+```python
+from pydantic import BaseModel
+from src.models.field import Field, FieldType
+from src.models.level import Level
+from src.models.reconciliation import ReconciliationGroup, ReconciliationStatus
+from src.repositories import dataset_repo, reconciliation_repo
+from src.services import reconciliation_service
+
+
+class ReconcileTrigger(BaseModel):
+    reference_dataset_id: int
+
+
+class BulkResolve(BaseModel):
+    ids: list[int]
+    action: ReconciliationStatus  # confirmed | rejected | excluded
+
+
+@router.post("/uploads/{session_id}/reconcile")
+async def trigger_reconcile(
+    session_id: int,
+    body: ReconcileTrigger,
+    session: AsyncSession = Depends(get_session),
+):
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+
+    # Load new fields + levels
+    new_fields = await upload_repo.get_fields_for_session(session, session_id)
+    new_levels_by_field: dict[int, list] = {}
+    for f in new_fields:
+        new_levels_by_field[f.id] = await upload_repo.get_levels_for_field(session, f.id)
+
+    # Load reference fields + levels
+    ref_fields_raw = await dataset_repo.get_fields_with_levels(session, body.reference_dataset_id)
+    # ref_fields_raw: list[tuple[Field, list[Level]]]
+    ref_by_key = {f.field_key: (f, lvls) for f, lvls in ref_fields_raw}
+
+    rows_to_create: list[dict] = []
+    matched_ref_keys: set[str] = set()
+
+    for uf in new_fields:
+        # Make a transient Field for classification
+        stub = Field(field_key=uf.field_key, display_name=uf.field_key,
+                     field_type=uf.override_type or uf.detected_type, dataset_id=0)
+
+        best_ref = None
+        best_ref_lvls: list = []
+        # Try exact key match first
+        if uf.field_key in ref_by_key:
+            best_ref, best_ref_lvls = ref_by_key[uf.field_key]
+        else:
+            # Find closest by edit distance
+            for key, (rf, rl) in ref_by_key.items():
+                d = reconciliation_service.edit_distance(uf.field_key, key)
+                if d < 4:
+                    best_ref, best_ref_lvls = rf, rl
+                    break
+
+        result = reconciliation_service.classify_row(
+            stub, new_levels_by_field.get(uf.id, []), best_ref, best_ref_lvls
+        )
+        if best_ref:
+            matched_ref_keys.add(best_ref.field_key)
+        rows_to_create.append({
+            "upload_session_id": session_id,
+            "upload_field_id": uf.id,
+            "ref_field_id": best_ref.id if best_ref else None,
+            "group": result.group,
+            "status": result.status,
+            "confidence": result.confidence,
+            "note": result.note,
+        })
+
+    # Old-only: reference fields not matched
+    for key, (rf, _) in ref_by_key.items():
+        if key not in matched_ref_keys:
+            rows_to_create.append({
+                "upload_session_id": session_id,
+                "upload_field_id": None,
+                "ref_field_id": rf.id,
+                "group": ReconciliationGroup.old_only,
+                "status": ReconciliationStatus.pending,
+                "confidence": None,
+                "note": "Present in reference, absent in new file",
+            })
+
+    await reconciliation_repo.bulk_create_rows(session, rows_to_create)
+    sess.reference_dataset_id = body.reference_dataset_id
+    session.add(sess)
+    await session.flush()
+    return {"total": len(rows_to_create)}
+
+
+@router.get("/uploads/{session_id}/reconcile")
+async def list_reconcile_rows(
+    session_id: int,
+    group: ReconciliationGroup | None = None,
+    after_id: int | None = None,
+    page_size: int = 50,
+    session: AsyncSession = Depends(get_session),
+):
+    rows = await reconciliation_repo.get_rows_page(
+        session, session_id, group=group, after_id=after_id, page_size=page_size
+    )
+    next_cursor = rows[-1].id if len(rows) == page_size else None
+    return {
+        "items": [
+            {"id": r.id, "group": r.group, "status": r.status,
+             "upload_field_id": r.upload_field_id, "ref_field_id": r.ref_field_id,
+             "confidence": r.confidence, "note": r.note}
+            for r in rows
+        ],
+        "next_cursor": next_cursor,
+    }
+
+
+@router.get("/uploads/{session_id}/reconcile/ids")
+async def get_reconcile_ids(
+    session_id: int,
+    group: ReconciliationGroup | None = None,
+    session: AsyncSession = Depends(get_session),
+):
+    ids = await reconciliation_repo.get_all_ids(session, session_id, group=group)
+    return {"ids": ids}
+
+
+@router.patch("/uploads/{session_id}/reconcile/{row_id}")
+async def resolve_reconcile_row(
+    session_id: int,
+    row_id: int,
+    body: dict,
+    session: AsyncSession = Depends(get_session),
+):
+    status = ReconciliationStatus(body["status"])
+    row = await reconciliation_repo.resolve_row(
+        session, row_id, status, ref_field_id=body.get("ref_field_id")
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Row not found")
+    return {"id": row.id, "status": row.status}
+
+
+@router.post("/uploads/{session_id}/reconcile/bulk")
+async def bulk_resolve_rows(
+    session_id: int,
+    body: BulkResolve,
+    session: AsyncSession = Depends(get_session),
+):
+    resolved = await reconciliation_repo.bulk_resolve(
+        session, session_id, body.ids, body.action
+    )
+    return {"resolved": resolved}
+```
+
+- [ ] **Step 4: Run — expect pass**
+
+```bash
+just test-api -k test_reconciliation_api
+```
+
+Expected: 3 tests passing.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/api/src/routes/uploads.py \
+        apps/api/tests/test_reconciliation_api.py
+git commit -m "feat(api): add reconciliation trigger, list, and bulk-resolve endpoints"
+```
