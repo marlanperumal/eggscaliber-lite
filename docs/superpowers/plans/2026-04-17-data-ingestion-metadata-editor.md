@@ -3081,3 +3081,368 @@ git add apps/web/src/app/datasets/upload/steps/Step2FieldDetection.tsx \
         apps/web/src/app/datasets/upload/WizardShell.tsx
 git commit -m "feat(web): add wizard Step 2 — field detection review table"
 ```
+
+---
+
+### Task 15: Step 3 — Reconciliation
+
+4-tab view (Exact / Probable / New only / Old only) with cursor-based pagination at top. The virtual "Show all" mode uses `@tanstack/react-virtual`. "Next" is disabled while any Probable or Old-only rows are pending.
+
+**Files:**
+- Create: `apps/web/src/app/datasets/upload/steps/ReconciliationRow.tsx`
+- Create: `apps/web/src/app/datasets/upload/steps/Step3Reconciliation.tsx`
+- Modify: `apps/web/src/app/datasets/upload/WizardShell.tsx`
+
+- [ ] **Step 1: Write `apps/web/src/app/datasets/upload/steps/ReconciliationRow.tsx`**
+
+The 8-column grid row. Columns: checkbox | dot | field_key | match_target | note | type | status | actions.
+
+```tsx
+import { cn } from "@/lib/utils"
+
+export type ReconGroup = "exact" | "probable" | "new_only" | "old_only"
+export type ReconStatus =
+  | "auto_accepted" | "pending" | "confirmed" | "rejected" | "excluded"
+
+export interface ReconRow {
+  id: number
+  group: ReconGroup
+  status: ReconStatus
+  upload_field_id: number | null
+  ref_field_id: number | null
+  confidence: number | null
+  note: string | null
+  // Enriched on the frontend after fetching field keys
+  field_key?: string
+  ref_field_key?: string
+  field_type?: string
+}
+
+const GROUP_DOT: Record<ReconGroup, string> = {
+  exact: "bg-green-500",
+  probable: "bg-amber-500",
+  new_only: "bg-blue-500",
+  old_only: "bg-muted-foreground",
+}
+
+const STATUS_CHIP: Record<ReconStatus, string> = {
+  auto_accepted: "bg-green-100 text-green-800",
+  pending: "bg-amber-100 text-amber-800",
+  confirmed: "bg-green-100 text-green-800",
+  rejected: "bg-muted text-muted-foreground",
+  excluded: "bg-muted text-muted-foreground",
+}
+
+interface Props {
+  row: ReconRow
+  checked: boolean
+  onCheck: (id: number, checked: boolean) => void
+  onAction: (id: number, action: "confirm" | "reject" | "exclude" | "map") => void
+}
+
+export function ReconciliationRow({ row, checked, onCheck, onAction }: Props) {
+  return (
+    <div
+      className="grid items-center gap-2 border-b border-border px-3 py-2 text-xs last:border-0"
+      style={{ gridTemplateColumns: "20px 10px 1fr 1fr 1fr 80px 80px auto" }}
+      data-testid="recon-row"
+    >
+      {/* Checkbox */}
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onCheck(row.id, e.target.checked)}
+        aria-label={`Select row ${row.id}`}
+      />
+      {/* Status dot */}
+      <span className={cn("h-2 w-2 rounded-full", GROUP_DOT[row.group])} />
+      {/* field_key */}
+      <span className="truncate font-mono">{row.field_key ?? `field_${row.upload_field_id}`}</span>
+      {/* match_target */}
+      <span className="truncate text-muted-foreground">
+        {row.ref_field_key ?? (row.group === "new_only" || row.group === "old_only" ? "—" : "?")}
+      </span>
+      {/* note */}
+      <span className="truncate text-muted-foreground">{row.note ?? ""}</span>
+      {/* type */}
+      <span className="truncate">{row.field_type ?? ""}</span>
+      {/* status chip */}
+      <span className={cn("rounded-full px-2 py-0.5 font-semibold", STATUS_CHIP[row.status])}>
+        {row.status.replace("_", " ")}
+      </span>
+      {/* actions */}
+      <div className="flex gap-1">
+        {row.group === "probable" && row.status === "pending" && (
+          <>
+            <button onClick={() => onAction(row.id, "confirm")}
+              className="rounded bg-green-100 px-1.5 py-0.5 text-xs font-semibold text-green-800 hover:bg-green-200">
+              Confirm
+            </button>
+            <button onClick={() => onAction(row.id, "reject")}
+              className="rounded bg-muted px-1.5 py-0.5 text-xs font-semibold hover:bg-muted/60">
+              Reject
+            </button>
+          </>
+        )}
+        {row.group === "old_only" && row.status === "pending" && (
+          <button onClick={() => onAction(row.id, "exclude")}
+            className="rounded bg-muted px-1.5 py-0.5 text-xs font-semibold hover:bg-muted/60">
+            Exclude
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 2: Write `apps/web/src/app/datasets/upload/steps/Step3Reconciliation.tsx`**
+
+```tsx
+"use client"
+import { useEffect, useRef, useState } from "react"
+import { useVirtualizer } from "@tanstack/react-virtual"
+import type { WizardState, WizardStep } from "../wizard-types"
+import { ReconciliationRow, type ReconGroup, type ReconRow, type ReconStatus } from "./ReconciliationRow"
+
+const TABS: { key: ReconGroup | "all"; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "exact", label: "Exact" },
+  { key: "probable", label: "Probable" },
+  { key: "new_only", label: "New only" },
+  { key: "old_only", label: "Old only" },
+]
+const PAGE_SIZE = 50
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+
+interface Props {
+  state: WizardState
+  setStep: (s: WizardStep) => void
+}
+
+export function Step3Reconciliation({ state, setStep }: Props) {
+  const [triggered, setTriggered] = useState(false)
+  const [refDatasetId, setRefDatasetId] = useState<string>("")
+  const [activeTab, setActiveTab] = useState<ReconGroup | "all">("all")
+  const [rows, setRows] = useState<ReconRow[]>([])
+  const [nextCursor, setNextCursor] = useState<number | null>(null)
+  const [showAll, setShowAll] = useState(false)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [loading, setLoading] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const parentRef = useRef<HTMLDivElement>(null)
+
+  const rowVirtualizer = useVirtualizer({
+    count: showAll ? rows.length : 0,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 40,
+  })
+
+  async function triggerReconcile() {
+    if (!state.sessionId || !refDatasetId) return
+    setBusy(true)
+    await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reference_dataset_id: Number(refDatasetId) }),
+    })
+    setTriggered(true)
+    fetchPage(null)
+    setBusy(false)
+  }
+
+  async function fetchPage(cursor: number | null) {
+    if (!state.sessionId) return
+    setLoading(true)
+    const params = new URLSearchParams({ page_size: String(PAGE_SIZE) })
+    if (activeTab !== "all") params.set("group", activeTab)
+    if (cursor !== null) params.set("after_id", String(cursor))
+    const res = await fetch(
+      `${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile?${params}`
+    )
+    const data = await res.json()
+    setRows((prev) => cursor === null ? data.items : [...prev, ...data.items])
+    setNextCursor(data.next_cursor ?? null)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    if (triggered) fetchPage(null)
+  }, [activeTab, triggered])
+
+  // Infinite scroll sentinel
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!showAll || !nextCursor) return
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) fetchPage(nextCursor)
+    })
+    if (sentinelRef.current) obs.observe(sentinelRef.current)
+    return () => obs.disconnect()
+  }, [showAll, nextCursor])
+
+  async function handleAction(rowId: number, action: "confirm" | "reject" | "exclude" | "map") {
+    const statusMap: Record<string, ReconStatus> = {
+      confirm: "confirmed", reject: "rejected", exclude: "excluded"
+    }
+    const status = statusMap[action] as ReconStatus
+    await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile/${rowId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    })
+    setRows((prev) => prev.map((r) => r.id === rowId ? { ...r, status } : r))
+  }
+
+  function handleCheck(id: number, checked: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      checked ? next.add(id) : next.delete(id)
+      return next
+    })
+  }
+
+  const pendingCount = rows.filter(
+    (r) => (r.group === "probable" || r.group === "old_only") && r.status === "pending"
+  ).length
+
+  if (!triggered) {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-base font-semibold text-foreground">Step 3 — Reconciliation</h2>
+        <p className="text-xs text-muted-foreground">
+          Enter the ID of the reference dataset to reconcile against.
+        </p>
+        <input
+          value={refDatasetId}
+          onChange={(e) => setRefDatasetId(e.target.value)}
+          placeholder="Reference dataset ID"
+          className="rounded border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+        />
+        <button
+          onClick={triggerReconcile}
+          disabled={!refDatasetId || busy}
+          className="rounded-lg bg-accent px-6 py-2 text-sm font-semibold text-white disabled:opacity-40"
+        >
+          {busy ? "Running…" : "Run reconciliation →"}
+        </button>
+        <div className="flex justify-start pt-2">
+          <button onClick={() => setStep(2)}
+            className="rounded-lg border border-border px-5 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted">
+            ← Back
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      <h2 className="text-base font-semibold text-foreground">Step 3 — Reconciliation</h2>
+
+      {/* Tabs */}
+      <div className="flex border-b border-border">
+        {TABS.map((tab) => (
+          <button key={tab.key}
+            onClick={() => setActiveTab(tab.key as ReconGroup | "all")}
+            className={[
+              "px-4 py-2 text-xs font-semibold",
+              activeTab === tab.key
+                ? "border-b-2 border-accent text-accent"
+                : "text-muted-foreground hover:text-foreground",
+            ].join(" ")}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Pagination controls at top */}
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <span>{rows.length} loaded</span>
+        {nextCursor && !showAll && (
+          <button onClick={() => fetchPage(nextCursor)}
+            className="font-semibold text-accent hover:underline">
+            Load more
+          </button>
+        )}
+        <button onClick={() => setShowAll((v) => !v)}
+          className="font-semibold text-accent hover:underline">
+          {showAll ? "Paginate" : "Show all"}
+        </button>
+        {loading && <span>Loading…</span>}
+      </div>
+
+      {/* Row list — virtual when showAll, plain list otherwise */}
+      {showAll ? (
+        <div ref={parentRef} className="relative max-h-96 overflow-auto"
+          style={{ height: `${rowVirtualizer.getTotalSize()}px` }}>
+          {rowVirtualizer.getVirtualItems().map((vi) => (
+            <div key={vi.key} style={{ position: "absolute", top: vi.start, width: "100%" }}>
+              <ReconciliationRow
+                row={rows[vi.index]}
+                checked={selected.has(rows[vi.index].id)}
+                onCheck={handleCheck}
+                onAction={handleAction}
+              />
+            </div>
+          ))}
+          <div ref={sentinelRef} className="h-1" />
+        </div>
+      ) : (
+        <div>
+          {rows.map((row) => (
+            <ReconciliationRow key={row.id} row={row}
+              checked={selected.has(row.id)} onCheck={handleCheck} onAction={handleAction} />
+          ))}
+        </div>
+      )}
+
+      {pendingCount > 0 && (
+        <p className="text-xs font-semibold text-amber-600">
+          {pendingCount} row{pendingCount > 1 ? "s" : ""} still need a decision before proceeding.
+        </p>
+      )}
+
+      <div className="flex justify-between pt-2">
+        <button onClick={() => setStep(2)}
+          className="rounded-lg border border-border px-5 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted">
+          ← Back
+        </button>
+        <button onClick={() => setStep(4)} disabled={pendingCount > 0}
+          className="rounded-lg bg-accent px-6 py-2 text-sm font-semibold text-white disabled:opacity-40">
+          Next →
+        </button>
+      </div>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 3: Wire Step3 into `WizardShell.tsx`**
+
+```tsx
+import { Step3Reconciliation } from "./steps/Step3Reconciliation"
+
+// Inside StepContent, after step 2 check:
+if (state.step === 3) {
+  return <Step3Reconciliation state={state} setStep={setStep} />
+}
+```
+
+- [ ] **Step 4: Verify in browser**
+
+After Step 2, clicking Next (with `needsReconcile = true`) lands on Step 3.
+- Enter a valid reference dataset ID → "Run reconciliation →" triggers the engine
+- Rows appear in the correct tab groupings
+- Probable rows show Confirm/Reject buttons; Old-only show Exclude
+- Resolving all pending rows enables the "Next →" button
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/web/src/app/datasets/upload/steps/ReconciliationRow.tsx \
+        apps/web/src/app/datasets/upload/steps/Step3Reconciliation.tsx \
+        apps/web/src/app/datasets/upload/WizardShell.tsx
+git commit -m "feat(web): add wizard Step 3 — reconciliation tabs with virtual list"
+```
