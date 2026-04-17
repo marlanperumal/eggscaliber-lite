@@ -533,3 +533,238 @@ git add apps/api/src/repositories/upload_repo.py \
         apps/api/tests/test_upload_repo.py
 git commit -m "feat(api): add upload repository with staging table CRUD"
 ```
+
+---
+
+### Task 3: Field detection service
+
+Pure function that takes CSV column data and returns a detected `FieldType`. No DB access — fully unit-testable.
+
+**Files:**
+- Create: `apps/api/src/services/detection_service.py`
+- Create: `apps/api/tests/test_detection_service.py`
+
+- [ ] **Step 1: Write the failing tests**
+
+`apps/api/tests/test_detection_service.py`:
+
+```python
+from src.models.field import FieldType
+from src.services.detection_service import (
+    DetectedField,
+    detect_fields,
+    slugify_key,
+)
+
+
+def _make_rows(header, rows):
+    return [dict(zip(header, r)) for r in rows]
+
+
+def test_slugify_key_lowercases_and_replaces_spaces():
+    assert slugify_key("Brand Awareness") == "brand_awareness"
+
+
+def test_slugify_key_strips_special_chars():
+    assert slugify_key("Q1. Age?") == "q1_age"
+
+
+def test_detects_identifier_by_name():
+    rows = _make_rows(["respondent_id"], [["1"], ["2"], ["3"]])
+    fields = detect_fields(["respondent_id"], rows)
+    assert fields[0].detected_type == FieldType.identifier
+
+
+def test_detects_weight_by_name():
+    rows = _make_rows(["weight"], [["1.2"], ["0.8"], ["1.0"]])
+    fields = detect_fields(["weight"], rows)
+    assert fields[0].detected_type == FieldType.weight
+
+
+def test_detects_multi_response_by_sibling_pattern():
+    headers = ["media_1", "media_2", "media_3"]
+    rows = _make_rows(headers, [["1", "0", "1"], ["0", "1", "0"]])
+    fields = detect_fields(headers, rows)
+    for f in fields:
+        assert f.detected_type == FieldType.multi_response
+
+
+def test_detects_ordinal_numeric_few_distinct_values():
+    rows = _make_rows(["rating"], [[str(i % 5 + 1)] for i in range(50)])
+    fields = detect_fields(["rating"], rows)
+    assert fields[0].detected_type == FieldType.ordinal
+
+
+def test_detects_categorical_string_low_cardinality():
+    rows = _make_rows(["region"], [["North"], ["South"], ["East"], ["West"]] * 10)
+    fields = detect_fields(["region"], rows)
+    assert fields[0].detected_type == FieldType.categorical
+
+
+def test_detects_numeric_high_cardinality_numbers():
+    import random
+    rows = _make_rows(["income"], [[str(random.randint(20000, 100000))] for _ in range(100)])
+    fields = detect_fields(["income"], rows)
+    assert fields[0].detected_type == FieldType.numeric
+
+
+def test_detect_fields_returns_sorted_by_original_order():
+    headers = ["gender", "age", "weight"]
+    rows = _make_rows(headers, [["male", "30", "1.0"], ["female", "25", "0.9"]])
+    fields = detect_fields(headers, rows)
+    assert [f.field_key for f in fields] == ["gender", "age", "weight"]
+
+
+def test_distinct_values_captured_for_categorical():
+    rows = _make_rows(["colour"], [["red"], ["blue"], ["green"], ["red"]])
+    fields = detect_fields(["colour"], rows)
+    assert set(fields[0].distinct_values) == {"red", "blue", "green"}
+```
+
+- [ ] **Step 2: Run — expect failure**
+
+```bash
+just test-api -k test_detection_service
+```
+
+Expected: `ModuleNotFoundError` on `detection_service`.
+
+- [ ] **Step 3: Write `apps/api/src/services/detection_service.py`**
+
+```python
+"""CSV field type detection heuristics.
+
+All functions are pure (no DB access) — call with header list + sample rows.
+"""
+
+import re
+from dataclasses import dataclass, field
+
+from src.models.field import FieldType
+
+_IDENTIFIER_PATTERNS = re.compile(
+    r"^(respondent[_\s]?id|resp[_\s]?id|id|uuid|record[_\s]?id)$", re.IGNORECASE
+)
+_WEIGHT_PATTERNS = re.compile(r"^(weight|wgt|w|wt)$", re.IGNORECASE)
+_MULTI_SIBLING = re.compile(r"^(.+)_(\d+)$")
+_OTHER_SUFFIX = re.compile(r"^(.+)_other$", re.IGNORECASE)
+
+# Thresholds
+_ORDINAL_MAX_DISTINCT = 10
+_CATEGORICAL_MAX_DISTINCT = 50
+_SAMPLE_ROWS = 200
+
+
+def slugify_key(raw: str) -> str:
+    """Lowercase, replace non-alphanumeric runs with underscore, strip edges."""
+    s = raw.lower()
+    s = re.sub(r"[^a-z0-9]+", "_", s)
+    return s.strip("_")
+
+
+@dataclass
+class DetectedField:
+    field_key: str
+    original_header: str
+    detected_type: FieldType
+    distinct_values: list[str] = field(default_factory=list)
+    confidence: str = "high"  # "high" | "review"
+
+
+def detect_fields(
+    headers: list[str], rows: list[dict[str, str]]
+) -> list[DetectedField]:
+    """Return one DetectedField per header, in original order."""
+    sample = rows[:_SAMPLE_ROWS]
+    slugged = [slugify_key(h) for h in headers]
+    header_set = set(slugged)
+
+    # Find multi_response sibling groups: {base_key: [col1, col2, ...]}
+    sibling_groups: dict[str, list[str]] = {}
+    for key in slugged:
+        m = _MULTI_SIBLING.match(key)
+        if m:
+            base = m.group(1)
+            sibling_groups.setdefault(base, []).append(key)
+    # Only count as multi_response if ≥ 2 siblings
+    multi_keys: set[str] = set()
+    for base, members in sibling_groups.items():
+        if len(members) >= 2:
+            multi_keys.update(members)
+
+    results: list[DetectedField] = []
+    for original, key in zip(headers, slugged):
+        det_type, distinct, confidence = _classify(key, original, sample, multi_keys, header_set)
+        results.append(
+            DetectedField(
+                field_key=key,
+                original_header=original,
+                detected_type=det_type,
+                distinct_values=distinct,
+                confidence=confidence,
+            )
+        )
+    return results
+
+
+def _classify(
+    key: str,
+    original: str,
+    sample: list[dict[str, str]],
+    multi_keys: set[str],
+    all_keys: set[str],
+) -> tuple[FieldType, list[str], str]:
+    # Name-pattern checks first (highest priority)
+    if _IDENTIFIER_PATTERNS.match(key) or _IDENTIFIER_PATTERNS.match(original):
+        return FieldType.identifier, [], "high"
+    if _WEIGHT_PATTERNS.match(key) or _WEIGHT_PATTERNS.match(original):
+        return FieldType.weight, [], "high"
+    # _other companions — not independently typed; mark as categorical for now
+    if _OTHER_SUFFIX.match(key):
+        return FieldType.categorical, [], "review"
+    if key in multi_keys:
+        return FieldType.multi_response, [], "high"
+
+    # Collect non-empty values using original header (rows keyed by original header)
+    vals = [r[original].strip() for r in sample if r.get(original, "").strip()]
+    distinct = list(dict.fromkeys(vals))  # preserve insertion order, dedupe
+
+    if not vals:
+        return FieldType.categorical, distinct, "review"
+
+    all_numeric = all(_is_numeric(v) for v in vals)
+    n_distinct = len(set(vals))
+
+    if all_numeric and n_distinct <= _ORDINAL_MAX_DISTINCT:
+        return FieldType.ordinal, distinct, "high"
+    if all_numeric:
+        return FieldType.numeric, distinct, "high"
+    if n_distinct <= _CATEGORICAL_MAX_DISTINCT:
+        return FieldType.categorical, distinct, "high"
+    # High-cardinality string — treat as categorical but flag for review
+    return FieldType.categorical, distinct[:50], "review"
+
+
+def _is_numeric(v: str) -> bool:
+    try:
+        float(v)
+        return True
+    except ValueError:
+        return False
+```
+
+- [ ] **Step 4: Run — expect pass**
+
+```bash
+just test-api -k test_detection_service
+```
+
+Expected: 9 tests passing.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/api/src/services/detection_service.py \
+        apps/api/tests/test_detection_service.py
+git commit -m "feat(api): add CSV field detection service with heuristics"
+```
