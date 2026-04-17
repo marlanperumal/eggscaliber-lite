@@ -70,8 +70,11 @@ export const WithLevels: Story = {
       ],
     },
     groups: [],
-    onSaved: async () => {},
-    onCancel: () => {},
-    onDelete: async () => {},
+    onSaved: fn(),
+    onCancel: fn(),
+    onDelete: fn(),
+  },
+  beforeEach() {
+    spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }))
   },
 }
