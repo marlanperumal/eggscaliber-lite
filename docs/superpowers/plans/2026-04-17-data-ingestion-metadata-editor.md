@@ -66,3 +66,233 @@
 ---
 
 <!-- TASKS START BELOW — written incrementally -->
+
+---
+
+### Task 1: Upload staging models + migration
+
+Adds five new tables that hold wizard state before commit: `upload_session`, `upload_field`, `upload_level`, `upload_fieldgroup`, `reconciliation_row`.
+
+**Files:**
+- Create: `apps/api/src/models/upload.py`
+- Create: `apps/api/src/models/reconciliation.py`
+- Modify: `apps/api/src/models/__init__.py`
+- Create: `apps/api/migrations/versions/<hash>_add_upload_tables.py` (generated)
+
+- [ ] **Step 1: Write `apps/api/src/models/upload.py`**
+
+```python
+from datetime import UTC, date, datetime
+from enum import StrEnum
+
+from sqlmodel import Field as sql_field
+from sqlmodel import SQLModel
+
+from src.models.field import FieldType
+
+
+class UploadSessionStatus(StrEnum):
+    pending = "pending"
+    detecting = "detecting"
+    reconciling = "reconciling"
+    editing = "editing"
+    committed = "committed"
+    abandoned = "abandoned"
+
+
+class UploadSessionBase(SQLModel):
+    status: UploadSessionStatus = UploadSessionStatus.pending
+    file_path: str
+    row_count: int | None = None
+    collection_id: int | None = sql_field(default=None, foreign_key="collection.id")
+    dataset_name: str | None = None
+    collected_at: date | None = None
+    reference_dataset_id: int | None = sql_field(default=None, foreign_key="dataset.id")
+    committed_dataset_id: int | None = sql_field(default=None, foreign_key="dataset.id")
+
+
+class UploadSession(UploadSessionBase, table=True):
+    __tablename__ = "upload_session"
+    id: int | None = sql_field(default=None, primary_key=True)
+    created_at: datetime = sql_field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
+    updated_at: datetime = sql_field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
+
+
+class UploadSessionRead(UploadSessionBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+# ---------------------------------------------------------------------------
+
+class UploadFieldGroupBase(SQLModel):
+    upload_session_id: int = sql_field(foreign_key="upload_session.id")
+    name: str
+    sort_order: int = 0
+    parent_id: int | None = sql_field(default=None, foreign_key="upload_fieldgroup.id")
+
+
+class UploadFieldGroup(UploadFieldGroupBase, table=True):
+    __tablename__ = "upload_fieldgroup"
+    id: int | None = sql_field(default=None, primary_key=True)
+
+
+class UploadFieldGroupRead(UploadFieldGroupBase):
+    id: int
+
+
+# ---------------------------------------------------------------------------
+
+class UploadFieldBase(SQLModel):
+    upload_session_id: int = sql_field(foreign_key="upload_session.id")
+    field_key: str
+    display_name: str | None = None
+    detected_type: FieldType
+    override_type: FieldType | None = None
+    sort_order: int = 0
+    upload_fieldgroup_id: int | None = sql_field(
+        default=None, foreign_key="upload_fieldgroup.id"
+    )
+
+
+class UploadField(UploadFieldBase, table=True):
+    __tablename__ = "upload_field"
+    id: int | None = sql_field(default=None, primary_key=True)
+
+
+class UploadFieldRead(UploadFieldBase):
+    id: int
+
+    @property
+    def effective_type(self) -> FieldType:
+        return self.override_type or self.detected_type
+
+
+# ---------------------------------------------------------------------------
+
+class UploadLevelBase(SQLModel):
+    upload_field_id: int = sql_field(foreign_key="upload_field.id")
+    raw_value: str
+    display_label: str | None = None
+    sort_order: int = 0
+
+
+class UploadLevel(UploadLevelBase, table=True):
+    __tablename__ = "upload_level"
+    id: int | None = sql_field(default=None, primary_key=True)
+
+
+class UploadLevelRead(UploadLevelBase):
+    id: int
+```
+
+- [ ] **Step 2: Write `apps/api/src/models/reconciliation.py`**
+
+```python
+from datetime import UTC, datetime
+from enum import StrEnum
+
+from sqlmodel import Field as sql_field
+from sqlmodel import SQLModel
+
+
+class ReconciliationGroup(StrEnum):
+    exact = "exact"
+    probable = "probable"
+    new_only = "new_only"
+    old_only = "old_only"
+
+
+class ReconciliationStatus(StrEnum):
+    auto_accepted = "auto_accepted"
+    pending = "pending"
+    confirmed = "confirmed"
+    rejected = "rejected"
+    excluded = "excluded"
+
+
+class ReconciliationRowBase(SQLModel):
+    upload_session_id: int = sql_field(foreign_key="upload_session.id")
+    upload_field_id: int | None = sql_field(default=None, foreign_key="upload_field.id")
+    ref_field_id: int | None = sql_field(default=None, foreign_key="field.id")
+    group: ReconciliationGroup
+    status: ReconciliationStatus
+    confidence: float | None = None
+    note: str | None = None
+
+
+class ReconciliationRow(ReconciliationRowBase, table=True):
+    __tablename__ = "reconciliation_row"
+    id: int | None = sql_field(default=None, primary_key=True)
+    created_at: datetime = sql_field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
+
+
+class ReconciliationRowRead(ReconciliationRowBase):
+    id: int
+    created_at: datetime
+```
+
+- [ ] **Step 3: Update `apps/api/src/models/__init__.py`**
+
+Add these exports after the existing lines:
+
+```python
+from .reconciliation import (  # noqa: F401
+    ReconciliationGroup,
+    ReconciliationRow,
+    ReconciliationRowBase,
+    ReconciliationRowRead,
+    ReconciliationStatus,
+)
+from .upload import (  # noqa: F401
+    UploadField,
+    UploadFieldBase,
+    UploadFieldGroup,
+    UploadFieldGroupBase,
+    UploadFieldGroupRead,
+    UploadFieldRead,
+    UploadLevel,
+    UploadLevelBase,
+    UploadLevelRead,
+    UploadSession,
+    UploadSessionBase,
+    UploadSessionRead,
+    UploadSessionStatus,
+)
+```
+
+- [ ] **Step 4: Generate the migration**
+
+```bash
+just db-migration "add upload tables"
+```
+
+Open the generated file and verify it creates all five tables in dependency order:
+`upload_session` → `upload_fieldgroup` → `upload_field` → `upload_level` → `reconciliation_row`.
+
+Check that the self-referential FK on `upload_fieldgroup.parent_id` is present and the downgrade drops tables in reverse order and calls `.drop()` on all new enums.
+
+- [ ] **Step 5: Apply and verify migration runs clean**
+
+```bash
+just db-migrate
+```
+
+Expected: no errors.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add apps/api/src/models/upload.py \
+        apps/api/src/models/reconciliation.py \
+        apps/api/src/models/__init__.py \
+        apps/api/migrations/versions/
+git commit -m "feat(api): add upload staging and reconciliation models + migration"
+```
