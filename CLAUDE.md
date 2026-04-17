@@ -56,11 +56,13 @@ just audit          # pip-audit + pnpm audit
 - `packages/shared/api.d.ts` — **AUTO-GENERATED** TypeScript types from FastAPI OpenAPI spec. Never edit manually. Run `just generate-types`.
 - `docker/init/` — SQL bootstrap only (create DBs + extensions). All schema lives in `apps/api/migrations/`.
 
-## MCP Server
+## MCP Servers
 
-The API exposes an MCP server at `http://localhost:8000/mcp` (streamable HTTP). When `just dev` or `just api` is running, the `eggscaliber` MCP server is available directly in Claude Code sessions — use its tools for interactive debugging and data exploration instead of writing curl commands.
+Two MCP servers are available in Claude Code sessions for local dev:
 
-Exposed tags: `packages`, `scope`, `collections`, `datasets`, `analytics`. See `docs/patterns/backend.md` for wiring details and the docstring requirement for MCP-exposed routes.
+**`eggscaliber`** — API-level tools (streamable HTTP, requires `just dev` or `just api`). Exposed tags: `packages`, `scope`, `collections`, `datasets`, `analytics`. Use for high-level data queries and analytics. See `docs/patterns/backend.md` for wiring details and the docstring requirement for MCP-exposed routes.
+
+**`postgres`** — Direct read-only DB access (stdio, requires `just db-up`). Use for schema inspection, raw SQL, EXPLAIN plans, and index analysis. Spawned automatically by Claude Code via `uvx postgres-mcp` — no extra server needed.
 
 ## Key Conventions
 

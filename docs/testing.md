@@ -332,7 +332,7 @@ proactively.
 
 When `just dev` or `just api` is running, the MCP server at `http://localhost:8000/mcp` is available inside Claude Code as the `eggscaliber` MCP server. This gives you direct tool access to query the live database without writing curl commands or opening a browser.
 
-### Available tools (when API is running)
+### `eggscaliber` tools (requires `just api`)
 
 | Tool | What it does |
 |------|-------------|
@@ -347,6 +347,21 @@ When `just dev` or `just api` is running, the MCP server at `http://localhost:80
 | `get_weight_fields` | Numeric weight fields for a dataset |
 | `run_crosstab` | Cross-tabulation query |
 | `run_trend` | Trend analysis across a collection |
+
+### `postgres` tools (requires `just db-up`)
+
+| Tool | What it does |
+|------|-------------|
+| `list_schemas` | List all schemas |
+| `list_objects` | List tables/views in a schema |
+| `get_object_details` | Columns, constraints, indexes, FKs for a table |
+| `execute_sql` | Run a read-only SQL query |
+| `explain_query` | EXPLAIN ANALYZE a query |
+| `analyze_query_indexes` | Index recommendations for a query |
+| `analyze_db_health` | Overall DB health report |
+| `get_top_queries` | Slowest queries by execution time |
+
+Use `get_object_details` before writing any non-trivial SQL — it shows column types, nullability, foreign keys, and indexes, which is enough to write correct queries first time.
 
 ### When to use MCP tools vs curl
 
