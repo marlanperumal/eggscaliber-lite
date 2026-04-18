@@ -1,6 +1,6 @@
 import { DndContext } from "@dnd-kit/core"
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { fn } from "@storybook/test"
+import { fn, userEvent, within } from "@storybook/test"
 import type { QueryConfig } from "./analytics-types"
 import { DEFAULT_QUERY } from "./analytics-types"
 import { QueryBuilderPanel } from "./QueryBuilderPanel"
@@ -137,5 +137,24 @@ export const WithPopulatedZones: Story = {
       columns: [{ field_key: "gender", display_name: "Gender", field_type: "categorical" }],
       measure: { type: "count", field_key: null, aggregation: null, display: "pct_col" },
     }),
+  },
+}
+
+export const DragOverHighlight: Story = {
+  name: "Drag-over highlight — zone glow + ghost chip",
+  args: {
+    query: withFields({
+      dataset_id: 1,
+      rows: [{ field_key: "gender", display_name: "Gender", field_type: "categorical" }],
+      columns: [],
+    }),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const chip = await canvas.findByTestId("field-chip-gender")
+    await userEvent.pointer([
+      { keys: "[MouseLeft>]", target: chip },
+      { coords: { clientX: 20, clientY: 0 } },
+    ])
   },
 }

@@ -314,6 +314,27 @@ function FilterChip({ filter, onRemove }: { filter: FilterSpec; onRemove: (fk: s
   )
 }
 
+// ── GhostZoneChip ─────────────────────────────────────────────────────────
+
+function GhostZoneChip({ displayName, fieldType }: { displayName?: string; fieldType?: string }) {
+  const typeConfig = fieldType ? FIELD_TYPE_CONFIG[fieldType] : null
+  return (
+    <div className="pointer-events-none flex items-center gap-1 rounded-full border border-dashed border-primary/50 bg-primary/10 px-1.5 py-0.5 font-medium text-[10px] text-primary opacity-[0.65]">
+      {typeConfig ? (
+        <span
+          className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full font-black text-[8px] text-primary-foreground"
+          style={{ background: typeConfig.color }}
+        >
+          {typeConfig.icon}
+        </span>
+      ) : (
+        <span className="h-[18px] w-[18px] shrink-0 rounded-full bg-muted" />
+      )}
+      <span>{displayName ?? "Field"}</span>
+    </div>
+  )
+}
+
 // ── Zone ───────────────────────────────────────────────────────────────────
 
 function Zone({
@@ -334,10 +355,24 @@ function Zone({
   showModeSelector: boolean
 }) {
   const [isDragActive, setIsDragActive] = useState(false)
+  const [activeDragData, setActiveDragData] = useState<{
+    displayName?: string
+    fieldType?: string
+  } | null>(null)
   useDndMonitor({
-    onDragStart: () => setIsDragActive(true),
-    onDragEnd: () => setIsDragActive(false),
-    onDragCancel: () => setIsDragActive(false),
+    onDragStart: ({ active }) => {
+      const d = active.data.current as { display_name?: string; field_type?: string } | undefined
+      setActiveDragData({ displayName: d?.display_name, fieldType: d?.field_type })
+      setIsDragActive(true)
+    },
+    onDragEnd: () => {
+      setIsDragActive(false)
+      setActiveDragData(null)
+    },
+    onDragCancel: () => {
+      setIsDragActive(false)
+      setActiveDragData(null)
+    },
   })
 
   const { setNodeRef, isOver } = useDroppable({ id: zoneId })
@@ -400,6 +435,12 @@ function Zone({
                   onRemove={onRemove}
                 />
               ))}
+              {isOver && activeDragData && (
+                <GhostZoneChip
+                  displayName={activeDragData.displayName}
+                  fieldType={activeDragData.fieldType}
+                />
+              )}
             </div>
           </SortableContext>
         )}
@@ -418,10 +459,24 @@ function BreakdownZone({
   onRemove: () => void
 }) {
   const [isDragActive, setIsDragActive] = useState(false)
+  const [activeDragData, setActiveDragData] = useState<{
+    displayName?: string
+    fieldType?: string
+  } | null>(null)
   useDndMonitor({
-    onDragStart: () => setIsDragActive(true),
-    onDragEnd: () => setIsDragActive(false),
-    onDragCancel: () => setIsDragActive(false),
+    onDragStart: ({ active }) => {
+      const d = active.data.current as { display_name?: string; field_type?: string } | undefined
+      setActiveDragData({ displayName: d?.display_name, fieldType: d?.field_type })
+      setIsDragActive(true)
+    },
+    onDragEnd: () => {
+      setIsDragActive(false)
+      setActiveDragData(null)
+    },
+    onDragCancel: () => {
+      setIsDragActive(false)
+      setActiveDragData(null)
+    },
   })
   const { setNodeRef, isOver } = useDroppable({ id: "zone-breakdown" })
 
@@ -442,7 +497,12 @@ function BreakdownZone({
           !isDragActive && "border-border bg-card",
         )}
       >
-        {breakdown ? (
+        {isOver && activeDragData ? (
+          <GhostZoneChip
+            displayName={activeDragData.displayName}
+            fieldType={activeDragData.fieldType}
+          />
+        ) : breakdown ? (
           <div
             data-testid={`field-chip-${breakdown.field_key}`}
             className="flex w-fit items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-medium text-[10px] text-primary"
