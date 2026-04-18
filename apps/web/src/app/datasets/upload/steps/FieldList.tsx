@@ -99,7 +99,7 @@ export function FieldList({
               <span
                 className={[
                   "h-1.5 w-1.5 shrink-0 rounded-full",
-                  f.display_name ? "bg-green-500" : "bg-amber-500",
+                  f.display_name ? "bg-[--success]" : "bg-[--warning]",
                 ].join(" ")}
                 aria-hidden="true"
               />

@@ -96,8 +96,8 @@ export function Step2FieldDetection({ state, setStep }: Props) {
                     className={[
                       "rounded-full px-2 py-0.5 font-semibold text-xs",
                       f.confidence === "review"
-                        ? "bg-amber-100 text-amber-800"
-                        : "bg-green-100 text-green-800",
+                        ? "bg-[--warning-subtle] text-[--warning-foreground]"
+                        : "bg-[--success-subtle] text-[--success-foreground]",
                     ].join(" ")}
                     data-testid="confidence-badge"
                   >
