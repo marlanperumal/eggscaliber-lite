@@ -45,6 +45,7 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
   const [newPkgName, setNewPkgName] = useState("")
   const [showNewCol, setShowNewCol] = useState(false)
   const [newColName, setNewColName] = useState("")
+  const [rowCount, setRowCount] = useState<number | null>(null)
 
   useEffect(() => {
     fetch(`${API_BASE}/api/v1/packages`)
@@ -129,9 +130,22 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
 
   function handleFileChange(f: File | null) {
     setFile(f)
+    setRowCount(null)
     if (f && !datasetName) {
       setDatasetName(f.name.replace(/\.[^.]+$/, ""))
     }
+    if (f) {
+      f.text().then((text) => {
+        const lines = text.split("\n").filter((l) => l.trim().length > 0)
+        setRowCount(Math.max(0, lines.length - 1))
+      })
+    }
+  }
+
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -193,7 +207,13 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
           aria-label="Choose CSV file"
         />
         {file ? (
-          <p className="font-medium text-foreground text-sm">{file.name}</p>
+          <div>
+            <p className="font-medium text-foreground text-sm">{file.name}</p>
+            <p className="mt-1 text-muted-foreground text-xs">
+              {formatFileSize(file.size)}
+              {rowCount !== null && ` · ~${rowCount.toLocaleString()} rows`}
+            </p>
+          </div>
         ) : (
           <>
             <p className="font-medium text-muted-foreground text-sm">
