@@ -1,3 +1,4 @@
+from sqlalchemy import delete as sql_delete
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -145,8 +146,6 @@ async def delete_level(session: AsyncSession, field_id: int, level_id: int) -> b
 
 
 async def delete_field(session: AsyncSession, upload_session_id: int, field_id: int) -> bool:
-    from sqlalchemy import delete as sql_delete
-
     field = await session.get(UploadField, field_id)
     if field is None or field.upload_session_id != upload_session_id:
         return False
