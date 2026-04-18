@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useRef, useState } from "react"
+import { api } from "@/lib/api"
 import type { WizardState, WizardStep } from "../wizard-types"
 
 interface PackageOption {
@@ -18,7 +19,6 @@ interface Props {
   setNeedsReconcile: (v: boolean) => void
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 const NEW_SENTINEL = "__new__"
 
 function slugify(name: string): string {
@@ -48,9 +48,9 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
   const [rowCount, setRowCount] = useState<number | null>(null)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/v1/packages`)
-      .then((r) => r.json())
-      .then((data) => setPackages(data))
+    api.GET("/api/v1/packages" as never).then(({ data }: any) => {
+      if (data) setPackages(data)
+    })
   }, [])
 
   useEffect(() => {
@@ -59,9 +59,16 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
       setSelectedCollectionId("")
       return
     }
-    fetch(`${API_BASE}/api/v1/packages/${selectedPackageId}`)
-      .then((r) => r.json())
-      .then((data) => setCollections(data.collections ?? []))
+    api
+      .GET(
+        "/api/v1/packages/{package_id}" as never,
+        {
+          params: { path: { package_id: selectedPackageId } },
+        } as any,
+      )
+      .then(({ data }: any) => {
+        if (data) setCollections((data as any)?.collections ?? [])
+      })
     setSelectedCollectionId("")
   }, [selectedPackageId])
 
@@ -89,12 +96,9 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
     if (!newPkgName.trim()) return
     setBusy(true)
     try {
-      const res = await fetch(`${API_BASE}/api/v1/packages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newPkgName.trim(), slug: slugify(newPkgName.trim()) }),
+      const { data: pkg } = await (api as any).POST("/api/v1/packages", {
+        body: { name: newPkgName.trim(), slug: slugify(newPkgName.trim()) },
       })
-      const pkg = await res.json()
       setPackages((prev) => [...prev, { id: pkg.id, name: pkg.name }])
       setSelectedPackageId(String(pkg.id))
       setShowNewPkg(false)
@@ -108,16 +112,13 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
     if (!newColName.trim() || !selectedPackageId) return
     setBusy(true)
     try {
-      const res = await fetch(`${API_BASE}/api/v1/collections`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { data: col } = await (api as any).POST("/api/v1/collections", {
+        body: {
           name: newColName.trim(),
           slug: slugify(newColName.trim()),
           package_id: Number(selectedPackageId),
-        }),
+        },
       })
-      const col = await res.json()
       setCollections((prev) => [...prev, { id: col.id, name: col.name }])
       setSelectedCollectionId(String(col.id))
       setShowNewCol(false)
@@ -171,9 +172,8 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
     form.append("collection_id", selectedCollectionId)
     form.append("collected_at", `${collectedAt}-01`)
     try {
-      const res = await fetch(`${API_BASE}/api/v1/uploads`, { method: "POST", body: form })
-      if (!res.ok) throw new Error(await res.text())
-      const data = await res.json()
+      const { data, error } = await (api as any).POST("/api/v1/uploads", { body: form })
+      if (error) throw new Error(JSON.stringify(error))
       setSessionId(data.id)
       setNeedsReconcile(true)
       setStep(2)
