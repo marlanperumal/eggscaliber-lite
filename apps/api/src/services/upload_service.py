@@ -8,9 +8,10 @@ from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.errors import UploadSessionNotFoundError
 from src.models.field import FieldType
 from src.models.upload import UploadSessionStatus
-from src.repositories import upload_repo
+from src.repositories import dataset_repo, upload_repo
 from src.services.detection_service import detect_fields
 
 _UPLOAD_DIR = os.environ.get("UPLOAD_DIR", tempfile.gettempdir())
@@ -108,3 +109,70 @@ async def create_upload_session(
         "row_count": sess.row_count,
         "fields": field_records,
     }
+
+
+async def get_upload_session(session: AsyncSession, session_id: int) -> dict:
+    """Raises UploadSessionNotFoundError if session_id does not exist."""
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise UploadSessionNotFoundError(session_id)
+    fields = await upload_repo.get_fields_for_session(session, session_id)
+    field_list = [
+        {
+            "id": f.id,
+            "field_key": f.field_key,
+            "detected_type": f.detected_type.value,
+            "override_type": f.override_type.value if f.override_type else None,
+            "sort_order": f.sort_order,
+            "upload_fieldgroup_id": f.upload_fieldgroup_id,
+            "confidence": f.confidence,
+            "value_sample": f.value_sample or [],
+        }
+        for f in fields
+    ]
+    collection_meta: dict = {}
+    if sess.collection_id:
+        collection_meta = await upload_repo.get_collection_meta(session, sess.collection_id) or {}
+    return {
+        "id": sess.id,
+        "status": sess.status.value,
+        "dataset_name": sess.dataset_name,
+        "collection_id": sess.collection_id,
+        "collection_name": collection_meta.get("collection_name"),
+        "package_name": collection_meta.get("package_name"),
+        "collected_at": sess.collected_at.isoformat() if sess.collected_at else None,
+        "file_name": os.path.basename(sess.file_path).split("_", 2)[-1],
+        "row_count": sess.row_count,
+        "fields": field_list,
+    }
+
+
+async def discard_session(session: AsyncSession, session_id: int) -> None:
+    """Raises UploadSessionNotFoundError if session_id does not exist."""
+    discarded = await upload_repo.discard_session(session, session_id)
+    if not discarded:
+        raise UploadSessionNotFoundError(session_id)
+
+
+async def get_suggested_reference(session: AsyncSession, session_id: int) -> dict:
+    """Raises UploadSessionNotFoundError if session_id does not exist."""
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise UploadSessionNotFoundError(session_id)
+    if sess.collection_id is None:
+        return {"dataset_id": None, "dataset_name": None}
+    ds = await dataset_repo.get_latest_for_collection(session, sess.collection_id)
+    if ds is None:
+        return {"dataset_id": None, "dataset_name": None}
+    return {"dataset_id": ds.id, "dataset_name": ds.name}
+
+
+async def commit(session: AsyncSession, session_id: int) -> int:
+    """Raises UploadSessionNotFoundError if session_id does not exist.
+    Returns the new dataset_id."""
+    from src.services import commit_service
+
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise UploadSessionNotFoundError(session_id)
+    return await commit_service.commit_upload(session, session_id)

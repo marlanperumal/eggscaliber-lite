@@ -521,3 +521,18 @@ async def test_suggested_reference_returns_none_for_empty_collection(client, db)
     ref_r = await client.get(f"/api/v1/uploads/{sid}/suggested-reference")
     assert ref_r.status_code == 200
     assert ref_r.json()["dataset_id"] is None
+
+
+async def test_get_upload_session_not_found_returns_404(client):
+    r = await client.get("/api/v1/uploads/99999")
+    assert r.status_code == 404
+
+
+async def test_discard_upload_session_not_found_returns_404(client):
+    r = await client.delete("/api/v1/uploads/99999")
+    assert r.status_code == 404
+
+
+async def test_commit_upload_session_not_found_returns_404(client):
+    r = await client.post("/api/v1/uploads/99999/commit")
+    assert r.status_code == 404
