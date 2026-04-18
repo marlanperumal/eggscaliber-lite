@@ -125,6 +125,8 @@ async def test_download_dataset_csv(client, db):
     lines = resp.text.strip().split("\n")
     assert len(lines) >= 2  # header + at least one row
     assert "gender" in lines[0]
+    assert "attachment" in resp.headers.get("content-disposition", "")
+    assert f"dataset-{ds.id}.csv" in resp.headers.get("content-disposition", "")
 
 
 async def test_download_dataset_csv_not_found(client):
