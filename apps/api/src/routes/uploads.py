@@ -444,7 +444,14 @@ async def get_field_tree(session_id: int, session: AsyncSession = Depends(get_se
     fields = await upload_repo.get_fields_for_session(session, session_id)
 
     def _group_dict(g):
-        return {"id": g.id, "name": g.name, "parent_id": g.parent_id, "sort_order": g.sort_order}
+        field_count = sum(1 for f in fields if f.upload_fieldgroup_id == g.id)
+        return {
+            "id": g.id,
+            "name": g.name,
+            "parent_id": g.parent_id,
+            "sort_order": g.sort_order,
+            "field_count": field_count,
+        }
 
     async def _field_to_dict(f) -> dict:
         levels = await upload_repo.get_levels_for_field(session, f.id)

@@ -22,7 +22,7 @@ interface SessionSummary {
   collected_at: string | null
   file_name: string | null
   fields: { detected_type: string; override_type: string | null }[]
-  groups: { id: number; name: string; parent_id: number | null }[]
+  groups: { id: number; name: string; parent_id: number | null; field_count: number }[]
   unassigned_fields: unknown[]
   recon: ReconSummary | null
   excluded_field_keys: string[]
@@ -254,28 +254,28 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
                 ← Edit
               </button>
             </div>
-            <div className="space-y-1 px-3 py-2 text-xs">
+            <div className="space-y-2 px-3 py-2 text-xs">
               {summary.recon.reference_dataset_name && (
                 <div className="flex gap-2">
-                  <span className="w-28 text-muted-foreground">Reference</span>
+                  <span className="w-24 text-muted-foreground">Reference</span>
                   <span className="font-medium">{summary.recon.reference_dataset_name}</span>
                 </div>
               )}
-              <div className="flex gap-2">
-                <span className="w-28 text-muted-foreground">✓ Exact</span>
-                <span className="font-medium">{summary.recon.exact}</span>
-              </div>
-              <div className="flex gap-2">
-                <span className="w-28 text-muted-foreground">✓ Confirmed</span>
-                <span className="font-medium">{summary.recon.confirmed}</span>
-              </div>
-              <div className="flex gap-2">
-                <span className="w-28 text-muted-foreground">+ New fields</span>
-                <span className="font-medium">{summary.recon.new_only}</span>
-              </div>
-              <div className="flex gap-2">
-                <span className="w-28 text-muted-foreground">— Excluded</span>
-                <span className="font-medium">{summary.recon.excluded}</span>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <span className="rounded-full bg-green-100 px-2 py-0.5 font-semibold text-green-800 text-xs dark:bg-green-900/30 dark:text-green-300">
+                  ✓ {summary.recon.exact} exact
+                </span>
+                <span className="rounded-full bg-green-100 px-2 py-0.5 font-semibold text-green-800 text-xs dark:bg-green-900/30 dark:text-green-300">
+                  ✓ {summary.recon.confirmed} confirmed
+                </span>
+                <span className="rounded-full bg-blue-100 px-2 py-0.5 font-semibold text-blue-800 text-xs dark:bg-blue-900/30 dark:text-blue-300">
+                  + {summary.recon.new_only} new
+                </span>
+                {summary.recon.excluded > 0 && (
+                  <span className="rounded-full bg-muted px-2 py-0.5 font-semibold text-muted-foreground text-xs">
+                    — {summary.recon.excluded} excluded
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -296,12 +296,15 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
             </div>
             <div className="space-y-1 px-3 py-2 text-xs">
               {topGroups.map((g) => (
-                <div key={g.id} className="flex gap-2">
+                <div key={g.id} className="flex items-center gap-2">
                   <span
                     className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-accent"
                     aria-hidden="true"
                   />
                   <span className="font-medium">{g.name}</span>
+                  <span className="text-muted-foreground">
+                    ({g.field_count} field{g.field_count !== 1 ? "s" : ""})
+                  </span>
                 </div>
               ))}
               {summary.unassigned_fields.length > 0 && (
