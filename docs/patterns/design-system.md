@@ -26,6 +26,12 @@ semantic token utilities.
 | `--chart-1` … `--chart-8` | Chart series colours — 8 hues evenly spaced from the brand base hue (read via `getComputedStyle`, not Tailwind utilities) |
 | `--field-type-categorical` … `--field-type-numeric` | Field-type indicator badge backgrounds — fixed semantic colours, not theme-derived (read via inline `style={{ background: "var(--field-type-X)" }}`) |
 | `--zone-rows`, `--zone-columns`, `--zone-breakdown` | Zone identity colours for the R/C/B toggle buttons in the field tree — fixed semantic colours, not theme-derived. Applied via inline `style` with `color-mix()` for alpha variants (see `ZoneToggleButton` in `FieldTreePanel.tsx`). |
+| `bg-[--success]` / `text-[--success]` | Status indicators: confirmed, accepted, complete |
+| `bg-[--success-subtle]` | Soft success badge backgrounds |
+| `text-[--success-foreground]` | Text on success-subtle backgrounds |
+| `bg-[--warning]` / `text-[--warning]` | Status indicators: pending, needs action |
+| `bg-[--warning-subtle]` | Soft warning badge backgrounds |
+| `text-[--warning-foreground]` | Text on warning-subtle backgrounds |
 
 ### Chart series colours
 

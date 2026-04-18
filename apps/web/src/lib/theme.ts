@@ -111,6 +111,12 @@ export function generateThemeCSS(config: ThemeConfig): string {
       --zone-rows: #6366f1;
       --zone-columns: #d97706;
       --zone-breakdown: #059669;
+      --success: oklch(0.45 0.15 145deg);
+      --success-foreground: oklch(0.98 0.01 145deg);
+      --success-subtle: oklch(0.95 0.04 145deg);
+      --warning: oklch(0.55 0.15 75deg);
+      --warning-foreground: oklch(0.35 0.12 75deg);
+      --warning-subtle: oklch(0.96 0.04 75deg);
 ${generateChartTokens(baseHue, 0.58, 0.15)}
     }
     .dark {
@@ -135,6 +141,12 @@ ${generateChartTokens(baseHue, 0.58, 0.15)}
       --ring: ${s[400]};
       --nav: ${s[950]};
       --radius: ${config.radius};
+      --success: oklch(0.65 0.15 145deg);
+      --success-foreground: oklch(0.15 0.05 145deg);
+      --success-subtle: oklch(0.25 0.06 145deg);
+      --warning: oklch(0.72 0.14 75deg);
+      --warning-foreground: oklch(0.20 0.08 75deg);
+      --warning-subtle: oklch(0.25 0.06 75deg);
 ${generateChartTokens(baseHue, 0.72, 0.15)}
     }
   `.trim()
