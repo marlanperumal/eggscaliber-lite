@@ -1,5 +1,5 @@
 from sqlalchemy import delete as sql_delete
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.collection import Collection
@@ -174,6 +174,46 @@ async def get_fieldgroups_for_session(
                 .order_by(UploadFieldGroup.sort_order, UploadFieldGroup.id)
             )
         )
+        .scalars()
+        .all()
+    )
+
+
+async def get_fieldgroup_by_id_and_session(
+    session: AsyncSession, group_id: int, session_id: int
+) -> UploadFieldGroup | None:
+    return (
+        (
+            await session.execute(
+                select(UploadFieldGroup).where(
+                    UploadFieldGroup.id == group_id,
+                    UploadFieldGroup.upload_session_id == session_id,
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+
+async def delete_fieldgroup(session: AsyncSession, grp: UploadFieldGroup) -> None:
+    """Unassign all fields in the group then delete it."""
+    await session.execute(
+        update(UploadField)
+        .where(UploadField.upload_fieldgroup_id == grp.id)
+        .values(upload_fieldgroup_id=None)
+    )
+    await session.delete(grp)
+    await session.flush()
+
+
+async def get_upload_fields_by_ids(
+    session: AsyncSession, field_ids: list[int]
+) -> list[UploadField]:
+    if not field_ids:
+        return []
+    return list(
+        (await session.execute(select(UploadField).where(UploadField.id.in_(field_ids))))
         .scalars()
         .all()
     )

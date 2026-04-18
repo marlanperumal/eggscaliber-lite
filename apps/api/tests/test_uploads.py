@@ -459,3 +459,34 @@ async def test_discard_upload_session(client, db):
     r3 = await client.get("/api/v1/uploads")
     items = r3.json()["items"]
     assert not any(i["id"] == session_id for i in items)
+
+
+async def test_get_fieldgroup_by_id_and_session_not_found(client, db):
+    """Repo helper returns None when group_id or session_id don't match."""
+    from src.repositories import upload_repo
+
+    result = await upload_repo.get_fieldgroup_by_id_and_session(db, 999, 999)
+    assert result is None
+
+
+async def test_delete_fieldgroup_unassigns_fields(client, db):
+    """delete_fieldgroup unassigns fields in the group then removes the group."""
+    csv_bytes = _make_csv(["q1", "q2"], [["a", "b"]])
+    r = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("x.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "X"},
+    )
+    sid = r.json()["id"]
+    grp_r = await client.post(f"/api/v1/uploads/{sid}/fieldgroups", json={"name": "G1"})
+    gid = grp_r.json()["id"]
+    fields_r = await client.get(f"/api/v1/uploads/{sid}")
+    fid = fields_r.json()["fields"][0]["id"]
+    await client.patch(
+        f"/api/v1/uploads/{sid}/fields/{fid}/move", json={"upload_fieldgroup_id": gid}
+    )
+    del_r = await client.delete(f"/api/v1/uploads/{sid}/fieldgroups/{gid}")
+    assert del_r.status_code == 200
+    tree = (await client.get(f"/api/v1/uploads/{sid}/field-tree")).json()
+    unassigned_ids = {f["id"] for f in tree["unassigned_fields"]}
+    assert fid in unassigned_ids
