@@ -280,9 +280,17 @@ export function FieldEditorPanel({
       {showLevels && (
         <div className="space-y-1">
           <span className="text-muted-foreground text-xs">Levels</span>
-          <div className="space-y-1 rounded border border-border p-2">
+          <div className="rounded border border-border">
+            <div className="grid grid-cols-[1fr_1fr_auto] gap-1 border-border border-b px-2 py-1 font-semibold text-muted-foreground text-xs">
+              <span>Raw value</span>
+              <span>Display label</span>
+              <span />
+            </div>
             {levels.map((lvl, i) => (
-              <div key={lvl.id} className="flex items-center gap-1">
+              <div
+                key={lvl.id}
+                className="grid grid-cols-[1fr_1fr_auto] items-center gap-1 px-2 py-1"
+              >
                 {lvl.id < 0 ? (
                   <input
                     type="text"
@@ -292,22 +300,35 @@ export function FieldEditorPanel({
                         prev.map((l, j) => (j === i ? { ...l, raw_value: e.target.value } : l)),
                       )
                     }
-                    placeholder="Raw value"
-                    className="flex-1 rounded border border-accent bg-background px-2 py-0.5 text-xs"
+                    placeholder="raw value"
+                    className="rounded border border-accent bg-background px-2 py-0.5 font-mono text-xs"
                   />
                 ) : (
-                  <input
-                    type="text"
-                    value={lvl.display_label ?? lvl.raw_value}
-                    onChange={(e) =>
-                      setLevels((prev) =>
-                        prev.map((l, j) => (j === i ? { ...l, display_label: e.target.value } : l)),
-                      )
-                    }
-                    placeholder={lvl.raw_value}
-                    className="flex-1 rounded border border-border bg-background px-2 py-0.5 text-xs"
-                  />
+                  <div className="flex min-w-0 items-center gap-1">
+                    <span className="truncate font-mono text-muted-foreground text-xs">
+                      {lvl.raw_value}
+                    </span>
+                    {lvl.is_inherited && (
+                      <span className="shrink-0 rounded bg-muted px-1 py-0.5 font-semibold text-muted-foreground text-xs">
+                        inherited
+                      </span>
+                    )}
+                  </div>
                 )}
+                <input
+                  type="text"
+                  value={lvl.id < 0 ? "" : (lvl.display_label ?? "")}
+                  onChange={(e) =>
+                    setLevels((prev) =>
+                      prev.map((l, j) =>
+                        j === i ? { ...l, display_label: e.target.value || null } : l,
+                      ),
+                    )
+                  }
+                  placeholder={lvl.id < 0 ? "label (optional)" : lvl.raw_value}
+                  disabled={lvl.id < 0}
+                  className="rounded border border-border bg-background px-2 py-0.5 text-xs disabled:opacity-50"
+                />
                 <button
                   type="button"
                   onClick={() => handleDeleteLevel(lvl.id)}
