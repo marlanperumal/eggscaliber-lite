@@ -178,3 +178,28 @@ async def get_fieldgroups_for_session(
         .scalars()
         .all()
     )
+
+
+async def list_draft_sessions(session: AsyncSession) -> list[UploadSession]:
+    """Return all sessions that are not committed or abandoned."""
+    result = await session.execute(
+        select(UploadSession)
+        .where(
+            UploadSession.status.not_in(
+                [UploadSessionStatus.committed, UploadSessionStatus.abandoned]
+            )
+        )
+        .order_by(UploadSession.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def discard_session(session: AsyncSession, session_id: int) -> bool:
+    """Set status to abandoned. Returns False if session not found."""
+    sess = await get_session_by_id(session, session_id)
+    if sess is None:
+        return False
+    sess.status = UploadSessionStatus.abandoned
+    session.add(sess)
+    await session.flush()
+    return True

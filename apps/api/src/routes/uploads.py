@@ -42,6 +42,37 @@ async def create_upload(
     return result
 
 
+@router.get("/uploads")
+async def list_upload_sessions(session: AsyncSession = Depends(get_session)):
+    """List all non-committed, non-abandoned upload sessions (drafts)."""
+    sessions = await upload_repo.list_draft_sessions(session)
+    items = []
+    for sess in sessions:
+        meta: dict = {}
+        if sess.collection_id:
+            meta = await upload_repo.get_collection_meta(session, sess.collection_id) or {}
+        items.append(
+            {
+                "id": sess.id,
+                "status": sess.status.value,
+                "dataset_name": sess.dataset_name,
+                "collection_name": meta.get("collection_name"),
+                "package_name": meta.get("package_name"),
+                "collected_at": sess.collected_at.isoformat() if sess.collected_at else None,
+                "created_at": sess.created_at.isoformat(),
+            }
+        )
+    return {"items": items}
+
+
+@router.delete("/uploads/{session_id}", status_code=204)
+async def discard_upload_session(session_id: int, session: AsyncSession = Depends(get_session)):
+    """Mark an upload session as abandoned (soft delete)."""
+    discarded = await upload_repo.discard_session(session, session_id)
+    if not discarded:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+
+
 @router.get("/uploads/{session_id}")
 async def get_upload_session(session_id: int, session: AsyncSession = Depends(get_session)):
     sess = await upload_repo.get_session_by_id(session, session_id)

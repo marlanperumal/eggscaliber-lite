@@ -305,7 +305,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Upload Sessions
+         * @description List all non-committed, non-abandoned upload sessions (drafts).
+         */
+        get: operations["list_upload_sessions_api_v1_uploads_get"];
         put?: never;
         /** Create Upload */
         post: operations["create_upload_api_v1_uploads_post"];
@@ -326,7 +330,11 @@ export interface paths {
         get: operations["get_upload_session_api_v1_uploads__session_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Discard Upload Session
+         * @description Mark an upload session as abandoned (soft delete).
+         */
+        delete: operations["discard_upload_session_api_v1_uploads__session_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1601,6 +1609,26 @@ export interface operations {
             };
         };
     };
+    list_upload_sessions_api_v1_uploads_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     create_upload_api_v1_uploads_post: {
         parameters: {
             query?: never;
@@ -1653,6 +1681,35 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discard_upload_session_api_v1_uploads__session_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

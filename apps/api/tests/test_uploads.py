@@ -426,3 +426,36 @@ async def test_reconcile_counts_includes_blocking_pending(client, db):
     body = resp.json()
     assert "blocking_pending" in body
     assert isinstance(body["blocking_pending"], int)
+
+
+async def test_list_uploads_returns_non_committed_sessions(client, db):
+    csv_bytes = _make_csv(["id"], [["1"]])
+    r = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "My Draft"},
+    )
+    assert r.status_code == 201
+
+    r2 = await client.get("/api/v1/uploads")
+    assert r2.status_code == 200
+    items = r2.json()["items"]
+    assert any(i["dataset_name"] == "My Draft" for i in items)
+    assert all(i["status"] != "committed" for i in items)
+
+
+async def test_discard_upload_session(client, db):
+    csv_bytes = _make_csv(["id"], [["1"]])
+    r = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "ToDiscard"},
+    )
+    session_id = r.json()["id"]
+
+    r2 = await client.delete(f"/api/v1/uploads/{session_id}")
+    assert r2.status_code == 204
+
+    r3 = await client.get("/api/v1/uploads")
+    items = r3.json()["items"]
+    assert not any(i["id"] == session_id for i in items)
