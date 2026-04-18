@@ -536,3 +536,27 @@ async def test_discard_upload_session_not_found_returns_404(client):
 async def test_commit_upload_session_not_found_returns_404(client):
     r = await client.post("/api/v1/uploads/99999/commit")
     assert r.status_code == 404
+
+
+async def test_update_fieldgroup_not_found_returns_404(client, db):
+    csv_bytes = _make_csv(["q1"], [["a"]])
+    r = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("x.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "X"},
+    )
+    sid = r.json()["id"]
+    r2 = await client.patch(f"/api/v1/uploads/{sid}/fieldgroups/99999", json={"name": "Y"})
+    assert r2.status_code == 404
+
+
+async def test_delete_fieldgroup_not_found_returns_404(client, db):
+    csv_bytes = _make_csv(["q1"], [["a"]])
+    r = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("x.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "X"},
+    )
+    sid = r.json()["id"]
+    r2 = await client.delete(f"/api/v1/uploads/{sid}/fieldgroups/99999")
+    assert r2.status_code == 404
