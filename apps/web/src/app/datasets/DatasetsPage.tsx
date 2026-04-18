@@ -41,10 +41,9 @@ export function DatasetsPage() {
     api.GET("/api/v1/packages" as never).then(({ data }: any) => {
       if (data) setPackages(data)
     })
-    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
-    fetch(`${base}/api/v1/uploads`)
-      .then((r) => r.json())
-      .then((data) => setDrafts(data.items ?? []))
+    api.GET("/api/v1/uploads" as never).then(({ data }: any) => {
+      if (data) setDrafts((data as any).items ?? [])
+    })
   }, [])
 
   useEffect(() => {
@@ -87,9 +86,11 @@ export function DatasetsPage() {
 
   async function handleDelete(id: number) {
     setDeleteId(null)
-    await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/v1/datasets/${id}`,
-      { method: "DELETE" },
+    await api.DELETE(
+      "/api/v1/datasets/{dataset_id}" as never,
+      {
+        params: { path: { dataset_id: id } },
+      } as any,
     )
     setItems((prev) => prev.filter((d) => d.id !== id))
   }
@@ -154,7 +155,7 @@ export function DatasetsPage() {
             {drafts.map((d) => (
               <div
                 key={d.id}
-                className="flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm dark:border-amber-700 dark:bg-amber-950/30"
+                className="flex items-center justify-between rounded-lg border border-[--warning] bg-[--warning-subtle] px-4 py-3 text-sm"
                 data-testid="draft-session-row"
               >
                 <div>
@@ -166,7 +167,7 @@ export function DatasetsPage() {
                       {d.package_name} › {d.collection_name}
                     </span>
                   )}
-                  <span className="ml-2 rounded-full bg-amber-200 px-2 py-0.5 font-semibold text-amber-800 text-xs dark:bg-amber-800 dark:text-amber-200">
+                  <span className="ml-2 rounded-full bg-[--warning-subtle] px-2 py-0.5 font-semibold text-[--warning-foreground] text-xs">
                     draft
                   </span>
                 </div>
@@ -180,8 +181,12 @@ export function DatasetsPage() {
                   <button
                     type="button"
                     onClick={async () => {
-                      const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
-                      await fetch(`${base}/api/v1/uploads/${d.id}`, { method: "DELETE" })
+                      await api.DELETE(
+                        "/api/v1/uploads/{session_id}" as never,
+                        {
+                          params: { path: { session_id: d.id } },
+                        } as any,
+                      )
                       setDrafts((prev) => prev.filter((x) => x.id !== d.id))
                     }}
                     className="font-semibold text-destructive text-xs hover:underline"
@@ -261,7 +266,7 @@ export function DatasetsPage() {
                   {new Date(d.created_at).toLocaleDateString()}
                 </td>
                 <td className="py-3 pr-4">
-                  <span className="rounded-full bg-green-100 px-2 py-0.5 font-semibold text-green-800 text-xs">
+                  <span className="rounded-full bg-[--success-subtle] px-2 py-0.5 font-semibold text-[--success-foreground] text-xs">
                     {d.status}
                   </span>
                 </td>
