@@ -117,6 +117,21 @@ async def test_get_dataset_responses_not_found(client):
     assert response.status_code == 404
 
 
+async def test_download_dataset_csv(client, db):
+    ds = await _seed_dataset(db)
+    resp = await client.get(f"/api/v1/datasets/{ds.id}/download")
+    assert resp.status_code == 200
+    assert "text/csv" in resp.headers["content-type"]
+    lines = resp.text.strip().split("\n")
+    assert len(lines) >= 2  # header + at least one row
+    assert "gender" in lines[0]
+
+
+async def test_download_dataset_csv_not_found(client):
+    resp = await client.get("/api/v1/datasets/99999/download")
+    assert resp.status_code == 404
+
+
 async def test_list_datasets_includes_collection_and_package(client, db):
     pkg = Package(name="Tracker", slug="tracker-enriched")
     db.add(pkg)

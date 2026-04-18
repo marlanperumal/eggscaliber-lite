@@ -173,6 +173,13 @@ export function DatasetsPage() {
                     >
                       View
                     </Link>
+                    <a
+                      href={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/v1/datasets/${d.id}/download`}
+                      download={`dataset-${d.id}.csv`}
+                      className="rounded border border-border px-3 py-1 text-xs hover:bg-muted"
+                    >
+                      Download
+                    </a>
                     <button
                       type="button"
                       onClick={() => setDeleteId(d.id)}

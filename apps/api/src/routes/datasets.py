@@ -1,4 +1,8 @@
+import csv
+import io
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_session
@@ -66,3 +70,37 @@ async def get_weight_fields(dataset_id: int, session: AsyncSession = Depends(get
         return await analytics_service.get_weight_fields(session, dataset_id)
     except DatasetNotFoundError:
         raise HTTPException(status_code=404, detail="Dataset not found") from None
+
+
+@router.get("/datasets/{dataset_id}/download")
+async def download_dataset_csv(
+    dataset_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    """Stream all responses for a dataset as a CSV file."""
+    from src.repositories import dataset_repo
+
+    dataset = await dataset_repo.get_by_id(session, dataset_id)
+    if dataset is None:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    _total, rows = await dataset_repo.get_responses(session, dataset_id, page=1, page_size=100_000)
+    fields = await dataset_repo.get_fields_for_datasets(session, [dataset_id])
+    field_keys = [f.field_key for f in fields]
+
+    def generate():
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(field_keys)
+        yield buf.getvalue()
+        for row in rows:
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            writer.writerow([row.payload.get(k, "") for k in field_keys])
+            yield buf.getvalue()
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="dataset-{dataset_id}.csv"'},
+    )
