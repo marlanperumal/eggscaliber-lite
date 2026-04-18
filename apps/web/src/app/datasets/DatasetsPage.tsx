@@ -198,14 +198,38 @@ export function DatasetsPage() {
       {loading ? (
         <p className="text-muted-foreground text-sm">Loading…</p>
       ) : filtered.length === 0 ? (
-        <div className="rounded-lg border border-border border-dashed py-16 text-center">
-          <p className="font-medium text-muted-foreground text-sm">No datasets yet.</p>
-          <Link
-            href="/datasets/upload"
-            className="mt-3 inline-block font-semibold text-accent text-sm"
+        <div className="rounded-lg border border-border border-dashed py-20 text-center">
+          <svg
+            className="mx-auto mb-4 h-12 w-12 text-muted-foreground/40"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
           >
-            Upload your first dataset →
-          </Link>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+            />
+          </svg>
+          <p className="font-semibold text-muted-foreground text-sm">
+            {search || selectedCollectionId ? "No matching datasets." : "No datasets yet."}
+          </p>
+          <p className="mt-1 text-muted-foreground text-xs">
+            {search || selectedCollectionId
+              ? "Try adjusting your filters."
+              : "Upload a CSV to get started."}
+          </p>
+          {!search && !selectedCollectionId && (
+            <Link
+              href="/datasets/upload"
+              className="mt-4 inline-block rounded-lg bg-accent px-4 py-2 font-semibold text-sm text-white hover:opacity-90"
+            >
+              Upload your first dataset →
+            </Link>
+          )}
         </div>
       ) : (
         <table className="w-full text-sm" data-testid="datasets-table">
