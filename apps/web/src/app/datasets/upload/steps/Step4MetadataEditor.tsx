@@ -63,6 +63,16 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
     await loadTree()
   }
 
+  async function handleMoveGroup(groupId: number, parentId: number | null) {
+    if (!state.sessionId) return
+    await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/fieldgroups/${groupId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parent_id: parentId }),
+    })
+    await loadTree()
+  }
+
   const selectedField = [...fields, ...unassigned].find((f) => f.id === selectedFieldId) ?? null
 
   if (loading) return <p className="text-muted-foreground text-sm">Loading…</p>
@@ -109,6 +119,7 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
                   await loadTree()
                 }}
                 onDeleteGroup={handleDeleteGroup}
+                onMoveGroup={handleMoveGroup}
               />
             ) : (
               <FieldList

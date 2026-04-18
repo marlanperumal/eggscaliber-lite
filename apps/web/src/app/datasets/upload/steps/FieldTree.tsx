@@ -48,22 +48,30 @@ interface Props {
   onCreateGroup: (name: string, parentId: number | null) => void
   onRenameGroup?: (id: number, name: string) => void
   onDeleteGroup: (id: number) => void
+  onMoveGroup?: (groupId: number, parentId: number | null) => void
 }
 
 function GroupContextMenu({
   groupId,
   groupName,
+  allGroups,
   onRename,
   onDelete,
+  onAddSubgroup,
+  onMoveGroup,
   onClose,
 }: {
   groupId: number
   groupName: string
+  allGroups: GroupNode[]
   onRename: (id: number, name: string) => void
   onDelete: (id: number) => void
+  onAddSubgroup: () => void
+  onMoveGroup?: (groupId: number, parentId: number | null) => void
   onClose: () => void
 }) {
   const [renaming, setRenaming] = useState(false)
+  const [showMove, setShowMove] = useState(false)
   const [nameValue, setNameValue] = useState(groupName)
   const inputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -79,6 +87,8 @@ function GroupContextMenu({
     document.addEventListener("mousedown", onClickOutside)
     return () => document.removeEventListener("mousedown", onClickOutside)
   }, [onClose])
+
+  const moveTargets = allGroups.filter((g) => g.id !== groupId)
 
   if (renaming) {
     return (
@@ -114,11 +124,64 @@ function GroupContextMenu({
     )
   }
 
+  if (showMove) {
+    return (
+      <div
+        ref={menuRef}
+        className="absolute right-0 top-6 z-50 min-w-36 rounded-lg border border-border bg-background py-1 shadow-lg"
+      >
+        <p className="px-3 py-1 font-semibold text-muted-foreground text-xs">Move to…</p>
+        <button
+          type="button"
+          onClick={() => {
+            onMoveGroup?.(groupId, null)
+            onClose()
+          }}
+          className="flex w-full items-center px-3 py-1.5 text-xs hover:bg-muted"
+        >
+          Top level
+        </button>
+        {moveTargets.map((g) => (
+          <button
+            key={g.id}
+            type="button"
+            onClick={() => {
+              onMoveGroup?.(groupId, g.id)
+              onClose()
+            }}
+            className="flex w-full items-center px-3 py-1.5 text-xs hover:bg-muted"
+          >
+            {g.name}
+          </button>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div
       ref={menuRef}
       className="absolute right-0 top-6 z-50 min-w-32 rounded-lg border border-border bg-background py-1 shadow-lg"
     >
+      <button
+        type="button"
+        onClick={() => {
+          onAddSubgroup()
+          onClose()
+        }}
+        className="flex w-full items-center px-3 py-1.5 text-xs hover:bg-muted"
+      >
+        Add subgroup
+      </button>
+      {onMoveGroup && (
+        <button
+          type="button"
+          onClick={() => setShowMove(true)}
+          className="flex w-full items-center px-3 py-1.5 text-xs hover:bg-muted"
+        >
+          Move to…
+        </button>
+      )}
       <button
         type="button"
         onClick={() => setRenaming(true)}
@@ -150,6 +213,7 @@ export function FieldTree({
   onCreateGroup,
   onRenameGroup,
   onDeleteGroup,
+  onMoveGroup,
 }: Props) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -222,8 +286,11 @@ export function FieldTree({
             <GroupContextMenu
               groupId={group.id}
               groupName={group.name}
+              allGroups={groups}
               onRename={(id, name) => onRenameGroup?.(id, name)}
               onDelete={onDeleteGroup}
+              onAddSubgroup={() => onCreateGroup("New subgroup", group.id)}
+              onMoveGroup={onMoveGroup}
               onClose={() => setOpenMenuId(null)}
             />
           )}

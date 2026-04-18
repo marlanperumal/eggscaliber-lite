@@ -550,7 +550,7 @@ async def update_fieldgroup(
         raise HTTPException(status_code=404, detail="Group not found")
     if body.name is not None:
         grp.name = body.name
-    if body.parent_id is not None:
+    if "parent_id" in body.model_fields_set:
         grp.parent_id = body.parent_id
     if body.sort_order is not None:
         grp.sort_order = body.sort_order
