@@ -40,6 +40,16 @@ async def get_dataset(dataset_id: int, session: AsyncSession = Depends(get_sessi
         raise HTTPException(status_code=404, detail="Dataset not found") from None
 
 
+@router.delete("/datasets/{dataset_id}", status_code=204)
+async def delete_dataset(dataset_id: int, session: AsyncSession = Depends(get_session)):
+    """Delete a dataset and all associated fields, levels, and responses."""
+    from src.repositories import dataset_repo
+
+    deleted = await dataset_repo.delete_dataset(session, dataset_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+
 @router.get("/datasets/{dataset_id}/responses", response_model=ResponsePage)
 async def get_dataset_responses(
     dataset_id: int,

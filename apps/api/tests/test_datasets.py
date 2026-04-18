@@ -134,6 +134,20 @@ async def test_download_dataset_csv_not_found(client):
     assert resp.status_code == 404
 
 
+async def test_delete_dataset(client, db):
+    ds = await _seed_dataset(db)
+    await db.commit()
+    resp = await client.delete(f"/api/v1/datasets/{ds.id}")
+    assert resp.status_code == 204
+    get_resp = await client.get(f"/api/v1/datasets/{ds.id}")
+    assert get_resp.status_code == 404
+
+
+async def test_delete_dataset_not_found(client):
+    resp = await client.delete("/api/v1/datasets/99999")
+    assert resp.status_code == 404
+
+
 async def test_list_datasets_includes_collection_and_package(client, db):
     pkg = Package(name="Tracker", slug="tracker-enriched")
     db.add(pkg)

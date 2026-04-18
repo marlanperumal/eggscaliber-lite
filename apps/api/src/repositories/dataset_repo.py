@@ -147,6 +147,46 @@ async def list_enriched(
     return total, items
 
 
+async def delete_dataset(session: AsyncSession, dataset_id: int) -> bool:
+    dataset = (
+        (await session.execute(select(Dataset).where(Dataset.id == dataset_id))).scalars().first()
+    )
+    if dataset is None:
+        return False
+
+    fields = list(
+        (await session.execute(select(Field).where(Field.dataset_id == dataset_id))).scalars().all()
+    )
+    field_ids = [f.id for f in fields if f.id is not None]
+
+    if field_ids:
+        levels = list(
+            (await session.execute(select(Level).where(Level.field_id.in_(field_ids))))
+            .scalars()
+            .all()
+        )
+        for level in levels:
+            await session.delete(level)
+        await session.flush()
+
+        for field in fields:
+            await session.delete(field)
+        await session.flush()
+
+    responses = list(
+        (await session.execute(select(Response).where(Response.dataset_id == dataset_id)))
+        .scalars()
+        .all()
+    )
+    for response in responses:
+        await session.delete(response)
+    await session.flush()
+
+    await session.delete(dataset)
+    await session.flush()
+    return True
+
+
 async def get_responses(
     session: AsyncSession, dataset_id: int, page: int = 1, page_size: int = 100
 ) -> tuple[int, list[Response]]:
