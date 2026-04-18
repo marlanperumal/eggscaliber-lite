@@ -16,7 +16,7 @@ const TABS: { key: ReconGroup; label: string }[] = [
   { key: "new_only", label: "New only" },
   { key: "old_only", label: "Old only" },
 ]
-const PAGE_SIZE = 50
+const PAGE_SIZE_OPTIONS = [25, 50, 100] as const
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 
 interface Props {
@@ -35,6 +35,7 @@ export function Step3Reconciliation({ state, setStep }: Props) {
   const [counts, setCounts] = useState<Counts>({ exact: 0, probable: 0, new_only: 0, old_only: 0 })
   const [blockingPending, setBlockingPending] = useState(0)
   const [nextCursor, setNextCursor] = useState<number | null>(null)
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(50)
   const [showAll, setShowAll] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(false)
@@ -101,7 +102,7 @@ export function Step3Reconciliation({ state, setStep }: Props) {
   async function fetchPage(cursor: number | null) {
     if (!state.sessionId) return
     setLoading(true)
-    const params = new URLSearchParams({ page_size: String(PAGE_SIZE), group: activeTab })
+    const params = new URLSearchParams({ page_size: String(pageSize), group: activeTab })
     if (cursor !== null) params.set("after_id", String(cursor))
     const res = await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile?${params}`)
     const data = await res.json()
@@ -117,7 +118,7 @@ export function Step3Reconciliation({ state, setStep }: Props) {
       setSelected(new Set())
       fetchPage(null)
     }
-  }, [activeTab, triggered])
+  }, [activeTab, triggered, pageSize])
 
   // Infinite scroll sentinel
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -295,6 +296,22 @@ export function Step3Reconciliation({ state, setStep }: Props) {
       {/* Pagination controls */}
       <div className="flex items-center gap-3 text-muted-foreground text-xs">
         <span>{rows.length} loaded</span>
+        <label className="flex items-center gap-1">
+          Page size
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])
+            }}
+            className="rounded border border-border bg-background px-1 py-0.5 text-xs"
+          >
+            {PAGE_SIZE_OPTIONS.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
         {nextCursor && !showAll && (
           <button
             type="button"
