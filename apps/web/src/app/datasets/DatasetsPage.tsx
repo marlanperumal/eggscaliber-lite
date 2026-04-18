@@ -5,6 +5,14 @@ import { api } from "@/lib/api"
 
 type Package = { id: number; name: string }
 type Collection = { id: number; name: string; package_id?: number }
+type DraftItem = {
+  id: number
+  status: string
+  dataset_name: string | null
+  collection_name: string | null
+  package_name: string | null
+  created_at: string
+}
 type DatasetItem = {
   id: number
   name: string
@@ -20,6 +28,7 @@ type DatasetItem = {
 
 export function DatasetsPage() {
   const [items, setItems] = useState<DatasetItem[]>([])
+  const [drafts, setDrafts] = useState<DraftItem[]>([])
   const [packages, setPackages] = useState<Package[]>([])
   const [collections, setCollections] = useState<Collection[]>([])
   const [selectedPackageId, setSelectedPackageId] = useState<string>("")
@@ -32,6 +41,10 @@ export function DatasetsPage() {
     api.GET("/api/v1/packages" as never).then(({ data }: any) => {
       if (data) setPackages(data)
     })
+    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+    fetch(`${base}/api/v1/uploads`)
+      .then((r) => r.json())
+      .then((data) => setDrafts(data.items ?? []))
   }, [])
 
   useEffect(() => {
@@ -58,6 +71,19 @@ export function DatasetsPage() {
   const filtered = items.filter((d) =>
     search ? d.name.toLowerCase().includes(search.toLowerCase()) : true,
   )
+
+  function resumeUrl(draft: DraftItem): string {
+    const stepMap: Record<string, number> = {
+      pending: 2,
+      detecting: 2,
+      reconciling: 3,
+      editing: 4,
+    }
+    const step = stepMap[draft.status] ?? 2
+    const reconcile =
+      draft.status === "reconciling" || draft.status === "editing" ? "&reconcile=1" : ""
+    return `/datasets/upload?session=${draft.id}&step=${step}${reconcile}`
+  }
 
   async function handleDelete(id: number) {
     setDeleteId(null)
@@ -118,6 +144,56 @@ export function DatasetsPage() {
           aria-label="Search datasets"
         />
       </div>
+
+      {drafts.length > 0 && (
+        <div className="mb-6">
+          <h2 className="mb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide">
+            In progress
+          </h2>
+          <div className="space-y-2">
+            {drafts.map((d) => (
+              <div
+                key={d.id}
+                className="flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm dark:border-amber-700 dark:bg-amber-950/30"
+                data-testid="draft-session-row"
+              >
+                <div>
+                  <span className="font-semibold text-foreground">
+                    {d.dataset_name ?? "Untitled upload"}
+                  </span>
+                  {d.collection_name && (
+                    <span className="ml-2 text-muted-foreground text-xs">
+                      {d.package_name} › {d.collection_name}
+                    </span>
+                  )}
+                  <span className="ml-2 rounded-full bg-amber-200 px-2 py-0.5 font-semibold text-amber-800 text-xs dark:bg-amber-800 dark:text-amber-200">
+                    draft
+                  </span>
+                </div>
+                <div className="flex gap-3">
+                  <Link
+                    href={resumeUrl(d)}
+                    className="rounded-lg bg-accent px-3 py-1.5 font-semibold text-sm text-white hover:opacity-90"
+                  >
+                    Resume →
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+                      await fetch(`${base}/api/v1/uploads/${d.id}`, { method: "DELETE" })
+                      setDrafts((prev) => prev.filter((x) => x.id !== d.id))
+                    }}
+                    className="font-semibold text-destructive text-xs hover:underline"
+                  >
+                    Discard
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <p className="text-muted-foreground text-sm">Loading…</p>
