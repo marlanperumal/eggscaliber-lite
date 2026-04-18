@@ -34,9 +34,19 @@ export function useWizardState() {
     [params, router],
   )
 
-  const setNeedsReconcile = useCallback((v: boolean) => {
-    setState((prev) => ({ ...prev, needsReconcile: v }))
-  }, [])
+  const setNeedsReconcile = useCallback(
+    (v: boolean) => {
+      setState((prev) => ({ ...prev, needsReconcile: v }))
+      const p = new URLSearchParams(params.toString())
+      if (v) {
+        p.set("reconcile", "1")
+      } else {
+        p.delete("reconcile")
+      }
+      router.replace(`/datasets/upload?${p.toString()}`)
+    },
+    [params, router],
+  )
 
   return { state, setStep, setSessionId, setNeedsReconcile }
 }
