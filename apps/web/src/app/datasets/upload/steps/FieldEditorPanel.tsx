@@ -1,9 +1,9 @@
 "use client"
 import { useEffect, useState } from "react"
+import { api } from "@/lib/api"
 import type { FieldNode, GroupNode, Level } from "./FieldTree"
 
 const FIELD_TYPES = ["numeric", "ordinal", "categorical", "multi_response", "identifier", "weight"]
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 
 interface Props {
   sessionId: number
@@ -103,9 +103,7 @@ export function FieldEditorPanel({
       setLevels((prev) => prev.filter((l) => l.id !== levelId))
       return
     }
-    await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}/levels/${levelId}`, {
-      method: "DELETE",
-    })
+    await (api as any).DELETE(`/api/v1/uploads/${sessionId}/fields/${field.id}/levels/${levelId}`)
     setLevels((prev) => prev.filter((l) => l.id !== levelId))
   }
 
@@ -128,41 +126,37 @@ export function FieldEditorPanel({
     if (!field) return
     setBusy(true)
     try {
-      const r1 = await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          display_name: displayName || null,
-          override_type: overrideType || null,
-          sort_order: sortOrder,
-        }),
-      })
+      const { data: savedField } = await (api as any).PATCH(
+        `/api/v1/uploads/${sessionId}/fields/${field.id}`,
+        {
+          body: {
+            display_name: displayName || null,
+            override_type: overrideType || null,
+            sort_order: sortOrder,
+          },
+        },
+      )
       const newGroupId = groupId ? Number(groupId) : null
       if (newGroupId !== field.upload_fieldgroup_id) {
-        await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}/move`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ upload_fieldgroup_id: newGroupId }),
+        await (api as any).PATCH(`/api/v1/uploads/${sessionId}/fields/${field.id}/move`, {
+          body: { upload_fieldgroup_id: newGroupId },
         })
       }
       // Upsert each level (skip new levels with no raw_value)
       for (const lvl of levels) {
         if (!lvl.raw_value.trim()) continue
-        await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}/levels`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        await (api as any).PUT(`/api/v1/uploads/${sessionId}/fields/${field.id}/levels`, {
+          body: {
             raw_value: lvl.raw_value,
             display_label: lvl.display_label,
             sort_order: lvl.sort_order,
-          }),
+          },
         })
       }
-      const data = await r1.json()
       onSaved({
         ...field,
-        display_name: data.display_name,
-        override_type: data.override_type,
+        display_name: savedField.display_name,
+        override_type: savedField.override_type,
         sort_order: sortOrder,
         upload_fieldgroup_id: newGroupId,
         levels,
@@ -214,8 +208,8 @@ export function FieldEditorPanel({
           className={[
             "rounded-full px-2 py-0.5 font-semibold text-xs",
             field.override_type || field.display_name
-              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-              : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+              ? "bg-[--success-subtle] text-[--success-foreground]"
+              : "bg-[--warning-subtle] text-[--warning-foreground]",
           ].join(" ")}
         >
           {field.override_type || field.display_name ? "✓ Ready" : "⚠ Needs review"}

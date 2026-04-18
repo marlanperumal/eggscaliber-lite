@@ -1,9 +1,8 @@
 "use client"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { api } from "@/lib/api"
 import type { WizardState, WizardStep } from "../wizard-types"
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 
 interface ReconSummary {
   reference_dataset_name: string | null
@@ -43,19 +42,23 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
   useEffect(() => {
     if (!state.sessionId) return
     Promise.all([
-      fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}`).then((r) => r.json()),
-      fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/field-tree`).then((r) => r.json()),
+      (api as any).GET(`/api/v1/uploads/${state.sessionId}`).then(({ data }: any) => data),
+      (api as any)
+        .GET(`/api/v1/uploads/${state.sessionId}/field-tree`)
+        .then(({ data }: any) => data),
       state.needsReconcile
         ? Promise.all([
-            fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile/counts`).then((r) =>
-              r.json(),
-            ),
-            fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/suggested-reference`).then((r) =>
-              r.json(),
-            ),
-            fetch(
-              `${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile?group=old_only&page_size=100`,
-            ).then((r) => r.json()),
+            (api as any)
+              .GET(`/api/v1/uploads/${state.sessionId}/reconcile/counts`)
+              .then(({ data }: any) => data),
+            (api as any)
+              .GET(`/api/v1/uploads/${state.sessionId}/suggested-reference`)
+              .then(({ data }: any) => data),
+            (api as any)
+              .GET(`/api/v1/uploads/${state.sessionId}/reconcile`, {
+                params: { query: { group: "old_only", page_size: 100 } },
+              })
+              .then(({ data }: any) => data),
           ])
         : Promise.resolve(null),
     ]).then(([sess, tree, reconData]) => {
@@ -103,10 +106,10 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
     if (!state.sessionId) return
     setBusy(true)
     setError(null)
-    const res = await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/commit`, {
-      method: "POST",
-    })
-    if (!res.ok) {
+    const { error: commitError } = await (api as any).POST(
+      `/api/v1/uploads/${state.sessionId}/commit`,
+    )
+    if (commitError) {
       setError("Commit failed. Please try again.")
       setBusy(false)
       return
@@ -133,7 +136,7 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
 
       {/* Warning box */}
       {summary.excluded_field_keys.length > 0 && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
+        <div className="rounded-lg border border-[--warning] bg-[--warning-subtle] px-4 py-3 text-xs text-[--warning-foreground]">
           <p className="mb-1 font-semibold">⚠ Excluded fields from reference dataset</p>
           <p>
             The following fields from the reference dataset are absent in this upload and will not
@@ -262,13 +265,13 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
                 </div>
               )}
               <div className="flex flex-wrap gap-1.5 pt-1">
-                <span className="rounded-full bg-green-100 px-2 py-0.5 font-semibold text-green-800 text-xs dark:bg-green-900/30 dark:text-green-300">
+                <span className="rounded-full bg-[--success-subtle] px-2 py-0.5 font-semibold text-[--success-foreground] text-xs">
                   ✓ {summary.recon.exact} exact
                 </span>
-                <span className="rounded-full bg-green-100 px-2 py-0.5 font-semibold text-green-800 text-xs dark:bg-green-900/30 dark:text-green-300">
+                <span className="rounded-full bg-[--success-subtle] px-2 py-0.5 font-semibold text-[--success-foreground] text-xs">
                   ✓ {summary.recon.confirmed} confirmed
                 </span>
-                <span className="rounded-full bg-blue-100 px-2 py-0.5 font-semibold text-blue-800 text-xs dark:bg-blue-900/30 dark:text-blue-300">
+                <span className="rounded-full bg-blue-100 px-2 py-0.5 font-semibold text-blue-800 text-xs">
                   + {summary.recon.new_only} new
                 </span>
                 {summary.recon.excluded > 0 && (
