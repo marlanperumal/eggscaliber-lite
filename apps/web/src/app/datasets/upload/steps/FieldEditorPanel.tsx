@@ -12,9 +12,18 @@ interface Props {
   onSaved: (updated: FieldNode) => void
   onCancel: () => void
   onDelete: () => Promise<void>
+  onCreateGroup: (name: string, parentId: number | null) => Promise<void>
 }
 
-export function FieldEditorPanel({ sessionId, field, groups, onSaved, onCancel, onDelete }: Props) {
+export function FieldEditorPanel({
+  sessionId,
+  field,
+  groups,
+  onSaved,
+  onCancel,
+  onDelete,
+  onCreateGroup,
+}: Props) {
   const [displayName, setDisplayName] = useState("")
   const [overrideType, setOverrideType] = useState<string>("")
   const [groupId, setGroupId] = useState<string>("")
@@ -22,6 +31,8 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved, onCancel, 
   const [levels, setLevels] = useState<Level[]>([])
   const [busy, setBusy] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [showNewGroup, setShowNewGroup] = useState(false)
+  const [newGroupName, setNewGroupName] = useState("")
 
   useEffect(() => {
     if (!field) return
@@ -32,10 +43,56 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved, onCancel, 
     setLevels(field.levels ?? [])
   }, [field])
 
+  async function handleCreateGroup() {
+    if (!newGroupName.trim()) return
+    await onCreateGroup(newGroupName.trim(), null)
+    setNewGroupName("")
+    setShowNewGroup(false)
+  }
+
   if (!field) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground text-xs">
-        Select a field to edit
+      <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-muted-foreground text-xs">
+        <span>Select a field to edit</span>
+        {showNewGroup ? (
+          <div className="flex w-full max-w-xs flex-col gap-2">
+            <input
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
+              placeholder="Group name"
+              className="rounded border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleCreateGroup}
+                disabled={!newGroupName.trim()}
+                className="flex-1 rounded bg-accent px-3 py-1.5 font-semibold text-sm text-white disabled:opacity-40"
+              >
+                Create group
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNewGroup(false)
+                  setNewGroupName("")
+                }}
+                className="rounded border border-border px-3 py-1.5 text-sm hover:bg-muted"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowNewGroup(true)}
+            className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-muted"
+          >
+            + New group
+          </button>
+        )}
       </div>
     )
   }

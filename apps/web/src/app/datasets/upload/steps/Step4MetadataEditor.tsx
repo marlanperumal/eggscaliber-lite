@@ -140,6 +140,7 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
               setSelectedFieldId(null)
               await loadTree()
             }}
+            onCreateGroup={handleCreateGroup}
           />
         </div>
       </div>
