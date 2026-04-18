@@ -21,6 +21,7 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved, onCancel, 
   const [sortOrder, setSortOrder] = useState<number>(0)
   const [levels, setLevels] = useState<Level[]>([])
   const [busy, setBusy] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
     if (!field) return
@@ -248,14 +249,40 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved, onCancel, 
         </button>
         <button
           type="button"
-          onClick={() => {
-            void onDelete()
-          }}
+          onClick={() => setConfirmDelete(true)}
           className="rounded border border-destructive px-4 py-1.5 text-destructive text-sm hover:bg-destructive/10"
         >
           Delete
         </button>
       </div>
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="rounded-xl border border-border bg-background p-6 shadow-xl">
+            <p className="mb-1 font-semibold text-sm">Delete field "{field.field_key}"?</p>
+            <p className="mb-4 text-muted-foreground text-xs">This cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmDelete(false)
+                  void onDelete()
+                }}
+                className="rounded-lg bg-destructive px-4 py-2 font-semibold text-sm text-white"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   )
 }
