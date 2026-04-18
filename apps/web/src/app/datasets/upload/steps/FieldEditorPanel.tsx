@@ -42,10 +42,28 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved, onCancel, 
 
   async function handleDeleteLevel(levelId: number) {
     if (!field) return
+    if (levelId < 0) {
+      setLevels((prev) => prev.filter((l) => l.id !== levelId))
+      return
+    }
     await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}/levels/${levelId}`, {
       method: "DELETE",
     })
     setLevels((prev) => prev.filter((l) => l.id !== levelId))
+  }
+
+  function handleAddLevel() {
+    const maxOrder = levels.reduce((m, l) => Math.max(m, l.sort_order), -1)
+    setLevels((prev) => [
+      ...prev,
+      {
+        id: -Date.now(),
+        raw_value: "",
+        display_label: null,
+        sort_order: maxOrder + 1,
+        is_inherited: false,
+      },
+    ])
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -70,8 +88,9 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved, onCancel, 
           body: JSON.stringify({ upload_fieldgroup_id: newGroupId }),
         })
       }
-      // Upsert each level
+      // Upsert each level (skip new levels with no raw_value)
       for (const lvl of levels) {
+        if (!lvl.raw_value.trim()) continue
         await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/fields/${field.id}/levels`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -105,7 +124,7 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved, onCancel, 
   const selectedGroup = groupId ? groups.find((g) => g.id === Number(groupId)) : null
   const effectiveType = overrideType || field.detected_type
   const showLevels =
-    field.levels.length > 0 || effectiveType === "categorical" || effectiveType === "ordinal"
+    levels.length > 0 || effectiveType === "categorical" || effectiveType === "ordinal"
 
   return (
     <form onSubmit={handleSave} className="flex flex-col gap-4 overflow-auto p-4">
@@ -207,17 +226,31 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved, onCancel, 
           <div className="space-y-1 rounded border border-border p-2">
             {levels.map((lvl, i) => (
               <div key={lvl.id} className="flex items-center gap-1">
-                <input
-                  type="text"
-                  value={lvl.display_label ?? lvl.raw_value}
-                  onChange={(e) =>
-                    setLevels((prev) =>
-                      prev.map((l, j) => (j === i ? { ...l, display_label: e.target.value } : l)),
-                    )
-                  }
-                  placeholder={lvl.raw_value}
-                  className="flex-1 rounded border border-border bg-background px-2 py-0.5 text-xs"
-                />
+                {lvl.id < 0 ? (
+                  <input
+                    type="text"
+                    value={lvl.raw_value}
+                    onChange={(e) =>
+                      setLevels((prev) =>
+                        prev.map((l, j) => (j === i ? { ...l, raw_value: e.target.value } : l)),
+                      )
+                    }
+                    placeholder="Raw value"
+                    className="flex-1 rounded border border-accent bg-background px-2 py-0.5 text-xs"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={lvl.display_label ?? lvl.raw_value}
+                    onChange={(e) =>
+                      setLevels((prev) =>
+                        prev.map((l, j) => (j === i ? { ...l, display_label: e.target.value } : l)),
+                      )
+                    }
+                    placeholder={lvl.raw_value}
+                    className="flex-1 rounded border border-border bg-background px-2 py-0.5 text-xs"
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => handleDeleteLevel(lvl.id)}
@@ -229,6 +262,13 @@ export function FieldEditorPanel({ sessionId, field, groups, onSaved, onCancel, 
               </div>
             ))}
           </div>
+          <button
+            type="button"
+            onClick={handleAddLevel}
+            className="text-accent text-xs hover:underline"
+          >
+            + Add level
+          </button>
         </div>
       )}
 
