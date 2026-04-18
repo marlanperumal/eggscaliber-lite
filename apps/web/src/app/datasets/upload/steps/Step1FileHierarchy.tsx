@@ -19,6 +19,15 @@ interface Props {
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+const NEW_SENTINEL = "__new__"
+
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+}
 
 export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }: Props) {
   const [file, setFile] = useState<File | null>(null)
@@ -32,6 +41,11 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
   const [busy, setBusy] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const [showNewPkg, setShowNewPkg] = useState(false)
+  const [newPkgName, setNewPkgName] = useState("")
+  const [showNewCol, setShowNewCol] = useState(false)
+  const [newColName, setNewColName] = useState("")
+
   useEffect(() => {
     fetch(`${API_BASE}/api/v1/packages`)
       .then((r) => r.json())
@@ -39,7 +53,7 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
   }, [])
 
   useEffect(() => {
-    if (!selectedPackageId) {
+    if (!selectedPackageId || selectedPackageId === NEW_SENTINEL) {
       setCollections([])
       setSelectedCollectionId("")
       return
@@ -49,6 +63,69 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
       .then((data) => setCollections(data.collections ?? []))
     setSelectedCollectionId("")
   }, [selectedPackageId])
+
+  function handlePackageChange(value: string) {
+    if (value === NEW_SENTINEL) {
+      setShowNewPkg(true)
+      setSelectedPackageId("")
+    } else {
+      setShowNewPkg(false)
+      setSelectedPackageId(value)
+    }
+  }
+
+  function handleCollectionChange(value: string) {
+    if (value === NEW_SENTINEL) {
+      setShowNewCol(true)
+      setSelectedCollectionId("")
+    } else {
+      setShowNewCol(false)
+      setSelectedCollectionId(value)
+    }
+  }
+
+  async function createPackage() {
+    if (!newPkgName.trim()) return
+    setBusy(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/packages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newPkgName.trim(), slug: slugify(newPkgName.trim()) }),
+      })
+      const pkg = await res.json()
+      setPackages((prev) => [...prev, { id: pkg.id, name: pkg.name }])
+      setSelectedPackageId(String(pkg.id))
+      setShowNewPkg(false)
+      setNewPkgName("")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function createCollection() {
+    if (!newColName.trim() || !selectedPackageId) return
+    setBusy(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/collections`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newColName.trim(),
+          slug: slugify(newColName.trim()),
+          package_id: Number(selectedPackageId),
+        }),
+      })
+      const col = await res.json()
+      setCollections((prev) => [...prev, { id: col.id, name: col.name }])
+      setSelectedCollectionId(String(col.id))
+      setShowNewCol(false)
+      setNewColName("")
+      setNeedsReconcile(false)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   function handleFileChange(f: File | null) {
     setFile(f)
@@ -139,7 +216,7 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
           <select
             id="pkg-select"
             value={selectedPackageId}
-            onChange={(e) => setSelectedPackageId(e.target.value)}
+            onChange={(e) => handlePackageChange(e.target.value)}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
           >
             <option value="">Select package…</option>
@@ -148,7 +225,37 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
                 {p.name}
               </option>
             ))}
+            <option value={NEW_SENTINEL}>+ New package…</option>
           </select>
+          {showNewPkg && (
+            <div className="mt-2 flex gap-2">
+              <input
+                value={newPkgName}
+                onChange={(e) => setNewPkgName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && createPackage()}
+                placeholder="Package name"
+                className="flex-1 rounded-md border border-border bg-background px-3 py-1.5 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+              <button
+                type="button"
+                onClick={createPackage}
+                disabled={!newPkgName.trim() || busy}
+                className="rounded-md bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-40"
+              >
+                Create
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNewPkg(false)
+                  setNewPkgName("")
+                }}
+                className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
         <div>
           <label
@@ -160,7 +267,7 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
           <select
             id="col-select"
             value={selectedCollectionId}
-            onChange={(e) => setSelectedCollectionId(e.target.value)}
+            onChange={(e) => handleCollectionChange(e.target.value)}
             disabled={!selectedPackageId}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-40"
           >
@@ -170,7 +277,37 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
                 {c.name}
               </option>
             ))}
+            {selectedPackageId && <option value={NEW_SENTINEL}>+ New collection…</option>}
           </select>
+          {showNewCol && (
+            <div className="mt-2 flex gap-2">
+              <input
+                value={newColName}
+                onChange={(e) => setNewColName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && createCollection()}
+                placeholder="Collection name"
+                className="flex-1 rounded-md border border-border bg-background px-3 py-1.5 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+              <button
+                type="button"
+                onClick={createCollection}
+                disabled={!newColName.trim() || busy}
+                className="rounded-md bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-40"
+              >
+                Create
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNewCol(false)
+                  setNewColName("")
+                }}
+                className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
         <div>
           <label
