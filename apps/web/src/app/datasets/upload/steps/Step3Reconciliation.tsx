@@ -1,6 +1,7 @@
 "use client"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { useEffect, useRef, useState } from "react"
+import { api } from "@/lib/api"
 import type { WizardState, WizardStep } from "../wizard-types"
 import type { FieldNode, GroupNode } from "./FieldTree"
 import {
@@ -17,7 +18,6 @@ const TABS: { key: ReconGroup; label: string }[] = [
   { key: "old_only", label: "Old only" },
 ]
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 
 interface Props {
   state: WizardState
@@ -54,10 +54,10 @@ export function Step3Reconciliation({ state, setStep }: Props) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: fetchFieldTree intentionally excluded (stable reference)
   useEffect(() => {
     if (!state.sessionId) return
-    fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/suggested-reference`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.dataset_id) {
+    ;(api as any)
+      .GET(`/api/v1/uploads/${state.sessionId}/suggested-reference`)
+      .then(({ data }: any) => {
+        if (data?.dataset_id) {
           setRefDatasetId(String(data.dataset_id))
           setRefDatasetName(data.dataset_name ?? "")
         }
@@ -67,18 +67,14 @@ export function Step3Reconciliation({ state, setStep }: Props) {
 
   async function fetchCounts() {
     if (!state.sessionId) return
-    const data = await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile/counts`).then(
-      (r) => r.json(),
-    )
+    const { data } = await (api as any).GET(`/api/v1/uploads/${state.sessionId}/reconcile/counts`)
     setCounts(data)
     setBlockingPending(data.blocking_pending ?? 0)
   }
 
   async function fetchFieldTree() {
     if (!state.sessionId) return
-    const data = await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/field-tree`).then((r) =>
-      r.json(),
-    )
+    const { data } = await (api as any).GET(`/api/v1/uploads/${state.sessionId}/field-tree`)
     const allFields: FieldNode[] = [...(data.fields ?? []), ...(data.unassigned_fields ?? [])]
     setUploadFields(allFields)
     setUploadGroups(data.groups ?? [])
@@ -87,10 +83,8 @@ export function Step3Reconciliation({ state, setStep }: Props) {
   async function triggerReconcile() {
     if (!state.sessionId || !refDatasetId) return
     setBusy(true)
-    await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reference_dataset_id: Number(refDatasetId) }),
+    await (api as any).POST(`/api/v1/uploads/${state.sessionId}/reconcile`, {
+      body: { reference_dataset_id: Number(refDatasetId) },
     })
     setTriggered(true)
     await fetchCounts()
@@ -102,10 +96,11 @@ export function Step3Reconciliation({ state, setStep }: Props) {
   async function fetchPage(cursor: number | null) {
     if (!state.sessionId) return
     setLoading(true)
-    const params = new URLSearchParams({ page_size: String(pageSize), group: activeTab })
-    if (cursor !== null) params.set("after_id", String(cursor))
-    const res = await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile?${params}`)
-    const data = await res.json()
+    const query: Record<string, string | number> = { page_size: pageSize, group: activeTab }
+    if (cursor !== null) query.after_id = cursor
+    const { data } = await (api as any).GET(`/api/v1/uploads/${state.sessionId}/reconcile`, {
+      params: { query },
+    })
     setRows((prev) => (cursor === null ? data.items : [...prev, ...data.items]))
     setNextCursor(data.next_cursor ?? null)
     setLoading(false)
@@ -139,10 +134,8 @@ export function Step3Reconciliation({ state, setStep }: Props) {
       exclude: "excluded",
     }
     const status = statusMap[action] as ReconStatus
-    await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile/${rowId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+    await (api as any).PATCH(`/api/v1/uploads/${state.sessionId}/reconcile/${rowId}`, {
+      body: { status },
     })
     setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, status } : r)))
     await fetchCounts()
@@ -151,10 +144,8 @@ export function Step3Reconciliation({ state, setStep }: Props) {
   async function handleBulkAction(action: ReconStatus) {
     if (!state.sessionId || selected.size === 0) return
     setBusy(true)
-    await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/reconcile/bulk`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: Array.from(selected), action }),
+    await (api as any).POST(`/api/v1/uploads/${state.sessionId}/reconcile/bulk`, {
+      body: { ids: Array.from(selected), action },
     })
     setRows((prev) => prev.map((r) => (selected.has(r.id) ? { ...r, status: action } : r)))
     setSelected(new Set())
@@ -259,7 +250,7 @@ export function Step3Reconciliation({ state, setStep }: Props) {
                 type="button"
                 onClick={() => handleBulkAction("confirmed")}
                 disabled={busy}
-                className="rounded bg-green-100 px-2 py-1 font-semibold text-green-800 hover:bg-green-200"
+                className="rounded bg-[--success-subtle] px-2 py-1 font-semibold text-[--success-foreground] hover:bg-[--success]/20"
               >
                 Confirm all
               </button>
@@ -379,7 +370,7 @@ export function Step3Reconciliation({ state, setStep }: Props) {
       )}
 
       {blockingPending > 0 && (
-        <p className="font-semibold text-amber-600 text-xs">
+        <p className="font-semibold text-[--warning-foreground] text-xs">
           {blockingPending} row{blockingPending > 1 ? "s" : ""} still need a decision before
           proceeding.
         </p>

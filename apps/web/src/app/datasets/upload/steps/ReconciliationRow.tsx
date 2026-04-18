@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { api } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { FieldPicker } from "./FieldPicker"
 import type { FieldNode, GroupNode } from "./FieldTree"
@@ -21,16 +22,16 @@ export interface ReconRow {
 }
 
 const GROUP_DOT: Record<ReconGroup, string> = {
-  exact: "bg-green-500",
-  probable: "bg-amber-500",
+  exact: "bg-[--success]",
+  probable: "bg-[--warning]",
   new_only: "bg-blue-500",
   old_only: "bg-muted-foreground",
 }
 
 const STATUS_CHIP: Record<ReconStatus, string> = {
-  auto_accepted: "bg-green-100 text-green-800",
-  pending: "bg-amber-100 text-amber-800",
-  confirmed: "bg-green-100 text-green-800",
+  auto_accepted: "bg-[--success-subtle] text-[--success-foreground]",
+  pending: "bg-[--warning-subtle] text-[--warning-foreground]",
+  confirmed: "bg-[--success-subtle] text-[--success-foreground]",
   rejected: "bg-muted text-muted-foreground",
   excluded: "bg-muted text-muted-foreground",
 }
@@ -45,8 +46,6 @@ interface Props {
   sessionId: number | null
   onResolved: () => void
 }
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 
 export function ReconciliationRow({
   row,
@@ -96,7 +95,7 @@ export function ReconciliationRow({
             <button
               type="button"
               onClick={() => onAction(row.id, "confirm")}
-              className="rounded bg-green-100 px-1.5 py-0.5 font-semibold text-green-800 text-xs hover:bg-green-200"
+              className="rounded bg-[--success-subtle] px-1.5 py-0.5 font-semibold text-[--success-foreground] text-xs hover:bg-[--success]/20"
             >
               Confirm
             </button>
@@ -120,10 +119,8 @@ export function ReconciliationRow({
                   fields={fields}
                   groups={groups}
                   onPick={async (fieldId) => {
-                    await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/reconcile/${row.id}`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ ref_field_id: fieldId, status: "confirmed" }),
+                    await (api as any).PATCH(`/api/v1/uploads/${sessionId}/reconcile/${row.id}`, {
+                      body: { ref_field_id: fieldId, status: "confirmed" },
                     })
                     onResolved()
                   }}
@@ -155,10 +152,8 @@ export function ReconciliationRow({
                   fields={fields}
                   groups={groups}
                   onPick={async (fieldId) => {
-                    await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/reconcile/${row.id}`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ upload_field_id: fieldId, status: "confirmed" }),
+                    await (api as any).PATCH(`/api/v1/uploads/${sessionId}/reconcile/${row.id}`, {
+                      body: { upload_field_id: fieldId, status: "confirmed" },
                     })
                     onResolved()
                   }}
