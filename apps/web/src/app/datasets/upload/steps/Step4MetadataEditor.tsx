@@ -1,11 +1,11 @@
 "use client"
 import { useEffect, useState } from "react"
+import { api } from "@/lib/api"
 import type { WizardState, WizardStep } from "../wizard-types"
 import { FieldEditorPanel } from "./FieldEditorPanel"
 import { FieldList } from "./FieldList"
 import { type FieldNode, FieldTree, type GroupNode } from "./FieldTree"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 type PanelTab = "tree" | "list"
 
 interface Props {
@@ -23,8 +23,7 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
 
   async function loadTree() {
     if (!state.sessionId) return
-    const res = await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/field-tree`)
-    const data = await res.json()
+    const { data } = await (api as any).GET(`/api/v1/uploads/${state.sessionId}/field-tree`)
     setGroups(data.groups)
     setFields(data.fields)
     setUnassigned(data.unassigned_fields)
@@ -37,38 +36,30 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
 
   async function handleMoveField(fieldId: number, groupId: number | null) {
     if (!state.sessionId) return
-    await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/fields/${fieldId}/move`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ upload_fieldgroup_id: groupId }),
+    await (api as any).PATCH(`/api/v1/uploads/${state.sessionId}/fields/${fieldId}/move`, {
+      body: { upload_fieldgroup_id: groupId },
     })
     await loadTree()
   }
 
   async function handleCreateGroup(name: string, parentId: number | null) {
     if (!state.sessionId) return
-    await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/fieldgroups`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, parent_id: parentId }),
+    await (api as any).POST(`/api/v1/uploads/${state.sessionId}/fieldgroups`, {
+      body: { name, parent_id: parentId },
     })
     await loadTree()
   }
 
   async function handleDeleteGroup(id: number) {
     if (!state.sessionId) return
-    await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/fieldgroups/${id}`, {
-      method: "DELETE",
-    })
+    await (api as any).DELETE(`/api/v1/uploads/${state.sessionId}/fieldgroups/${id}`)
     await loadTree()
   }
 
   async function handleMoveGroup(groupId: number, parentId: number | null) {
     if (!state.sessionId) return
-    await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/fieldgroups/${groupId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ parent_id: parentId }),
+    await (api as any).PATCH(`/api/v1/uploads/${state.sessionId}/fieldgroups/${groupId}`, {
+      body: { parent_id: parentId },
     })
     await loadTree()
   }
@@ -111,10 +102,8 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
                 onCreateGroup={handleCreateGroup}
                 onRenameGroup={async (id: number, name: string) => {
                   if (!state.sessionId) return
-                  await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/fieldgroups/${id}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name }),
+                  await (api as any).PATCH(`/api/v1/uploads/${state.sessionId}/fieldgroups/${id}`, {
+                    body: { name },
                   })
                   await loadTree()
                 }}
@@ -144,9 +133,8 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
             onCancel={() => setSelectedFieldId(null)}
             onDelete={async () => {
               if (!state.sessionId || !selectedFieldId) return
-              await fetch(
-                `${API_BASE}/api/v1/uploads/${state.sessionId}/fields/${selectedFieldId}`,
-                { method: "DELETE" },
+              await (api as any).DELETE(
+                `/api/v1/uploads/${state.sessionId}/fields/${selectedFieldId}`,
               )
               setSelectedFieldId(null)
               await loadTree()
