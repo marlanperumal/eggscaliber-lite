@@ -48,7 +48,8 @@ export function Step3Reconciliation({ state, setStep }: Props) {
     estimateSize: () => 40,
   })
 
-  // Auto-fetch suggested reference when the step mounts
+  // Auto-fetch suggested reference when the step mounts; also populate field tree if already triggered
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchFieldTree intentionally excluded (stable reference)
   useEffect(() => {
     if (!state.sessionId) return
     fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/suggested-reference`)
@@ -59,7 +60,8 @@ export function Step3Reconciliation({ state, setStep }: Props) {
           setRefDatasetName(data.dataset_name ?? "")
         }
       })
-  }, [state.sessionId])
+    if (triggered) fetchFieldTree()
+  }, [state.sessionId, triggered])
 
   async function fetchCounts() {
     if (!state.sessionId) return

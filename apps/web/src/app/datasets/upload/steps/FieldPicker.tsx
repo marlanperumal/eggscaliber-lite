@@ -5,7 +5,7 @@ import type { FieldNode, GroupNode } from "./FieldTree"
 interface Props {
   fields: FieldNode[]
   groups: GroupNode[]
-  onPick: (fieldId: number) => void
+  onPick: (fieldId: number) => Promise<void>
   onClose: () => void
 }
 
@@ -41,8 +41,8 @@ export function FieldPicker({ fields, groups, onPick, onClose }: Props) {
               <button
                 key={f.id}
                 type="button"
-                onClick={() => {
-                  onPick(f.id)
+                onClick={async () => {
+                  await onPick(f.id)
                   onClose()
                 }}
                 className="block w-full px-3 py-1 text-left text-xs hover:bg-muted"
@@ -57,8 +57,8 @@ export function FieldPicker({ fields, groups, onPick, onClose }: Props) {
         <button
           key={f.id}
           type="button"
-          onClick={() => {
-            onPick(f.id)
+          onClick={async () => {
+            await onPick(f.id)
             onClose()
           }}
           className="block w-full px-3 py-1 text-left text-xs hover:bg-muted"

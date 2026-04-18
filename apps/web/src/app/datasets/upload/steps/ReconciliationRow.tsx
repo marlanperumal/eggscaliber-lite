@@ -148,7 +148,7 @@ export function ReconciliationRow({
                 onClick={() => setPickerOpen(true)}
                 className="rounded border border-border px-2 py-0.5 text-xs hover:bg-muted"
               >
-                Map to new field
+                Map to…
               </button>
               {pickerOpen && (
                 <FieldPicker
