@@ -229,7 +229,9 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
                   <div className="flex-1 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-1.5 rounded-full bg-accent"
-                      style={{ width: `${Math.round((n / summary.fields.length) * 100)}%` }}
+                      style={{
+                        width: `${summary.fields.length > 0 ? Math.round((n / summary.fields.length) * 100) : 0}%`,
+                      }}
                     />
                   </div>
                   <span className="w-6 text-right text-muted-foreground text-xs">{n}</span>

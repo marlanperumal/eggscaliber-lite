@@ -33,6 +33,25 @@ async def test_get_package_not_found(client):
     assert response.status_code == 404
 
 
+async def test_create_package(client):
+    response = await client.post(
+        "/api/v1/packages",
+        json={"name": "New Package", "slug": "new-package"},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["name"] == "New Package"
+    assert data["slug"] == "new-package"
+    assert data["id"] is not None
+
+
+async def test_create_package_slug_auto_generated(client):
+    response = await client.post("/api/v1/packages", json={"name": "Auto Slug Package"})
+    assert response.status_code == 201
+    data = response.json()
+    assert data["slug"] == "auto-slug-package"
+
+
 async def test_get_package_with_collections(client, db):
     pkg = await _make_package(db)
     col = Collection(

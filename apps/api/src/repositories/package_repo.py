@@ -15,6 +15,16 @@ async def get_by_id(session: AsyncSession, package_id: int) -> Package | None:
     )
 
 
+async def create_package(
+    session: AsyncSession, name: str, slug: str, description: str | None = None
+) -> Package:
+    obj = Package(name=name, slug=slug, description=description)
+    session.add(obj)
+    await session.flush()
+    await session.refresh(obj)
+    return obj
+
+
 async def get_collections_for_package(session: AsyncSession, package_id: int) -> list[Collection]:
     return list(
         (await session.execute(select(Collection).where(Collection.package_id == package_id)))

@@ -44,6 +44,46 @@ async def test_get_collection_consistency_not_found(client):
     assert response.status_code == 404
 
 
+async def test_create_collection(client, db):
+    pkg = Package(name="Pkg", slug="pkg-col-create-test")
+    db.add(pkg)
+    await db.flush()
+    await db.refresh(pkg)
+
+    response = await client.post(
+        "/api/v1/collections",
+        json={"name": "New Collection", "slug": "new-collection", "package_id": pkg.id},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["name"] == "New Collection"
+    assert data["package_id"] == pkg.id
+    assert data["id"] is not None
+
+
+async def test_create_collection_slug_auto_generated(client, db):
+    pkg = Package(name="Pkg2", slug="pkg2-col-create-test")
+    db.add(pkg)
+    await db.flush()
+    await db.refresh(pkg)
+
+    response = await client.post(
+        "/api/v1/collections",
+        json={"name": "Auto Slug Collection", "package_id": pkg.id},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["slug"] == "auto-slug-collection"
+
+
+async def test_create_collection_invalid_package(client):
+    response = await client.post(
+        "/api/v1/collections",
+        json={"name": "Bad Col", "package_id": 99999},
+    )
+    assert response.status_code == 404
+
+
 async def test_get_collection_with_datasets(client, db):
     col = await _seed_collection(db)
 

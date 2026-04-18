@@ -51,7 +51,11 @@ export interface paths {
          */
         get: operations["list_packages_api_v1_packages_get"];
         put?: never;
-        post?: never;
+        /**
+         * Create Package
+         * @description Create a new package.
+         */
+        post: operations["create_package_api_v1_packages_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -92,6 +96,26 @@ export interface paths {
         get: operations["get_scope_api_v1_scope_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Collection
+         * @description Create a new collection within a package.
+         */
+        post: operations["create_collection_api_v1_collections_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -618,6 +642,42 @@ export interface components {
             ids: number[];
             action: components["schemas"]["ReconciliationStatus"];
         };
+        /** CollectionCreate */
+        CollectionCreate: {
+            /** Name */
+            name: string;
+            /** Slug */
+            slug?: string | null;
+            /** Description */
+            description?: string | null;
+            /**
+             * Collection Type
+             * @default generic
+             */
+            collection_type: string;
+            /** Package Id */
+            package_id: number;
+        };
+        /** CollectionRead */
+        CollectionRead: {
+            /** Name */
+            name: string;
+            /** Slug */
+            slug: string;
+            /** Description */
+            description?: string | null;
+            /** @default generic */
+            collection_type: components["schemas"]["CollectionType"];
+            /** Package Id */
+            package_id: number;
+            /** Id */
+            id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** CollectionSummary */
         CollectionSummary: {
             /** Id */
@@ -978,6 +1038,15 @@ export interface components {
             /** Display Name */
             display_name: string;
         };
+        /** PackageCreate */
+        PackageCreate: {
+            /** Name */
+            name: string;
+            /** Slug */
+            slug?: string | null;
+            /** Description */
+            description?: string | null;
+        };
         /** PackageRead */
         PackageRead: {
             /** Name */
@@ -1239,6 +1308,39 @@ export interface operations {
             };
         };
     };
+    create_package_api_v1_packages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackageCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_package_api_v1_packages__package_id__get: {
         parameters: {
             query?: never;
@@ -1286,6 +1388,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScopePackage"][];
+                };
+            };
+        };
+    };
+    create_collection_api_v1_collections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -23,6 +23,27 @@ async def get_by_id(session: AsyncSession, collection_id: int) -> Collection | N
     )
 
 
+async def create_collection(
+    session: AsyncSession,
+    name: str,
+    slug: str,
+    package_id: int,
+    description: str | None = None,
+    collection_type: str = "generic",
+) -> Collection:
+    obj = Collection(
+        name=name,
+        slug=slug,
+        package_id=package_id,
+        description=description,
+        collection_type=collection_type,
+    )
+    session.add(obj)
+    await session.flush()
+    await session.refresh(obj)
+    return obj
+
+
 async def get_datasets_for_collection(session: AsyncSession, collection_id: int) -> list[Dataset]:
     return list(
         (
