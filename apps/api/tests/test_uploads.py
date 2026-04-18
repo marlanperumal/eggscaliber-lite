@@ -490,3 +490,34 @@ async def test_delete_fieldgroup_unassigns_fields(client, db):
     tree = (await client.get(f"/api/v1/uploads/{sid}/field-tree")).json()
     unassigned_ids = {f["id"] for f in tree["unassigned_fields"]}
     assert fid in unassigned_ids
+
+
+async def test_suggested_reference_returns_none_for_empty_collection(client, db):
+    """get_suggested_reference returns null dataset_id when collection has no datasets."""
+    from src.models.collection import Collection, CollectionType
+    from src.models.package import Package
+
+    pkg = Package(name="Empty Pkg", slug="empty-pkg")
+    db.add(pkg)
+    await db.flush()
+    await db.refresh(pkg)
+    col = Collection(
+        name="Empty Col",
+        slug="empty-col",
+        package_id=pkg.id,
+        collection_type=CollectionType.generic,
+    )
+    db.add(col)
+    await db.flush()
+    await db.refresh(col)
+
+    csv_bytes = _make_csv(["q1"], [["a"]])
+    r = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("x.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "X", "collection_id": str(col.id)},
+    )
+    sid = r.json()["id"]
+    ref_r = await client.get(f"/api/v1/uploads/{sid}/suggested-reference")
+    assert ref_r.status_code == 200
+    assert ref_r.json()["dataset_id"] is None

@@ -187,6 +187,30 @@ async def delete_dataset(session: AsyncSession, dataset_id: int) -> bool:
     return True
 
 
+async def get_latest_for_collection(session: AsyncSession, collection_id: int) -> Dataset | None:
+    """Return the most recently created dataset in a collection, or None."""
+    return (
+        (
+            await session.execute(
+                select(Dataset)
+                .where(Dataset.collection_id == collection_id)
+                .order_by(Dataset.id.desc())
+                .limit(1)
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+
+async def get_fields_by_ids(session: AsyncSession, field_ids: list[int]) -> list[Field]:
+    if not field_ids:
+        return []
+    return list(
+        (await session.execute(select(Field).where(Field.id.in_(field_ids)))).scalars().all()
+    )
+
+
 async def get_responses(
     session: AsyncSession, dataset_id: int, page: int = 1, page_size: int = 100
 ) -> tuple[int, list[Response]]:
