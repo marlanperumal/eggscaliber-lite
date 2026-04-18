@@ -1,4 +1,7 @@
+import { useState } from "react"
 import { cn } from "@/lib/utils"
+import { FieldPicker } from "./FieldPicker"
+import type { FieldNode, GroupNode } from "./FieldTree"
 
 export type ReconGroup = "exact" | "probable" | "new_only" | "old_only"
 export type ReconStatus = "auto_accepted" | "pending" | "confirmed" | "rejected" | "excluded"
@@ -37,9 +40,26 @@ interface Props {
   checked: boolean
   onCheck: (id: number, checked: boolean) => void
   onAction: (id: number, action: "confirm" | "reject" | "exclude" | "map") => void
+  fields: FieldNode[]
+  groups: GroupNode[]
+  sessionId: number | null
+  onResolved: () => void
 }
 
-export function ReconciliationRow({ row, checked, onCheck, onAction }: Props) {
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+
+export function ReconciliationRow({
+  row,
+  checked,
+  onCheck,
+  onAction,
+  fields,
+  groups,
+  sessionId,
+  onResolved,
+}: Props) {
+  const [pickerOpen, setPickerOpen] = useState(false)
+
   return (
     <div
       className="grid items-center gap-2 border-border border-b px-3 py-2 text-xs last:border-0"
@@ -87,16 +107,66 @@ export function ReconciliationRow({ row, checked, onCheck, onAction }: Props) {
             >
               Reject
             </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className="rounded border border-border px-2 py-0.5 text-xs hover:bg-muted"
+              >
+                Map to…
+              </button>
+              {pickerOpen && (
+                <FieldPicker
+                  fields={fields}
+                  groups={groups}
+                  onPick={async (fieldId) => {
+                    await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/reconcile/${row.id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ ref_field_id: fieldId, status: "confirmed" }),
+                    })
+                    onResolved()
+                  }}
+                  onClose={() => setPickerOpen(false)}
+                />
+              )}
+            </div>
           </>
         )}
         {row.group === "old_only" && row.status === "pending" && (
-          <button
-            type="button"
-            onClick={() => onAction(row.id, "exclude")}
-            className="rounded bg-muted px-1.5 py-0.5 font-semibold text-xs hover:bg-muted/60"
-          >
-            Exclude
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => onAction(row.id, "exclude")}
+              className="rounded bg-muted px-1.5 py-0.5 font-semibold text-xs hover:bg-muted/60"
+            >
+              Exclude
+            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className="rounded border border-border px-2 py-0.5 text-xs hover:bg-muted"
+              >
+                Map to new field
+              </button>
+              {pickerOpen && (
+                <FieldPicker
+                  fields={fields}
+                  groups={groups}
+                  onPick={async (fieldId) => {
+                    await fetch(`${API_BASE}/api/v1/uploads/${sessionId}/reconcile/${row.id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ upload_field_id: fieldId, status: "confirmed" }),
+                    })
+                    onResolved()
+                  }}
+                  onClose={() => setPickerOpen(false)}
+                />
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>

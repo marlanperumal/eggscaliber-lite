@@ -53,6 +53,7 @@ async def resolve_row(
     row_id: int,
     status: ReconciliationStatus,
     ref_field_id: int | None = None,
+    upload_field_id: int | None = None,
 ) -> ReconciliationRow | None:
     row = (
         (await session.execute(select(ReconciliationRow).where(ReconciliationRow.id == row_id)))
@@ -63,8 +64,11 @@ async def resolve_row(
         row.status = status
         if ref_field_id is not None:
             row.ref_field_id = ref_field_id
+        if upload_field_id is not None:
+            row.upload_field_id = upload_field_id
         session.add(row)
         await session.flush()
+        await session.refresh(row)
     return row
 
 

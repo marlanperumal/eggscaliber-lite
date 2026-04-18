@@ -349,8 +349,9 @@ async def get_suggested_reference(session_id: int, session: AsyncSession = Depen
 
 
 class RowResolve(BaseModel):
-    status: ReconciliationStatus
     ref_field_id: int | None = None
+    upload_field_id: int | None = None
+    status: ReconciliationStatus
 
 
 @router.patch("/uploads/{session_id}/reconcile/{row_id}")
@@ -361,11 +362,20 @@ async def resolve_reconcile_row(
     session: AsyncSession = Depends(get_session),
 ):
     row = await reconciliation_repo.resolve_row(
-        session, row_id, body.status, ref_field_id=body.ref_field_id
+        session,
+        row_id,
+        body.status,
+        ref_field_id=body.ref_field_id,
+        upload_field_id=body.upload_field_id,
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Row not found")
-    return {"id": row.id, "status": row.status}
+    return {
+        "id": row.id,
+        "status": row.status,
+        "upload_field_id": row.upload_field_id,
+        "ref_field_id": row.ref_field_id,
+    }
 
 
 @router.post("/uploads/{session_id}/reconcile/bulk")

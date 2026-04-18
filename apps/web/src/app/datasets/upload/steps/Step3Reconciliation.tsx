@@ -2,6 +2,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { useEffect, useRef, useState } from "react"
 import type { WizardState, WizardStep } from "../wizard-types"
+import type { FieldNode, GroupNode } from "./FieldTree"
 import {
   ReconciliationRow,
   type ReconGroup,
@@ -37,6 +38,8 @@ export function Step3Reconciliation({ state, setStep }: Props) {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [uploadFields, setUploadFields] = useState<FieldNode[]>([])
+  const [uploadGroups, setUploadGroups] = useState<GroupNode[]>([])
   const parentRef = useRef<HTMLDivElement>(null)
 
   const rowVirtualizer = useVirtualizer({
@@ -66,6 +69,16 @@ export function Step3Reconciliation({ state, setStep }: Props) {
     setCounts(data)
   }
 
+  async function fetchFieldTree() {
+    if (!state.sessionId) return
+    const data = await fetch(`${API_BASE}/api/v1/uploads/${state.sessionId}/field-tree`).then((r) =>
+      r.json(),
+    )
+    const allFields: FieldNode[] = [...(data.fields ?? []), ...(data.unassigned_fields ?? [])]
+    setUploadFields(allFields)
+    setUploadGroups(data.groups ?? [])
+  }
+
   async function triggerReconcile() {
     if (!state.sessionId || !refDatasetId) return
     setBusy(true)
@@ -76,6 +89,7 @@ export function Step3Reconciliation({ state, setStep }: Props) {
     })
     setTriggered(true)
     await fetchCounts()
+    await fetchFieldTree()
     fetchPage(null)
     setBusy(false)
   }
@@ -314,6 +328,13 @@ export function Step3Reconciliation({ state, setStep }: Props) {
                 checked={selected.has(rows[vi.index].id)}
                 onCheck={handleCheck}
                 onAction={handleAction}
+                fields={uploadFields}
+                groups={uploadGroups}
+                sessionId={state.sessionId}
+                onResolved={async () => {
+                  await fetchCounts()
+                  fetchPage(null)
+                }}
               />
             </div>
           ))}
@@ -328,6 +349,13 @@ export function Step3Reconciliation({ state, setStep }: Props) {
               checked={selected.has(row.id)}
               onCheck={handleCheck}
               onAction={handleAction}
+              fields={uploadFields}
+              groups={uploadGroups}
+              sessionId={state.sessionId}
+              onResolved={async () => {
+                await fetchCounts()
+                fetchPage(null)
+              }}
             />
           ))}
         </div>

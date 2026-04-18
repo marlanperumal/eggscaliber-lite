@@ -323,6 +323,78 @@ async def test_upsert_and_delete_level(client, db):
     assert del_resp.status_code == 204
 
 
+async def test_resolve_row_with_upload_field_id(client, db):
+    from src.models.collection import Collection, CollectionType
+    from src.models.dataset import Dataset
+    from src.models.field import Field, FieldType
+    from src.models.package import Package
+
+    pkg = Package(name="P upload_field", slug="p-upload-field-test")
+    db.add(pkg)
+    await db.flush()
+    await db.refresh(pkg)
+    col = Collection(
+        name="C",
+        slug="c-upload-field-test",
+        package_id=pkg.id,
+        collection_type=CollectionType.survey,
+    )
+    db.add(col)
+    await db.flush()
+    await db.refresh(col)
+    ds = Dataset(name="Wave Ref", slug="wave-ref-upload-field-test", collection_id=col.id)
+    db.add(ds)
+    await db.flush()
+    await db.refresh(ds)
+    f1 = Field(
+        field_key="gender",
+        display_name="Gender",
+        field_type=FieldType.categorical,
+        dataset_id=ds.id,
+    )
+    f2 = Field(
+        field_key="region",
+        display_name="Region",
+        field_type=FieldType.categorical,
+        dataset_id=ds.id,
+    )
+    db.add(f1)
+    db.add(f2)
+    await db.flush()
+
+    csv_bytes = _make_csv(["gender"], [["male"], ["female"]])
+    resp = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "Wave New", "collection_id": str(col.id)},
+    )
+    assert resp.status_code == 201
+    sess = resp.json()
+
+    await client.post(
+        f"/api/v1/uploads/{sess['id']}/reconcile",
+        json={"reference_dataset_id": ds.id},
+    )
+
+    rows_resp = await client.get(
+        f"/api/v1/uploads/{sess['id']}/reconcile?group=old_only&page_size=1"
+    )
+    assert rows_resp.status_code == 200
+    items = rows_resp.json()["items"]
+    assert len(items) >= 1, "Expected at least one old_only row (region not in upload)"
+    row_id = items[0]["id"]
+
+    sess_resp = await client.get(f"/api/v1/uploads/{sess['id']}")
+    upload_field_id = sess_resp.json()["fields"][0]["id"]
+
+    patch = await client.patch(
+        f"/api/v1/uploads/{sess['id']}/reconcile/{row_id}",
+        json={"upload_field_id": upload_field_id, "status": "confirmed"},
+    )
+    assert patch.status_code == 200
+    assert patch.json()["upload_field_id"] == upload_field_id
+
+
 async def test_reconcile_counts_includes_status_counts(client, db):
     from tests.test_reconciliation_api import _seed_ref_dataset, _upload
 
