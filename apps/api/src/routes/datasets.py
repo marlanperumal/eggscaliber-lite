@@ -10,6 +10,7 @@ from src.errors import DatasetNotFoundError
 from src.models.analytics import FieldTreeOut
 from src.models.dataset import DatasetWithFields, FieldOut
 from src.models.response import ResponsePage
+from src.repositories import dataset_repo
 from src.services import analytics_service, dataset_service
 
 router = APIRouter(tags=["datasets"])
@@ -23,8 +24,6 @@ async def list_datasets(
     session: AsyncSession = Depends(get_session),
 ):
     """List datasets, optionally filtered by collection_id."""
-    from src.repositories import dataset_repo
-
     total, items = await dataset_repo.list_enriched(
         session, collection_id=collection_id, page=page, page_size=page_size
     )
@@ -43,11 +42,10 @@ async def get_dataset(dataset_id: int, session: AsyncSession = Depends(get_sessi
 @router.delete("/datasets/{dataset_id}", status_code=204)
 async def delete_dataset(dataset_id: int, session: AsyncSession = Depends(get_session)):
     """Delete a dataset and all associated fields, levels, and responses."""
-    from src.repositories import dataset_repo
-
-    deleted = await dataset_repo.delete_dataset(session, dataset_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Dataset not found")
+    try:
+        await dataset_service.delete_dataset(session, dataset_id)
+    except DatasetNotFoundError:
+        raise HTTPException(status_code=404, detail="Dataset not found") from None
 
 
 @router.get("/datasets/{dataset_id}/responses", response_model=ResponsePage)
@@ -88,15 +86,10 @@ async def download_dataset_csv(
     session: AsyncSession = Depends(get_session),
 ):
     """Stream all responses for a dataset as a CSV file."""
-    from src.repositories import dataset_repo
-
-    dataset = await dataset_repo.get_by_id(session, dataset_id)
-    if dataset is None:
-        raise HTTPException(status_code=404, detail="Dataset not found")
-
-    _total, rows = await dataset_repo.get_responses(session, dataset_id, page=1, page_size=100_000)
-    fields = await dataset_repo.get_fields_for_datasets(session, [dataset_id])
-    field_keys = [f.field_key for f in fields]
+    try:
+        field_keys, rows = await dataset_service.get_csv_data(session, dataset_id)
+    except DatasetNotFoundError:
+        raise HTTPException(status_code=404, detail="Dataset not found") from None
 
     def generate():
         buf = io.StringIO()

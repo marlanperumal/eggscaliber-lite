@@ -21,6 +21,14 @@ class CollectionBase(SQLModel):
     package_id: int = Field(foreign_key="package.id")
 
 
+class CollectionCreate(SQLModel):
+    name: str
+    slug: str | None = None
+    description: str | None = None
+    collection_type: CollectionType = CollectionType.generic
+    package_id: int
+
+
 class Collection(CollectionBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))

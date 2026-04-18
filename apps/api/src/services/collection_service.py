@@ -1,11 +1,18 @@
+import re
 from enum import StrEnum
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.errors import CollectionNotFoundError
-from src.models.collection import CollectionWithDatasets, DatasetSummary, InconsistencyOut
+from src.errors import CollectionNotFoundError, PackageNotFoundError
+from src.models.collection import (
+    CollectionCreate,
+    CollectionRead,
+    CollectionWithDatasets,
+    DatasetSummary,
+    InconsistencyOut,
+)
 from src.models.field import FieldType
-from src.repositories import collection_repo, dataset_repo
+from src.repositories import collection_repo, dataset_repo, package_repo
 
 
 class InconsistencyType(StrEnum):
@@ -13,6 +20,27 @@ class InconsistencyType(StrEnum):
     level_added = "level_added"
     level_removed = "level_removed"
     missing_field = "missing_field"
+
+
+def _slugify(name: str) -> str:
+    return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", name.lower())).strip("-")
+
+
+async def create_collection(session: AsyncSession, body: CollectionCreate) -> CollectionRead:
+    """Raises PackageNotFoundError if body.package_id does not exist."""
+    pkg = await package_repo.get_by_id(session, body.package_id)
+    if pkg is None:
+        raise PackageNotFoundError(body.package_id)
+    slug = body.slug or _slugify(body.name)
+    col = await collection_repo.create_collection(
+        session,
+        name=body.name,
+        slug=slug,
+        package_id=body.package_id,
+        description=body.description,
+        collection_type=body.collection_type,
+    )
+    return CollectionRead.model_validate(col.model_dump())
 
 
 async def get_with_datasets(session: AsyncSession, collection_id: int) -> CollectionWithDatasets:

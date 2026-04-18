@@ -24,6 +24,24 @@ async def get_with_fields(session: AsyncSession, dataset_id: int) -> DatasetWith
     return DatasetWithFields.model_validate({**ds.model_dump(), "fields": fields_out})
 
 
+async def delete_dataset(session: AsyncSession, dataset_id: int) -> None:
+    """Raises DatasetNotFoundError if dataset_id does not exist."""
+    deleted = await dataset_repo.delete_dataset(session, dataset_id)
+    if not deleted:
+        raise DatasetNotFoundError(dataset_id)
+
+
+async def get_csv_data(session: AsyncSession, dataset_id: int) -> tuple[list[str], list]:
+    """Raises DatasetNotFoundError if dataset_id does not exist.
+    Returns (field_keys, rows) for CSV generation."""
+    ds = await dataset_repo.get_by_id(session, dataset_id)
+    if ds is None:
+        raise DatasetNotFoundError(dataset_id)
+    _total, rows = await dataset_repo.get_responses(session, dataset_id, page=1, page_size=100_000)
+    fields = await dataset_repo.get_fields_for_datasets(session, [dataset_id])
+    return [f.field_key for f in fields], rows
+
+
 async def get_responses(
     session: AsyncSession, dataset_id: int, page: int, page_size: int
 ) -> ResponsePage:
