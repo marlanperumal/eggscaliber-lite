@@ -119,7 +119,9 @@ export function ReconciliationRow({
                   fields={fields}
                   groups={groups}
                   onPick={async (fieldId) => {
-                    await (api as any).PATCH(`/api/v1/uploads/${sessionId}/reconcile/${row.id}`, {
+                    if (!sessionId) return
+                    await api.PATCH("/api/v1/uploads/{session_id}/reconcile/{row_id}", {
+                      params: { path: { session_id: sessionId, row_id: row.id } },
                       body: { ref_field_id: fieldId, status: "confirmed" },
                     })
                     onResolved()
@@ -152,7 +154,9 @@ export function ReconciliationRow({
                   fields={fields}
                   groups={groups}
                   onPick={async (fieldId) => {
-                    await (api as any).PATCH(`/api/v1/uploads/${sessionId}/reconcile/${row.id}`, {
+                    if (!sessionId) return
+                    await api.PATCH("/api/v1/uploads/{session_id}/reconcile/{row_id}", {
+                      params: { path: { session_id: sessionId, row_id: row.id } },
                       body: { upload_field_id: fieldId, status: "confirmed" },
                     })
                     onResolved()

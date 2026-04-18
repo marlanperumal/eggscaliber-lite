@@ -34,7 +34,7 @@ export function FieldPicker({ fields, groups, onPick, onClose }: Props) {
       {grouped.map(({ group, fields: gf }) =>
         gf.length > 0 ? (
           <div key={group.id}>
-            <div className="bg-muted/50 px-2 py-1 text-muted-foreground text-xs font-semibold">
+            <div className="bg-muted/50 px-2 py-1 font-semibold text-muted-foreground text-xs">
               {group.name}
             </div>
             {gf.map((f) => (

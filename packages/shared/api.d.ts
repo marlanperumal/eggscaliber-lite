@@ -196,7 +196,11 @@ export interface paths {
         get: operations["get_dataset_api_v1_datasets__dataset_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete Dataset
+         * @description Delete a dataset and all associated fields, levels, and responses.
+         */
+        delete: operations["delete_dataset_api_v1_datasets__dataset_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -650,11 +654,8 @@ export interface components {
             slug?: string | null;
             /** Description */
             description?: string | null;
-            /**
-             * Collection Type
-             * @default generic
-             */
-            collection_type: string;
+            /** @default generic */
+            collection_type: components["schemas"]["CollectionType"];
             /** Package Id */
             package_id: number;
         };
@@ -1539,6 +1540,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DatasetWithFields"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_dataset_api_v1_datasets__dataset_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

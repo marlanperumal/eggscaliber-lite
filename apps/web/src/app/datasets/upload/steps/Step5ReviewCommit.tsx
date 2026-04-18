@@ -42,26 +42,41 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
   useEffect(() => {
     if (!state.sessionId) return
     Promise.all([
-      (api as any).GET(`/api/v1/uploads/${state.sessionId}`).then(({ data }: any) => data),
-      (api as any)
-        .GET(`/api/v1/uploads/${state.sessionId}/field-tree`)
-        .then(({ data }: any) => data),
+      api
+        .GET("/api/v1/uploads/{session_id}", {
+          params: { path: { session_id: state.sessionId! } },
+        })
+        .then(({ data }) => data),
+      api
+        .GET("/api/v1/uploads/{session_id}/field-tree", {
+          params: { path: { session_id: state.sessionId! } },
+        })
+        .then(({ data }) => data),
       state.needsReconcile
         ? Promise.all([
-            (api as any)
-              .GET(`/api/v1/uploads/${state.sessionId}/reconcile/counts`)
-              .then(({ data }: any) => data),
-            (api as any)
-              .GET(`/api/v1/uploads/${state.sessionId}/suggested-reference`)
-              .then(({ data }: any) => data),
-            (api as any)
-              .GET(`/api/v1/uploads/${state.sessionId}/reconcile`, {
-                params: { query: { group: "old_only", page_size: 100 } },
+            api
+              .GET("/api/v1/uploads/{session_id}/reconcile/counts", {
+                params: { path: { session_id: state.sessionId! } },
               })
-              .then(({ data }: any) => data),
+              .then(({ data }) => data),
+            api
+              .GET("/api/v1/uploads/{session_id}/suggested-reference", {
+                params: { path: { session_id: state.sessionId! } },
+              })
+              .then(({ data }) => data),
+            api
+              .GET("/api/v1/uploads/{session_id}/reconcile", {
+                params: {
+                  path: { session_id: state.sessionId! },
+                  query: { group: "old_only", page_size: 100 },
+                },
+              })
+              .then(({ data }) => data),
           ])
         : Promise.resolve(null),
-    ]).then(([sess, tree, reconData]) => {
+    ]).then(([sessRaw, treeRaw, reconData]) => {
+      const sess = sessRaw as any
+      const tree = treeRaw as any
       let recon: ReconSummary | null = null
       let excludedKeys: string[] = []
       if (reconData) {
@@ -106,9 +121,9 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
     if (!state.sessionId) return
     setBusy(true)
     setError(null)
-    const { error: commitError } = await (api as any).POST(
-      `/api/v1/uploads/${state.sessionId}/commit`,
-    )
+    const { error: commitError } = await api.POST("/api/v1/uploads/{session_id}/commit", {
+      params: { path: { session_id: state.sessionId! } },
+    })
     if (commitError) {
       setError("Commit failed. Please try again.")
       setBusy(false)
@@ -136,7 +151,7 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
 
       {/* Warning box */}
       {summary.excluded_field_keys.length > 0 && (
-        <div className="rounded-lg border border-[--warning] bg-[--warning-subtle] px-4 py-3 text-xs text-[--warning-foreground]">
+        <div className="rounded-lg border border-[--warning] bg-[--warning-subtle] px-4 py-3 text-[--warning-foreground] text-xs">
           <p className="mb-1 font-semibold">⚠ Excluded fields from reference dataset</p>
           <p>
             The following fields from the reference dataset are absent in this upload and will not
@@ -195,7 +210,7 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
             {summary.file_name && (
               <div className="flex gap-2">
                 <span className="w-28 text-muted-foreground">File</span>
-                <span className="font-mono font-medium text-xs">{summary.file_name}</span>
+                <span className="font-medium font-mono text-xs">{summary.file_name}</span>
               </div>
             )}
           </div>

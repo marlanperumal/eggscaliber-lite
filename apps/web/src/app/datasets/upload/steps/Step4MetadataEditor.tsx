@@ -23,10 +23,12 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
 
   async function loadTree() {
     if (!state.sessionId) return
-    const { data } = await (api as any).GET(`/api/v1/uploads/${state.sessionId}/field-tree`)
-    setGroups(data.groups)
-    setFields(data.fields)
-    setUnassigned(data.unassigned_fields)
+    const { data } = await api.GET("/api/v1/uploads/{session_id}/field-tree", {
+      params: { path: { session_id: state.sessionId } },
+    })
+    setGroups((data as any).groups)
+    setFields((data as any).fields)
+    setUnassigned((data as any).unassigned_fields)
   }
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: loadTree intentionally excluded
@@ -36,7 +38,8 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
 
   async function handleMoveField(fieldId: number, groupId: number | null) {
     if (!state.sessionId) return
-    await (api as any).PATCH(`/api/v1/uploads/${state.sessionId}/fields/${fieldId}/move`, {
+    await api.PATCH("/api/v1/uploads/{session_id}/fields/{field_id}/move", {
+      params: { path: { session_id: state.sessionId!, field_id: fieldId } },
       body: { upload_fieldgroup_id: groupId },
     })
     await loadTree()
@@ -44,7 +47,8 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
 
   async function handleCreateGroup(name: string, parentId: number | null) {
     if (!state.sessionId) return
-    await (api as any).POST(`/api/v1/uploads/${state.sessionId}/fieldgroups`, {
+    await api.POST("/api/v1/uploads/{session_id}/fieldgroups", {
+      params: { path: { session_id: state.sessionId! } },
       body: { name, parent_id: parentId },
     })
     await loadTree()
@@ -52,13 +56,16 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
 
   async function handleDeleteGroup(id: number) {
     if (!state.sessionId) return
-    await (api as any).DELETE(`/api/v1/uploads/${state.sessionId}/fieldgroups/${id}`)
+    await api.DELETE("/api/v1/uploads/{session_id}/fieldgroups/{group_id}", {
+      params: { path: { session_id: state.sessionId!, group_id: id } },
+    })
     await loadTree()
   }
 
   async function handleMoveGroup(groupId: number, parentId: number | null) {
     if (!state.sessionId) return
-    await (api as any).PATCH(`/api/v1/uploads/${state.sessionId}/fieldgroups/${groupId}`, {
+    await api.PATCH("/api/v1/uploads/{session_id}/fieldgroups/{group_id}", {
+      params: { path: { session_id: state.sessionId!, group_id: groupId } },
       body: { parent_id: parentId },
     })
     await loadTree()
@@ -102,7 +109,8 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
                 onCreateGroup={handleCreateGroup}
                 onRenameGroup={async (id: number, name: string) => {
                   if (!state.sessionId) return
-                  await (api as any).PATCH(`/api/v1/uploads/${state.sessionId}/fieldgroups/${id}`, {
+                  await api.PATCH("/api/v1/uploads/{session_id}/fieldgroups/{group_id}", {
+                    params: { path: { session_id: state.sessionId!, group_id: id } },
                     body: { name },
                   })
                   await loadTree()
@@ -133,9 +141,11 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
             onCancel={() => setSelectedFieldId(null)}
             onDelete={async () => {
               if (!state.sessionId || !selectedFieldId) return
-              await (api as any).DELETE(
-                `/api/v1/uploads/${state.sessionId}/fields/${selectedFieldId}`,
-              )
+              await api.DELETE("/api/v1/uploads/{upload_session_id}/fields/{field_id}", {
+                params: {
+                  path: { upload_session_id: state.sessionId!, field_id: selectedFieldId },
+                },
+              })
               setSelectedFieldId(null)
               await loadTree()
             }}

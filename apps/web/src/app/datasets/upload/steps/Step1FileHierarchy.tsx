@@ -48,7 +48,7 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
   const [rowCount, setRowCount] = useState<number | null>(null)
 
   useEffect(() => {
-    api.GET("/api/v1/packages" as never).then(({ data }: any) => {
+    api.GET("/api/v1/packages").then(({ data }) => {
       if (data) setPackages(data)
     })
   }, [])
@@ -60,14 +60,11 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
       return
     }
     api
-      .GET(
-        "/api/v1/packages/{package_id}" as never,
-        {
-          params: { path: { package_id: selectedPackageId } },
-        } as any,
-      )
-      .then(({ data }: any) => {
-        if (data) setCollections((data as any)?.collections ?? [])
+      .GET("/api/v1/packages/{package_id}", {
+        params: { path: { package_id: Number(selectedPackageId) } },
+      })
+      .then(({ data }) => {
+        if (data) setCollections(data.collections ?? [])
       })
     setSelectedCollectionId("")
   }, [selectedPackageId])
@@ -96,9 +93,10 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
     if (!newPkgName.trim()) return
     setBusy(true)
     try {
-      const { data: pkg } = await (api as any).POST("/api/v1/packages", {
+      const { data: pkg } = await api.POST("/api/v1/packages", {
         body: { name: newPkgName.trim(), slug: slugify(newPkgName.trim()) },
       })
+      if (!pkg) throw new Error("Failed to create package")
       setPackages((prev) => [...prev, { id: pkg.id, name: pkg.name }])
       setSelectedPackageId(String(pkg.id))
       setShowNewPkg(false)
@@ -112,13 +110,15 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
     if (!newColName.trim() || !selectedPackageId) return
     setBusy(true)
     try {
-      const { data: col } = await (api as any).POST("/api/v1/collections", {
+      const { data: col } = await api.POST("/api/v1/collections", {
         body: {
           name: newColName.trim(),
           slug: slugify(newColName.trim()),
           package_id: Number(selectedPackageId),
+          collection_type: "generic",
         },
       })
+      if (!col) throw new Error("Failed to create collection")
       setCollections((prev) => [...prev, { id: col.id, name: col.name }])
       setSelectedCollectionId(String(col.id))
       setShowNewCol(false)
@@ -172,9 +172,9 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
     form.append("collection_id", selectedCollectionId)
     form.append("collected_at", `${collectedAt}-01`)
     try {
-      const { data, error } = await (api as any).POST("/api/v1/uploads", { body: form })
+      const { data, error } = await api.POST("/api/v1/uploads", { body: form as any })
       if (error) throw new Error(JSON.stringify(error))
-      setSessionId(data.id)
+      setSessionId((data as any).id)
       setNeedsReconcile(true)
       setStep(2)
     } catch (e) {

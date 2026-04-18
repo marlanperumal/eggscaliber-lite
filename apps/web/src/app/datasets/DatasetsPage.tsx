@@ -38,11 +38,11 @@ export function DatasetsPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null)
 
   useEffect(() => {
-    api.GET("/api/v1/packages" as never).then(({ data }: any) => {
+    api.GET("/api/v1/packages").then(({ data }) => {
       if (data) setPackages(data)
     })
-    api.GET("/api/v1/uploads" as never).then(({ data }: any) => {
-      if (data) setDrafts((data as any).items ?? [])
+    api.GET("/api/v1/uploads").then(({ data }) => {
+      if (data) setDrafts((data as { items: DraftItem[] }).items ?? [])
     })
   }, [])
 
@@ -52,19 +52,28 @@ export function DatasetsPage() {
       setSelectedCollectionId("")
       return
     }
-    api.GET(`/api/v1/packages/${selectedPackageId}` as never).then(({ data }: any) => {
-      if (data?.collections) setCollections(data.collections)
-      setSelectedCollectionId("")
-    })
+    api
+      .GET("/api/v1/packages/{package_id}", {
+        params: { path: { package_id: Number(selectedPackageId) } },
+      })
+      .then(({ data }) => {
+        if (data?.collections) setCollections(data.collections)
+        setSelectedCollectionId("")
+      })
   }, [selectedPackageId])
 
   useEffect(() => {
     setLoading(true)
-    const params = selectedCollectionId ? `?collection_id=${selectedCollectionId}` : ""
-    api.GET(`/api/v1/datasets${params}` as never).then(({ data }: any) => {
-      if (data) setItems(data.items)
-      setLoading(false)
-    })
+    api
+      .GET("/api/v1/datasets", {
+        params: {
+          query: { collection_id: selectedCollectionId ? Number(selectedCollectionId) : undefined },
+        },
+      })
+      .then(({ data }) => {
+        if (data) setItems((data as { items: DatasetItem[] }).items)
+        setLoading(false)
+      })
   }, [selectedCollectionId])
 
   const filtered = items.filter((d) =>
@@ -86,12 +95,9 @@ export function DatasetsPage() {
 
   async function handleDelete(id: number) {
     setDeleteId(null)
-    await api.DELETE(
-      "/api/v1/datasets/{dataset_id}" as never,
-      {
-        params: { path: { dataset_id: id } },
-      } as any,
-    )
+    await api.DELETE("/api/v1/datasets/{dataset_id}", {
+      params: { path: { dataset_id: id } },
+    })
     setItems((prev) => prev.filter((d) => d.id !== id))
   }
 
@@ -112,7 +118,7 @@ export function DatasetsPage() {
         <select
           value={selectedPackageId}
           onChange={(e) => setSelectedPackageId(e.target.value)}
-          className="rounded border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+          className="rounded border border-border bg-background px-3 py-1.5 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
           aria-label="Filter by package"
         >
           <option value="">All packages</option>
@@ -126,7 +132,7 @@ export function DatasetsPage() {
           value={selectedCollectionId}
           onChange={(e) => setSelectedCollectionId(e.target.value)}
           disabled={!selectedPackageId}
-          className="rounded border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-40"
+          className="rounded border border-border bg-background px-3 py-1.5 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-40"
           aria-label="Filter by collection"
         >
           <option value="">All collections</option>
@@ -141,7 +147,7 @@ export function DatasetsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name…"
-          className="rounded border border-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+          className="rounded border border-border bg-background px-3 py-1.5 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
           aria-label="Search datasets"
         />
       </div>
@@ -181,12 +187,9 @@ export function DatasetsPage() {
                   <button
                     type="button"
                     onClick={async () => {
-                      await api.DELETE(
-                        "/api/v1/uploads/{session_id}" as never,
-                        {
-                          params: { path: { session_id: d.id } },
-                        } as any,
-                      )
+                      await api.DELETE("/api/v1/uploads/{session_id}", {
+                        params: { path: { session_id: d.id } },
+                      })
                       setDrafts((prev) => prev.filter((x) => x.id !== d.id))
                     }}
                     className="font-semibold text-destructive text-xs hover:underline"

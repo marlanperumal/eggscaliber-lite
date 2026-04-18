@@ -27,21 +27,27 @@ export function Step2FieldDetection({ state, setStep }: Props) {
 
   useEffect(() => {
     if (!state.sessionId) return
-    ;(api.GET as any)(`/api/v1/uploads/${state.sessionId}`).then(({ data }: any) => {
-      if (data) setFields(data.fields)
-      setLoading(false)
-    })
+    api
+      .GET("/api/v1/uploads/{session_id}", {
+        params: { path: { session_id: state.sessionId } },
+      })
+      .then(({ data }) => {
+        if (data) setFields((data as any).fields)
+        setLoading(false)
+      })
   }, [state.sessionId])
 
   async function handleOverride(fieldId: number, overrideType: string | null) {
     if (!state.sessionId) return
-    const res: any = await (api.PATCH as any)(
-      `/api/v1/uploads/${state.sessionId}/fields/${fieldId}`,
-      { body: { override_type: overrideType } },
-    )
-    if (res.data) {
+    const { data } = await api.PATCH("/api/v1/uploads/{session_id}/fields/{field_id}", {
+      params: { path: { session_id: state.sessionId, field_id: fieldId } },
+      body: { override_type: overrideType },
+    })
+    if (data) {
       setFields((prev) =>
-        prev.map((f) => (f.id === fieldId ? { ...f, override_type: res.data.override_type } : f)),
+        prev.map((f) =>
+          f.id === fieldId ? { ...f, override_type: (data as any).override_type } : f,
+        ),
       )
     }
   }

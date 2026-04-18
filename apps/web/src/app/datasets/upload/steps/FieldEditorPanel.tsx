@@ -61,7 +61,7 @@ export function FieldEditorPanel({
               onChange={(e) => setNewGroupName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
               placeholder="Group name"
-              className="rounded border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+              className="rounded border border-border bg-background px-3 py-1.5 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
             />
             <div className="flex gap-2">
               <button
@@ -103,7 +103,9 @@ export function FieldEditorPanel({
       setLevels((prev) => prev.filter((l) => l.id !== levelId))
       return
     }
-    await (api as any).DELETE(`/api/v1/uploads/${sessionId}/fields/${field.id}/levels/${levelId}`)
+    await api.DELETE("/api/v1/uploads/{upload_session_id}/fields/{field_id}/levels/{level_id}", {
+      params: { path: { upload_session_id: sessionId, field_id: field.id, level_id: levelId } },
+    })
     setLevels((prev) => prev.filter((l) => l.id !== levelId))
   }
 
@@ -126,9 +128,10 @@ export function FieldEditorPanel({
     if (!field) return
     setBusy(true)
     try {
-      const { data: savedField } = await (api as any).PATCH(
-        `/api/v1/uploads/${sessionId}/fields/${field.id}`,
+      const { data: savedField } = await api.PATCH(
+        "/api/v1/uploads/{session_id}/fields/{field_id}",
         {
+          params: { path: { session_id: sessionId, field_id: field.id } },
           body: {
             display_name: displayName || null,
             override_type: overrideType || null,
@@ -138,14 +141,16 @@ export function FieldEditorPanel({
       )
       const newGroupId = groupId ? Number(groupId) : null
       if (newGroupId !== field.upload_fieldgroup_id) {
-        await (api as any).PATCH(`/api/v1/uploads/${sessionId}/fields/${field.id}/move`, {
+        await api.PATCH("/api/v1/uploads/{session_id}/fields/{field_id}/move", {
+          params: { path: { session_id: sessionId, field_id: field.id } },
           body: { upload_fieldgroup_id: newGroupId },
         })
       }
       // Upsert each level (skip new levels with no raw_value)
       for (const lvl of levels) {
         if (!lvl.raw_value.trim()) continue
-        await (api as any).PUT(`/api/v1/uploads/${sessionId}/fields/${field.id}/levels`, {
+        await api.PUT("/api/v1/uploads/{upload_session_id}/fields/{field_id}/levels", {
+          params: { path: { upload_session_id: sessionId, field_id: field.id } },
           body: {
             raw_value: lvl.raw_value,
             display_label: lvl.display_label,
@@ -153,10 +158,11 @@ export function FieldEditorPanel({
           },
         })
       }
+      const saved = savedField as { display_name: string | null; override_type: string | null }
       onSaved({
         ...field,
-        display_name: savedField.display_name,
-        override_type: savedField.override_type,
+        display_name: saved.display_name,
+        override_type: saved.override_type,
         sort_order: sortOrder,
         upload_fieldgroup_id: newGroupId,
         levels,

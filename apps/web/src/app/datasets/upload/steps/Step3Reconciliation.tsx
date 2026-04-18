@@ -54,12 +54,14 @@ export function Step3Reconciliation({ state, setStep }: Props) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: fetchFieldTree intentionally excluded (stable reference)
   useEffect(() => {
     if (!state.sessionId) return
-    ;(api as any)
-      .GET(`/api/v1/uploads/${state.sessionId}/suggested-reference`)
-      .then(({ data }: any) => {
-        if (data?.dataset_id) {
-          setRefDatasetId(String(data.dataset_id))
-          setRefDatasetName(data.dataset_name ?? "")
+    api
+      .GET("/api/v1/uploads/{session_id}/suggested-reference", {
+        params: { path: { session_id: state.sessionId } },
+      })
+      .then(({ data }) => {
+        if ((data as any)?.dataset_id) {
+          setRefDatasetId(String((data as any).dataset_id))
+          setRefDatasetName((data as any).dataset_name ?? "")
         }
       })
     if (triggered) fetchFieldTree()
@@ -67,23 +69,31 @@ export function Step3Reconciliation({ state, setStep }: Props) {
 
   async function fetchCounts() {
     if (!state.sessionId) return
-    const { data } = await (api as any).GET(`/api/v1/uploads/${state.sessionId}/reconcile/counts`)
-    setCounts(data)
-    setBlockingPending(data.blocking_pending ?? 0)
+    const { data } = await api.GET("/api/v1/uploads/{session_id}/reconcile/counts", {
+      params: { path: { session_id: state.sessionId! } },
+    })
+    setCounts(data as any)
+    setBlockingPending((data as any).blocking_pending ?? 0)
   }
 
   async function fetchFieldTree() {
     if (!state.sessionId) return
-    const { data } = await (api as any).GET(`/api/v1/uploads/${state.sessionId}/field-tree`)
-    const allFields: FieldNode[] = [...(data.fields ?? []), ...(data.unassigned_fields ?? [])]
+    const { data } = await api.GET("/api/v1/uploads/{session_id}/field-tree", {
+      params: { path: { session_id: state.sessionId! } },
+    })
+    const allFields: FieldNode[] = [
+      ...((data as any).fields ?? []),
+      ...((data as any).unassigned_fields ?? []),
+    ]
     setUploadFields(allFields)
-    setUploadGroups(data.groups ?? [])
+    setUploadGroups((data as any).groups ?? [])
   }
 
   async function triggerReconcile() {
     if (!state.sessionId || !refDatasetId) return
     setBusy(true)
-    await (api as any).POST(`/api/v1/uploads/${state.sessionId}/reconcile`, {
+    await api.POST("/api/v1/uploads/{session_id}/reconcile", {
+      params: { path: { session_id: state.sessionId! } },
       body: { reference_dataset_id: Number(refDatasetId) },
     })
     setTriggered(true)
@@ -96,13 +106,14 @@ export function Step3Reconciliation({ state, setStep }: Props) {
   async function fetchPage(cursor: number | null) {
     if (!state.sessionId) return
     setLoading(true)
-    const query: Record<string, string | number> = { page_size: pageSize, group: activeTab }
-    if (cursor !== null) query.after_id = cursor
-    const { data } = await (api as any).GET(`/api/v1/uploads/${state.sessionId}/reconcile`, {
-      params: { query },
+    const { data } = await api.GET("/api/v1/uploads/{session_id}/reconcile", {
+      params: {
+        path: { session_id: state.sessionId! },
+        query: { group: activeTab, page_size: pageSize, after_id: cursor ?? undefined },
+      },
     })
-    setRows((prev) => (cursor === null ? data.items : [...prev, ...data.items]))
-    setNextCursor(data.next_cursor ?? null)
+    setRows((prev) => (cursor === null ? (data as any).items : [...prev, ...(data as any).items]))
+    setNextCursor((data as any).next_cursor ?? null)
     setLoading(false)
   }
 
@@ -134,7 +145,8 @@ export function Step3Reconciliation({ state, setStep }: Props) {
       exclude: "excluded",
     }
     const status = statusMap[action] as ReconStatus
-    await (api as any).PATCH(`/api/v1/uploads/${state.sessionId}/reconcile/${rowId}`, {
+    await api.PATCH("/api/v1/uploads/{session_id}/reconcile/{row_id}", {
+      params: { path: { session_id: state.sessionId!, row_id: rowId } },
       body: { status },
     })
     setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, status } : r)))
@@ -144,7 +156,8 @@ export function Step3Reconciliation({ state, setStep }: Props) {
   async function handleBulkAction(action: ReconStatus) {
     if (!state.sessionId || selected.size === 0) return
     setBusy(true)
-    await (api as any).POST(`/api/v1/uploads/${state.sessionId}/reconcile/bulk`, {
+    await api.POST("/api/v1/uploads/{session_id}/reconcile/bulk", {
+      params: { path: { session_id: state.sessionId! } },
       body: { ids: Array.from(selected), action },
     })
     setRows((prev) => prev.map((r) => (selected.has(r.id) ? { ...r, status: action } : r)))

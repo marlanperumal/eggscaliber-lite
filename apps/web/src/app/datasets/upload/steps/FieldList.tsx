@@ -112,13 +112,13 @@ export function FieldList({
                 e.stopPropagation()
                 setMenuFieldId(menuFieldId === f.id ? null : f.id)
               }}
-              className="ml-auto opacity-0 group-hover:opacity-100 rounded p-0.5 hover:bg-muted-foreground/10"
+              className="ml-auto rounded p-0.5 opacity-0 hover:bg-muted-foreground/10 group-hover:opacity-100"
               aria-label="Field actions"
             >
               ⋮
             </button>
             {menuFieldId === f.id && (
-              <div className="absolute right-0 top-6 z-10 min-w-32 rounded border border-border bg-popover shadow-md">
+              <div className="absolute top-6 right-0 z-10 min-w-32 rounded border border-border bg-popover shadow-md">
                 <button
                   type="button"
                   onClick={() => {

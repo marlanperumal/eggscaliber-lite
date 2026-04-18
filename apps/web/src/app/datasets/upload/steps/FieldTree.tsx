@@ -94,7 +94,7 @@ function GroupContextMenu({
     return (
       <div
         ref={menuRef}
-        className="absolute right-0 top-6 z-50 flex items-center gap-1 rounded-lg border border-border bg-background p-1 shadow-lg"
+        className="absolute top-6 right-0 z-50 flex items-center gap-1 rounded-lg border border-border bg-background p-1 shadow-lg"
       >
         <input
           ref={inputRef}
@@ -128,7 +128,7 @@ function GroupContextMenu({
     return (
       <div
         ref={menuRef}
-        className="absolute right-0 top-6 z-50 min-w-36 rounded-lg border border-border bg-background py-1 shadow-lg"
+        className="absolute top-6 right-0 z-50 min-w-36 rounded-lg border border-border bg-background py-1 shadow-lg"
       >
         <p className="px-3 py-1 font-semibold text-muted-foreground text-xs">Move to…</p>
         <button
@@ -161,7 +161,7 @@ function GroupContextMenu({
   return (
     <div
       ref={menuRef}
-      className="absolute right-0 top-6 z-50 min-w-32 rounded-lg border border-border bg-background py-1 shadow-lg"
+      className="absolute top-6 right-0 z-50 min-w-32 rounded-lg border border-border bg-background py-1 shadow-lg"
     >
       <button
         type="button"
