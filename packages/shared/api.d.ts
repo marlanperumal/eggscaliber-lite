@@ -45,7 +45,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Packages */
+        /**
+         * List Packages
+         * @description List all packages (top-level groupings of survey collections).
+         */
         get: operations["list_packages_api_v1_packages_get"];
         put?: never;
         post?: never;
@@ -62,7 +65,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Package */
+        /**
+         * Get Package
+         * @description Get a package with its collections.
+         */
         get: operations["get_package_api_v1_packages__package_id__get"];
         put?: never;
         post?: never;
@@ -79,7 +85,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Scope */
+        /**
+         * Get Scope
+         * @description Get the full data hierarchy: packages → collections → datasets with field metadata.
+         */
         get: operations["get_scope_api_v1_scope_get"];
         put?: never;
         post?: never;
@@ -96,7 +105,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Collection */
+        /**
+         * Get Collection
+         * @description Get a collection with all its datasets.
+         */
         get: operations["get_collection_api_v1_collections__collection_id__get"];
         put?: never;
         post?: never;
@@ -113,7 +125,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Collection Consistency */
+        /**
+         * Get Collection Consistency
+         * @description List field inconsistencies across datasets in a collection (e.g. mismatched types or labels).
+         */
         get: operations["get_collection_consistency_api_v1_collections__collection_id__consistency_get"];
         put?: never;
         post?: never;
@@ -130,7 +145,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Datasets */
+        /**
+         * List Datasets
+         * @description List datasets, optionally filtered by collection_id.
+         */
         get: operations["list_datasets_api_v1_datasets_get"];
         put?: never;
         post?: never;
@@ -147,7 +165,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Dataset */
+        /**
+         * Get Dataset
+         * @description Get a dataset with all its fields and metadata.
+         */
         get: operations["get_dataset_api_v1_datasets__dataset_id__get"];
         put?: never;
         post?: never;
@@ -164,7 +185,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Dataset Responses */
+        /**
+         * Get Dataset Responses
+         * @description Get paginated raw survey responses for a dataset.
+         */
         get: operations["get_dataset_responses_api_v1_datasets__dataset_id__responses_get"];
         put?: never;
         post?: never;
@@ -181,7 +205,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Field Tree */
+        /**
+         * Get Field Tree
+         * @description Get the hierarchical field tree for a dataset (groups and fields for use in query builder).
+         */
         get: operations["get_field_tree_api_v1_datasets__dataset_id__field_tree_get"];
         put?: never;
         post?: never;
@@ -198,8 +225,31 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Weight Fields */
+        /**
+         * Get Weight Fields
+         * @description Get the numeric fields available as weighting variables for a dataset.
+         */
         get: operations["get_weight_fields_api_v1_datasets__dataset_id__weight_fields_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasets/{dataset_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Dataset Csv
+         * @description Stream all responses for a dataset as a CSV file.
+         */
+        get: operations["download_dataset_csv_api_v1_datasets__dataset_id__download_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -217,7 +267,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Run Crosstab */
+        /**
+         * Run Crosstab
+         * @description Run a cross-tabulation: rows × columns × optional breakdown, with optional weighting.
+         */
         post: operations["run_crosstab_api_v1_analytics_crosstab_post"];
         delete?: never;
         options?: never;
@@ -234,7 +287,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Run Trend */
+        /**
+         * Run Trend
+         * @description Run a trend analysis: track a field's distribution across datasets in a collection over time.
+         */
         post: operations["run_trend_api_v1_analytics_trend_post"];
         delete?: never;
         options?: never;
@@ -293,6 +349,23 @@ export interface paths {
         patch: operations["override_field_api_v1_uploads__session_id__fields__field_id__patch"];
         trace?: never;
     };
+    "/api/v1/uploads/{upload_session_id}/fields/{field_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Field */
+        delete: operations["delete_field_api_v1_uploads__upload_session_id__fields__field_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/uploads/{session_id}/reconcile": {
         parameters: {
             query?: never;
@@ -320,6 +393,40 @@ export interface paths {
         };
         /** Get Reconcile Ids */
         get: operations["get_reconcile_ids_api_v1_uploads__session_id__reconcile_ids_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/uploads/{session_id}/reconcile/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Reconcile Counts */
+        get: operations["get_reconcile_counts_api_v1_uploads__session_id__reconcile_counts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/uploads/{session_id}/suggested-reference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Suggested Reference */
+        get: operations["get_suggested_reference_api_v1_uploads__session_id__suggested_reference_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -429,6 +536,40 @@ export interface paths {
         head?: never;
         /** Update Fieldgroup */
         patch: operations["update_fieldgroup_api_v1_uploads__session_id__fieldgroups__group_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/uploads/{upload_session_id}/fields/{field_id}/levels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Upsert Level Route */
+        put: operations["upsert_level_route_api_v1_uploads__upload_session_id__fields__field_id__levels_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/uploads/{upload_session_id}/fields/{field_id}/levels/{level_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Level Route */
+        delete: operations["delete_level_route_api_v1_uploads__upload_session_id__fields__field_id__levels__level_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/uploads/{session_id}/fields/{field_id}/move": {
@@ -668,6 +809,10 @@ export interface components {
             override_type?: components["schemas"]["FieldType"] | null;
             /** Display Name */
             display_name?: string | null;
+            /** Upload Fieldgroup Id */
+            upload_fieldgroup_id?: number | null;
+            /** Sort Order */
+            sort_order?: number | null;
         };
         /** FieldSelection */
         FieldSelection: {
@@ -782,6 +927,23 @@ export interface components {
             display_label: string;
             /** Sort Order */
             sort_order: number;
+        };
+        /** LevelUpsert */
+        LevelUpsert: {
+            /** Raw Value */
+            raw_value: string;
+            /** Display Label */
+            display_label?: string | null;
+            /**
+             * Sort Order
+             * @default 0
+             */
+            sort_order: number;
+            /**
+             * Is Inherited
+             * @default false
+             */
+            is_inherited: boolean;
         };
         /** MeasureSpec */
         MeasureSpec: {
@@ -898,9 +1060,11 @@ export interface components {
         };
         /** RowResolve */
         RowResolve: {
-            status: components["schemas"]["ReconciliationStatus"];
             /** Ref Field Id */
             ref_field_id?: number | null;
+            /** Upload Field Id */
+            upload_field_id?: number | null;
+            status: components["schemas"]["ReconciliationStatus"];
         };
         /** ScopeCollection */
         ScopeCollection: {
@@ -1340,6 +1504,37 @@ export interface operations {
             };
         };
     };
+    download_dataset_csv_api_v1_datasets__dataset_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     run_crosstab_api_v1_analytics_crosstab_post: {
         parameters: {
             query?: never;
@@ -1506,6 +1701,36 @@ export interface operations {
             };
         };
     };
+    delete_field_api_v1_uploads__upload_session_id__fields__field_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                upload_session_id: number;
+                field_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_reconcile_rows_api_v1_uploads__session_id__reconcile_get: {
         parameters: {
             query?: {
@@ -1581,6 +1806,68 @@ export interface operations {
             query?: {
                 group?: components["schemas"]["ReconciliationGroup"] | null;
             };
+            header?: never;
+            path: {
+                session_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_reconcile_counts_api_v1_uploads__session_id__reconcile_counts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_suggested_reference_api_v1_uploads__session_id__suggested_reference_get: {
+        parameters: {
+            query?: never;
             header?: never;
             path: {
                 session_id: number;
@@ -1833,6 +2120,73 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upsert_level_route_api_v1_uploads__upload_session_id__fields__field_id__levels_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                upload_session_id: number;
+                field_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LevelUpsert"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_level_route_api_v1_uploads__upload_session_id__fields__field_id__levels__level_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                upload_session_id: number;
+                field_id: number;
+                level_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

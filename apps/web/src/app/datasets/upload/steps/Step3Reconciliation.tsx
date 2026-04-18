@@ -33,6 +33,7 @@ export function Step3Reconciliation({ state, setStep }: Props) {
   const [activeTab, setActiveTab] = useState<ReconGroup>("exact")
   const [rows, setRows] = useState<ReconRow[]>([])
   const [counts, setCounts] = useState<Counts>({ exact: 0, probable: 0, new_only: 0, old_only: 0 })
+  const [blockingPending, setBlockingPending] = useState(0)
   const [nextCursor, setNextCursor] = useState<number | null>(null)
   const [showAll, setShowAll] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -69,6 +70,7 @@ export function Step3Reconciliation({ state, setStep }: Props) {
       (r) => r.json(),
     )
     setCounts(data)
+    setBlockingPending(data.blocking_pending ?? 0)
   }
 
   async function fetchFieldTree() {
@@ -166,10 +168,6 @@ export function Step3Reconciliation({ state, setStep }: Props) {
       return next
     })
   }
-
-  const pendingCount = rows.filter(
-    (r) => (r.group === "probable" || r.group === "old_only") && r.status === "pending",
-  ).length
 
   if (!triggered) {
     return (
@@ -363,9 +361,10 @@ export function Step3Reconciliation({ state, setStep }: Props) {
         </div>
       )}
 
-      {pendingCount > 0 && (
+      {blockingPending > 0 && (
         <p className="font-semibold text-amber-600 text-xs">
-          {pendingCount} row{pendingCount > 1 ? "s" : ""} still need a decision before proceeding.
+          {blockingPending} row{blockingPending > 1 ? "s" : ""} still need a decision before
+          proceeding.
         </p>
       )}
 
@@ -380,7 +379,7 @@ export function Step3Reconciliation({ state, setStep }: Props) {
         <button
           type="button"
           onClick={() => setStep(4)}
-          disabled={pendingCount > 0}
+          disabled={blockingPending > 0}
           className="rounded-lg bg-accent px-6 py-2 font-semibold text-sm text-white disabled:opacity-40"
         >
           Next →

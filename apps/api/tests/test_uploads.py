@@ -410,3 +410,19 @@ async def test_reconcile_counts_includes_status_counts(client, db):
     assert "status_counts" in body
     assert isinstance(body["status_counts"], dict)
     assert len(body["status_counts"]) >= 1
+
+
+async def test_reconcile_counts_includes_blocking_pending(client, db):
+    from tests.test_reconciliation_api import _seed_ref_dataset, _upload
+
+    col, ref_ds = await _seed_ref_dataset(db)
+    sess = await _upload(client, col.id)
+    await client.post(
+        f"/api/v1/uploads/{sess['id']}/reconcile",
+        json={"reference_dataset_id": ref_ds.id},
+    )
+    resp = await client.get(f"/api/v1/uploads/{sess['id']}/reconcile/counts")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "blocking_pending" in body
+    assert isinstance(body["blocking_pending"], int)

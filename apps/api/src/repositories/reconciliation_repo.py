@@ -129,3 +129,20 @@ async def bulk_resolve(
         session.add(row)
     await session.flush()
     return len(rows)
+
+
+async def get_blocking_pending_count(
+    session: AsyncSession,
+    upload_session_id: int,
+) -> int:
+    """Count probable + old_only rows whose status is still pending."""
+    result = await session.execute(
+        select(func.count(ReconciliationRow.id)).where(
+            ReconciliationRow.upload_session_id == upload_session_id,
+            ReconciliationRow.status == ReconciliationStatus.pending,
+            ReconciliationRow.group.in_(
+                [ReconciliationGroup.probable, ReconciliationGroup.old_only]
+            ),
+        )
+    )
+    return result.scalar_one()
