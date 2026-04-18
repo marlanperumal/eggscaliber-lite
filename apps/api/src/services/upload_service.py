@@ -16,9 +16,12 @@ from src.errors import (
     LevelNotFoundError,
     UploadSessionNotFoundError,
 )
-from src.models.field import FieldType
+from src.models.field import Field, FieldType
+from src.models.level import Level as LiveLevel
+from src.models.reconciliation import ReconciliationGroup, ReconciliationStatus
 from src.models.upload import UploadSessionStatus
-from src.repositories import dataset_repo, upload_repo
+from src.repositories import dataset_repo, reconciliation_repo, upload_repo
+from src.services import reconciliation_service
 from src.services.detection_service import detect_fields
 
 _UPLOAD_DIR = os.environ.get("UPLOAD_DIR", tempfile.gettempdir())
@@ -378,3 +381,176 @@ async def delete_fieldgroup_svc(session: AsyncSession, session_id: int, group_id
         raise FieldGroupNotFoundError(group_id)
     await upload_repo.delete_fieldgroup(session, grp)
     return {"deleted": group_id}
+
+
+async def trigger_reconcile(
+    session: AsyncSession, session_id: int, reference_dataset_id: int
+) -> dict:
+    """Raises UploadSessionNotFoundError if session not found."""
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise UploadSessionNotFoundError(session_id)
+
+    new_fields = await upload_repo.get_fields_for_session(session, session_id)
+    new_levels_by_field: dict[int, list] = {}
+    for f in new_fields:
+        new_levels_by_field[f.id] = await upload_repo.get_levels_for_field(session, f.id)
+
+    ref_fields_raw = await dataset_repo.get_fields_with_levels(session, reference_dataset_id)
+    ref_by_key = {f.field_key: (f, lvls) for f, lvls in ref_fields_raw}
+
+    rows_to_create: list[dict] = []
+    matched_ref_keys: set[str] = set()
+
+    for uf in new_fields:
+        stub = Field(
+            field_key=uf.field_key,
+            display_name=uf.field_key,
+            field_type=uf.override_type or uf.detected_type,
+            dataset_id=0,
+        )
+        best_ref = None
+        best_ref_lvls: list = []
+        if uf.field_key in ref_by_key:
+            best_ref, best_ref_lvls = ref_by_key[uf.field_key]
+        else:
+            for key, (rf, rl) in ref_by_key.items():
+                d = reconciliation_service.edit_distance(uf.field_key, key)
+                if d < 4:
+                    best_ref, best_ref_lvls = rf, rl
+                    break
+
+        upload_lvls = new_levels_by_field.get(uf.id, [])
+        stub_lvls = [
+            LiveLevel(
+                value=ul.raw_value,
+                display_label=ul.raw_value,
+                sort_order=ul.sort_order,
+                field_id=0,
+            )
+            for ul in upload_lvls
+        ]
+        result = reconciliation_service.classify_row(stub, stub_lvls, best_ref, best_ref_lvls)
+        if best_ref:
+            matched_ref_keys.add(best_ref.field_key)
+        rows_to_create.append(
+            {
+                "upload_session_id": session_id,
+                "upload_field_id": uf.id,
+                "ref_field_id": best_ref.id if best_ref else None,
+                "group": result.group,
+                "status": result.status,
+                "confidence": result.confidence,
+                "note": result.note,
+            }
+        )
+
+    for key, (rf, _) in ref_by_key.items():
+        if key not in matched_ref_keys:
+            rows_to_create.append(
+                {
+                    "upload_session_id": session_id,
+                    "upload_field_id": None,
+                    "ref_field_id": rf.id,
+                    "group": ReconciliationGroup.old_only,
+                    "status": ReconciliationStatus.pending,
+                    "confidence": None,
+                    "note": "Present in reference, absent in new file",
+                }
+            )
+
+    await reconciliation_repo.bulk_create_rows(session, rows_to_create)
+    sess.reference_dataset_id = reference_dataset_id
+    session.add(sess)
+    await session.flush()
+    return {"total": len(rows_to_create)}
+
+
+async def list_reconcile_rows(
+    session: AsyncSession,
+    session_id: int,
+    group: ReconciliationGroup | None,
+    after_id: int | None,
+    page_size: int,
+) -> dict:
+    rows = await reconciliation_repo.get_rows_page(
+        session, session_id, group=group, after_id=after_id, page_size=page_size
+    )
+    next_cursor = rows[-1].id if len(rows) == page_size else None
+
+    upload_field_ids = [r.upload_field_id for r in rows if r.upload_field_id]
+    ref_field_ids = [r.ref_field_id for r in rows if r.ref_field_id]
+    uf_map = {
+        u.id: u
+        for u in await upload_repo.get_upload_fields_by_ids(session, upload_field_ids)
+        if u.id
+    }
+    rf_map = {f.id: f for f in await dataset_repo.get_fields_by_ids(session, ref_field_ids) if f.id}
+
+    return {
+        "items": [
+            {
+                "id": r.id,
+                "group": r.group,
+                "status": r.status,
+                "upload_field_id": r.upload_field_id,
+                "ref_field_id": r.ref_field_id,
+                "field_key": uf_map[r.upload_field_id].field_key
+                if r.upload_field_id and r.upload_field_id in uf_map
+                else None,
+                "field_type": (
+                    uf_map[r.upload_field_id].override_type
+                    or uf_map[r.upload_field_id].detected_type
+                ).value
+                if r.upload_field_id and r.upload_field_id in uf_map
+                else None,
+                "ref_field_key": rf_map[r.ref_field_id].field_key
+                if r.ref_field_id and r.ref_field_id in rf_map
+                else None,
+                "confidence": r.confidence,
+                "note": r.note,
+            }
+            for r in rows
+        ],
+        "next_cursor": next_cursor,
+    }
+
+
+async def get_reconcile_counts(session: AsyncSession, session_id: int) -> dict:
+    """Raises UploadSessionNotFoundError if session not found."""
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    if sess is None:
+        raise UploadSessionNotFoundError(session_id)
+    group_counts = await reconciliation_repo.get_counts_by_group(session, session_id)
+    status_counts = await reconciliation_repo.get_status_counts(session, session_id)
+    blocking_pending = await reconciliation_repo.get_blocking_pending_count(session, session_id)
+    return {**group_counts, "status_counts": status_counts, "blocking_pending": blocking_pending}
+
+
+async def resolve_reconcile_row(
+    session: AsyncSession,
+    session_id: int,
+    row_id: int,
+    status: ReconciliationStatus,
+    ref_field_id: int | None,
+    upload_field_id: int | None,
+) -> dict:
+    """Raises LevelNotFoundError (reused as RowNotFoundError) if row not found."""
+    row = await reconciliation_repo.resolve_row(
+        session, row_id, status, ref_field_id=ref_field_id, upload_field_id=upload_field_id
+    )
+    if row is None:
+        raise LevelNotFoundError(row_id)
+    return {
+        "id": row.id,
+        "status": row.status,
+        "upload_field_id": row.upload_field_id,
+        "ref_field_id": row.ref_field_id,
+    }
+
+
+async def bulk_resolve_rows(
+    session: AsyncSession, session_id: int, ids: list[int], action: ReconciliationStatus
+) -> dict:
+    resolved = await reconciliation_repo.bulk_resolve(session, session_id, ids, action)
+    return {"resolved": resolved}
