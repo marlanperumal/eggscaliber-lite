@@ -113,3 +113,51 @@ async def test_reconcile_list_includes_field_keys(client, db):
             assert item.get("field_key") is not None
         if item["ref_field_id"] is not None:
             assert item.get("ref_field_key") is not None
+
+
+async def test_trigger_reconcile_with_ref_only_field_creates_old_only_row(client, db):
+    col, ref_ds = await _seed_ref_dataset(db)
+    csv_bytes = _csv(["age"], [["25"], ["30"]])
+    resp = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "Wave 3", "collection_id": str(col.id)},
+    )
+    assert resp.status_code == 201
+    sid = resp.json()["id"]
+
+    await client.post(
+        f"/api/v1/uploads/{sid}/reconcile",
+        json={"reference_dataset_id": ref_ds.id},
+    )
+    rows_resp = await client.get(f"/api/v1/uploads/{sid}/reconcile?group=old_only")
+    assert rows_resp.status_code == 200
+    items = rows_resp.json()["items"]
+    assert len(items) == 1
+    assert items[0]["ref_field_key"] == "gender"
+    assert items[0]["upload_field_id"] is None
+
+
+async def test_trigger_reconcile_with_near_match_field_key_links_to_ref(client, db):
+    col, ref_ds = await _seed_ref_dataset(db)
+    csv_bytes = _csv(["gende"], [["male"], ["female"]])
+    resp = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "Wave 3", "collection_id": str(col.id)},
+    )
+    assert resp.status_code == 201
+    sid = resp.json()["id"]
+
+    await client.post(
+        f"/api/v1/uploads/{sid}/reconcile",
+        json={"reference_dataset_id": ref_ds.id},
+    )
+    rows_resp = await client.get(f"/api/v1/uploads/{sid}/reconcile")
+    assert rows_resp.status_code == 200
+    items = rows_resp.json()["items"]
+
+    gende_rows = [r for r in items if r.get("field_key") == "gende"]
+    assert len(gende_rows) == 1
+    assert gende_rows[0]["ref_field_key"] == "gender"
+    assert gende_rows[0]["group"] != "new_only"
