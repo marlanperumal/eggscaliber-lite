@@ -22,10 +22,13 @@ const MOCK_FIELD_TREE = {
     { id: 1, name: "Brand Tracker", parent_id: null, sort_order: 0, field_count: 3 },
     { id: 2, name: "Demographics", parent_id: null, sort_order: 1, field_count: 2 },
   ],
+  fields: [],
   unassigned_fields: [],
 }
 
 const MOCK_SESSION = {
+  id: 1,
+  status: "editing" as const,
   dataset_name: "Wave 3",
   row_count: 847,
   collection_id: 1,
