@@ -1,5 +1,16 @@
 # CLAUDE.md
 
+## CRITICAL RULES
+
+These are enforced by hooks but check them yourself first:
+
+1. **Always use `just <cmd>` from repo root** — never `cd` into a subdirectory; never invoke raw `uv run`, `pytest`, `pnpm` etc. directly when a `just` recipe exists. Run `just --list` to check.
+2. **Never start a Bash call with a `#` comment** — blocks auto-approval.
+3. **`git add` and `git commit` must be separate Bash calls** — write message to `/tmp/commit-msg.txt` with the Write tool, then `git commit -F /tmp/commit-msg.txt`.
+4. **Never edit `packages/shared/api.d.ts` manually** — it is AUTO-GENERATED. Run `just generate-types`.
+5. **Subagents must `Read CLAUDE.md` as their very first step** — include this instruction explicitly in every subagent prompt.
+6. **Never use raw hex colors or `text-primary` as a text color in the frontend** — use design token classes only. Never write `dark:` overrides.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Commands
