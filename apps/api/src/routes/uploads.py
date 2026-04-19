@@ -12,15 +12,37 @@ from src.errors import (
     UploadSessionNotFoundError,
 )
 from src.models.field import FieldType
-from src.models.reconciliation import ReconciliationGroup, ReconciliationStatus
-from src.repositories import reconciliation_repo, upload_repo
+from src.models.reconciliation import (
+    BulkResolvedOut,
+    ReconcileCountsOut,
+    ReconcileIdsOut,
+    ReconcileRowPage,
+    ReconcileRowResolvedOut,
+    ReconcileTriggerOut,
+    ReconciliationGroup,
+    ReconciliationStatus,
+)
+from src.models.upload import (
+    CommitOut,
+    DeletedOut,
+    FieldGroupDetail,
+    FieldMoveOut,
+    FieldTreeOut,
+    SuggestedReferenceOut,
+    UploadCreatedResponse,
+    UploadFieldOverrideOut,
+    UploadLevelRead,
+    UploadSessionDetail,
+    UploadSessionListResponse,
+)
+from src.repositories import reconciliation_repo
 from src.services import upload_service
 from src.services.upload_service import InvalidFileTypeError
 
 router = APIRouter(tags=["uploads"])
 
 
-@router.post("/uploads", status_code=201)
+@router.post("/uploads", status_code=201, response_model=UploadCreatedResponse)
 async def create_upload(
     file: UploadFile,
     dataset_name: str = Form(),
@@ -45,27 +67,10 @@ async def create_upload(
     return result
 
 
-@router.get("/uploads")
+@router.get("/uploads", response_model=UploadSessionListResponse)
 async def list_upload_sessions(session: AsyncSession = Depends(get_session)):
     """List all non-committed, non-abandoned upload sessions (drafts)."""
-    sessions = await upload_repo.list_draft_sessions(session)
-    items = []
-    for sess in sessions:
-        meta: dict = {}
-        if sess.collection_id:
-            meta = await upload_repo.get_collection_meta(session, sess.collection_id) or {}
-        items.append(
-            {
-                "id": sess.id,
-                "status": sess.status.value,
-                "dataset_name": sess.dataset_name,
-                "collection_name": meta.get("collection_name"),
-                "package_name": meta.get("package_name"),
-                "collected_at": sess.collected_at.isoformat() if sess.collected_at else None,
-                "created_at": sess.created_at.isoformat(),
-            }
-        )
-    return {"items": items}
+    return await upload_service.list_upload_sessions(session)
 
 
 @router.delete("/uploads/{session_id}", status_code=204)
@@ -77,7 +82,7 @@ async def discard_upload_session(session_id: int, session: AsyncSession = Depend
         raise HTTPException(status_code=404, detail="Upload session not found") from None
 
 
-@router.get("/uploads/{session_id}")
+@router.get("/uploads/{session_id}", response_model=UploadSessionDetail)
 async def get_upload_session(session_id: int, session: AsyncSession = Depends(get_session)):
     try:
         return await upload_service.get_upload_session(session, session_id)
@@ -92,7 +97,7 @@ class FieldOverride(BaseModel):
     sort_order: int | None = None
 
 
-@router.patch("/uploads/{session_id}/fields/{field_id}")
+@router.patch("/uploads/{session_id}/fields/{field_id}", response_model=UploadFieldOverrideOut)
 async def override_field(
     session_id: int,
     field_id: int,
@@ -137,7 +142,7 @@ class BulkResolve(BaseModel):
     action: ReconciliationStatus  # confirmed | rejected | excluded
 
 
-@router.post("/uploads/{session_id}/reconcile")
+@router.post("/uploads/{session_id}/reconcile", response_model=ReconcileTriggerOut)
 async def trigger_reconcile(
     session_id: int,
     body: ReconcileTrigger,
@@ -151,7 +156,7 @@ async def trigger_reconcile(
         raise HTTPException(status_code=404, detail="Upload session not found") from None
 
 
-@router.get("/uploads/{session_id}/reconcile")
+@router.get("/uploads/{session_id}/reconcile", response_model=ReconcileRowPage)
 async def list_reconcile_rows(
     session_id: int,
     group: ReconciliationGroup | None = None,
@@ -164,17 +169,17 @@ async def list_reconcile_rows(
     )
 
 
-@router.get("/uploads/{session_id}/reconcile/ids")
+@router.get("/uploads/{session_id}/reconcile/ids", response_model=ReconcileIdsOut)
 async def get_reconcile_ids(
     session_id: int,
     group: ReconciliationGroup | None = None,
     session: AsyncSession = Depends(get_session),
 ):
     ids = await reconciliation_repo.get_all_ids(session, session_id, group=group)
-    return {"ids": ids}
+    return ReconcileIdsOut(ids=ids)
 
 
-@router.get("/uploads/{session_id}/reconcile/counts")
+@router.get("/uploads/{session_id}/reconcile/counts", response_model=ReconcileCountsOut)
 async def get_reconcile_counts(session_id: int, session: AsyncSession = Depends(get_session)):
     try:
         return await upload_service.get_reconcile_counts(session, session_id)
@@ -182,7 +187,7 @@ async def get_reconcile_counts(session_id: int, session: AsyncSession = Depends(
         raise HTTPException(status_code=404, detail="Upload session not found") from None
 
 
-@router.get("/uploads/{session_id}/suggested-reference")
+@router.get("/uploads/{session_id}/suggested-reference", response_model=SuggestedReferenceOut)
 async def get_suggested_reference(session_id: int, session: AsyncSession = Depends(get_session)):
     try:
         return await upload_service.get_suggested_reference(session, session_id)
@@ -196,7 +201,7 @@ class RowResolve(BaseModel):
     status: ReconciliationStatus
 
 
-@router.patch("/uploads/{session_id}/reconcile/{row_id}")
+@router.patch("/uploads/{session_id}/reconcile/{row_id}", response_model=ReconcileRowResolvedOut)
 async def resolve_reconcile_row(
     session_id: int,
     row_id: int,
@@ -216,7 +221,7 @@ async def resolve_reconcile_row(
         raise HTTPException(status_code=404, detail="Row not found") from None
 
 
-@router.post("/uploads/{session_id}/reconcile/bulk")
+@router.post("/uploads/{session_id}/reconcile/bulk", response_model=BulkResolvedOut)
 async def bulk_resolve_rows(
     session_id: int,
     body: BulkResolve,
@@ -225,7 +230,7 @@ async def bulk_resolve_rows(
     return await upload_service.bulk_resolve_rows(session, session_id, body.ids, body.action)
 
 
-@router.post("/uploads/{session_id}/commit", status_code=201)
+@router.post("/uploads/{session_id}/commit", status_code=201, response_model=CommitOut)
 async def commit_upload_session(session_id: int, session: AsyncSession = Depends(get_session)):
     try:
         dataset_id = await upload_service.commit(session, session_id)
@@ -233,13 +238,13 @@ async def commit_upload_session(session_id: int, session: AsyncSession = Depends
         raise HTTPException(status_code=404, detail="Upload session not found") from None
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    return {"dataset_id": dataset_id}
+    return CommitOut(dataset_id=dataset_id)
 
 
 # --- Field tree ---
 
 
-@router.get("/uploads/{session_id}/field-tree")
+@router.get("/uploads/{session_id}/field-tree", response_model=FieldTreeOut)
 async def get_field_tree(session_id: int, session: AsyncSession = Depends(get_session)):
     try:
         return await upload_service.get_field_tree(session, session_id)
@@ -262,7 +267,7 @@ class FieldGroupUpdate(BaseModel):
     sort_order: int | None = None
 
 
-@router.post("/uploads/{session_id}/fieldgroups", status_code=201)
+@router.post("/uploads/{session_id}/fieldgroups", status_code=201, response_model=FieldGroupDetail)
 async def create_fieldgroup(
     session_id: int,
     body: FieldGroupCreate,
@@ -280,7 +285,7 @@ async def create_fieldgroup(
         raise HTTPException(status_code=404, detail="Upload session not found") from None
 
 
-@router.patch("/uploads/{session_id}/fieldgroups/{group_id}")
+@router.patch("/uploads/{session_id}/fieldgroups/{group_id}", response_model=FieldGroupDetail)
 async def update_fieldgroup(
     session_id: int,
     group_id: int,
@@ -301,7 +306,7 @@ async def update_fieldgroup(
         raise HTTPException(status_code=404, detail="Group not found") from None
 
 
-@router.delete("/uploads/{session_id}/fieldgroups/{group_id}")
+@router.delete("/uploads/{session_id}/fieldgroups/{group_id}", response_model=DeletedOut)
 async def delete_fieldgroup(
     session_id: int,
     group_id: int,
@@ -323,7 +328,11 @@ class LevelUpsert(BaseModel):
     is_inherited: bool = False
 
 
-@router.put("/uploads/{upload_session_id}/fields/{field_id}/levels", status_code=200)
+@router.put(
+    "/uploads/{upload_session_id}/fields/{field_id}/levels",
+    status_code=200,
+    response_model=UploadLevelRead,
+)
 async def upsert_level_route(
     upload_session_id: int,
     field_id: int,
@@ -370,7 +379,7 @@ class FieldMove(BaseModel):
     upload_fieldgroup_id: int | None
 
 
-@router.patch("/uploads/{session_id}/fields/{field_id}/move")
+@router.patch("/uploads/{session_id}/fields/{field_id}/move", response_model=FieldMoveOut)
 async def move_field(
     session_id: int,
     field_id: int,
