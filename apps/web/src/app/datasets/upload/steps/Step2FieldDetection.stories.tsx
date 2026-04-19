@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { fn, spyOn } from "@storybook/test"
+import { fn } from "@storybook/test"
+import { HttpResponse, http } from "msw"
 import { Step2FieldDetection } from "./Step2FieldDetection"
+
+const BASE = "http://localhost:8000"
 
 const meta: Meta<typeof Step2FieldDetection> = {
   title: "Datasets/Upload/Step2FieldDetection",
@@ -57,14 +60,27 @@ const MOCK_FIELDS = [
   },
 ]
 
+const MOCK_SESSION = {
+  id: 1,
+  status: "editing" as const,
+  dataset_name: "Wave 3",
+  row_count: 847,
+  collection_id: 1,
+  collection_name: "Brand Tracker",
+  package_name: "Research",
+  collected_at: "2025-10-01T00:00:00Z",
+  file_name: "wave3.csv",
+  fields: MOCK_FIELDS,
+}
+
 export const WithFields: Story = {
   args: {
     state: { step: 2 as const, sessionId: 1, needsReconcile: false },
     setStep: fn(),
   },
-  beforeEach() {
-    spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ fields: MOCK_FIELDS }), { status: 200 }),
-    )
+  parameters: {
+    msw: {
+      handlers: [http.get(`${BASE}/api/v1/uploads/:id`, () => HttpResponse.json(MOCK_SESSION))],
+    },
   },
 }

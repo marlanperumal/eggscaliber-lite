@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { fn, spyOn } from "@storybook/test"
+import { fn } from "@storybook/test"
 import { FieldEditorPanel } from "./FieldEditorPanel"
 import type { FieldNode, GroupNode } from "./FieldTree"
 
@@ -34,6 +34,7 @@ export const NoSelection: Story = {
     onSaved: fn(),
     onCancel: fn(),
     onDelete: fn(),
+    onCreateGroup: fn(),
   },
 }
 
@@ -45,11 +46,7 @@ export const FieldSelected: Story = {
     onSaved: fn(),
     onCancel: fn(),
     onDelete: fn(),
-  },
-  beforeEach() {
-    spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ ...FIELD }), { status: 200 }),
-    )
+    onCreateGroup: fn(),
   },
 }
 
@@ -73,8 +70,6 @@ export const WithLevels: Story = {
     onSaved: fn(),
     onCancel: fn(),
     onDelete: fn(),
-  },
-  beforeEach() {
-    spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }))
+    onCreateGroup: fn(),
   },
 }
