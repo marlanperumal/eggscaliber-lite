@@ -73,7 +73,7 @@ export function DatasetsPageContent({ initialPackages, initialDrafts, initialDat
         },
       })
       .then(({ data }) => {
-        if (data) setItems((data as { items: DatasetItem[] }).items)
+        if (data) setItems(data.items)
         setLoading(false)
       })
   }, [selectedCollectionId])

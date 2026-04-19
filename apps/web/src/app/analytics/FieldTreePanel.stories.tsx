@@ -2,7 +2,6 @@ import { DndContext } from "@dnd-kit/core"
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { fn } from "@storybook/test"
 import { HttpResponse, http } from "msw"
-import { api } from "@/lib/api"
 import type { QueryConfig } from "./analytics-types"
 import { DEFAULT_QUERY } from "./analytics-types"
 import { FieldTreePanel } from "./FieldTreePanel"
@@ -77,14 +76,15 @@ export const NoDataset: Story = {
 export const Loading: Story = {
   name: "Loading — fetching tree",
   args: { query: makeQuery({ dataset_id: 1 }) },
-  beforeEach() {
-    const original = api.GET
-    // biome-ignore lint/suspicious/noExplicitAny: story-only mock
-    ;(api as any).GET = () => new Promise(() => {})
-    return () => {
-      // biome-ignore lint/suspicious/noExplicitAny: story-only mock
-      ;(api as any).GET = original
-    }
+  parameters: {
+    msw: {
+      handlers: [
+        http.get(
+          "http://localhost:8000/api/v1/datasets/:id/field-tree",
+          () => new Promise(() => {}),
+        ),
+      ],
+    },
   },
 }
 
