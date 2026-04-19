@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { resolveColLabel, resolveLevel } from "./AnalyticsChart"
+import { resolveColLabel, resolveLevel } from "@/components/analytics/AnalyticsChart"
 
 describe("resolveLevel", () => {
   it("returns the human label when found in levelLabels", () => {

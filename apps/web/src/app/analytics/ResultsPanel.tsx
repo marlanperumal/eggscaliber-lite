@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
+import { AnalyticsChart } from "@/components/analytics/AnalyticsChart"
 import { Skeleton } from "@/components/ui/skeleton"
-import { AnalyticsChart } from "./AnalyticsChart"
 import { AnalyticsTable } from "./AnalyticsTable"
 import type { AnalyticsResult, ChartType, QueryConfig, ViewMode } from "./analytics-types"
 import { EmptyState } from "./EmptyState"

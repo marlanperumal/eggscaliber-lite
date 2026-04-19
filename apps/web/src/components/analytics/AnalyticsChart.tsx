@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
-import type { AnalyticsResult, ChartType } from "./analytics-types"
+import type { AnalyticsResult, ChartType } from "@/app/analytics/analytics-types"
 
 const CHART_COLOR_COUNT = 8
 
