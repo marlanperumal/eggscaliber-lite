@@ -7,7 +7,17 @@ from fastmcp.utilities.lifespan import combine_lifespans
 
 from src.config import settings
 from src.database import lifespan as db_lifespan
-from src.routes import analytics, collections, datasets, health, packages, scope, sentry, uploads
+from src.routes import (
+    ai,
+    analytics,
+    collections,
+    datasets,
+    health,
+    packages,
+    scope,
+    sentry,
+    uploads,
+)
 
 if settings.sentry_dsn:
     sentry_sdk.init(
@@ -32,6 +42,7 @@ app.include_router(scope.router, prefix="/api/v1")
 app.include_router(collections.router, prefix="/api/v1")
 app.include_router(datasets.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
+app.include_router(ai.router, prefix="/api/v1")
 app.include_router(uploads.router, prefix="/api/v1")
 
 mcp = FastMCP.from_fastapi(
