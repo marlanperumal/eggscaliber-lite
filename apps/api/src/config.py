@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     sentry_dsn: str | None = None
     environment: str = "development"
     cors_origins: list[str] = ["http://localhost:3000"]
+    ai_model: str = "anthropic:claude-sonnet-4-6"
 
 
 settings = Settings()
