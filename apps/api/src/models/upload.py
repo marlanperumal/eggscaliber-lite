@@ -191,7 +191,7 @@ class UploadLevelOut(SQLModel):
     is_inherited: bool
 
 
-class FieldTreeFieldOut(SQLModel):
+class UploadFieldTreeFieldOut(SQLModel):
     id: int
     field_key: str
     display_name: str | None
@@ -202,7 +202,7 @@ class FieldTreeFieldOut(SQLModel):
     levels: list[UploadLevelOut]
 
 
-class FieldGroupOut(SQLModel):
+class UploadFieldGroupOut(SQLModel):
     id: int
     name: str
     parent_id: int | None
@@ -210,10 +210,10 @@ class FieldGroupOut(SQLModel):
     field_count: int = 0
 
 
-class FieldTreeOut(SQLModel):
-    groups: list[FieldGroupOut]
-    fields: list[FieldTreeFieldOut]
-    unassigned_fields: list[FieldTreeFieldOut]
+class UploadFieldTreeOut(SQLModel):
+    groups: list[UploadFieldGroupOut]
+    fields: list[UploadFieldTreeFieldOut]
+    unassigned_fields: list[UploadFieldTreeFieldOut]
 
 
 class FieldGroupDetail(SQLModel):

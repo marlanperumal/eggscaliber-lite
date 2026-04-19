@@ -1,7 +1,10 @@
 "use client"
+import type { components } from "@shared/api"
 import { useEffect, useState } from "react"
 import { api } from "@/lib/api"
 import type { FieldNode, GroupNode, Level } from "./FieldTree"
+
+type FieldType = components["schemas"]["FieldType"]
 
 const FIELD_TYPES = ["numeric", "ordinal", "categorical", "multi_response", "identifier", "weight"]
 
@@ -134,7 +137,7 @@ export function FieldEditorPanel({
           params: { path: { session_id: sessionId, field_id: field.id } },
           body: {
             display_name: displayName || null,
-            override_type: overrideType || null,
+            override_type: (overrideType || null) as FieldType | null,
             sort_order: sortOrder,
           },
         },
@@ -146,7 +149,6 @@ export function FieldEditorPanel({
           body: { upload_fieldgroup_id: newGroupId },
         })
       }
-      // Upsert each level (skip new levels with no raw_value)
       for (const lvl of levels) {
         if (!lvl.raw_value.trim()) continue
         await api.PUT("/api/v1/uploads/{upload_session_id}/fields/{field_id}/levels", {
@@ -155,18 +157,20 @@ export function FieldEditorPanel({
             raw_value: lvl.raw_value,
             display_label: lvl.display_label,
             sort_order: lvl.sort_order,
+            is_inherited: lvl.is_inherited,
           },
         })
       }
-      const saved = savedField as { display_name: string | null; override_type: string | null }
-      onSaved({
-        ...field,
-        display_name: saved.display_name,
-        override_type: saved.override_type,
-        sort_order: sortOrder,
-        upload_fieldgroup_id: newGroupId,
-        levels,
-      })
+      if (savedField) {
+        onSaved({
+          ...field,
+          display_name: savedField.display_name,
+          override_type: savedField.override_type,
+          sort_order: sortOrder,
+          upload_fieldgroup_id: newGroupId,
+          levels,
+        })
+      }
     } finally {
       setBusy(false)
     }

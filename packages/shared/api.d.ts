@@ -905,22 +905,6 @@ export interface components {
             /** Sort Order */
             sort_order: number;
         };
-        /** FieldGroupOut */
-        FieldGroupOut: {
-            /** Id */
-            id: number;
-            /** Name */
-            name: string;
-            /** Parent Id */
-            parent_id: number | null;
-            /** Sort Order */
-            sort_order: number;
-            /**
-             * Field Count
-             * @default 0
-             */
-            field_count: number;
-        };
         /** FieldGroupUpdate */
         FieldGroupUpdate: {
             /** Name */
@@ -971,6 +955,20 @@ export interface components {
             /** Field Key */
             field_key: string;
         };
+        /** FieldTreeFieldOut */
+        FieldTreeFieldOut: {
+            /** Id */
+            id: number;
+            /** Field Key */
+            field_key: string;
+            /** Display Name */
+            display_name: string;
+            field_type: components["schemas"]["FieldType"];
+            /** Sort Order */
+            sort_order: number;
+            /** Is Filterable */
+            is_filterable: boolean;
+        };
         /** FieldTreeGroupOut */
         FieldTreeGroupOut: {
             /** Id */
@@ -985,12 +983,25 @@ export interface components {
              * Fields
              * @default []
              */
-            fields: components["schemas"]["src__models__analytics__FieldTreeFieldOut"][];
+            fields: components["schemas"]["FieldTreeFieldOut"][];
             /**
              * Children
              * @default []
              */
             children: components["schemas"]["FieldTreeGroupOut"][];
+        };
+        /** FieldTreeOut */
+        FieldTreeOut: {
+            /**
+             * Groups
+             * @default []
+             */
+            groups: components["schemas"]["FieldTreeGroupOut"][];
+            /**
+             * Ungrouped Fields
+             * @default []
+             */
+            ungrouped_fields: components["schemas"]["FieldTreeFieldOut"][];
         };
         /**
          * FieldType
@@ -1377,6 +1388,22 @@ export interface components {
             /** Fields */
             fields: components["schemas"]["UploadFieldOut"][];
         };
+        /** UploadFieldGroupOut */
+        UploadFieldGroupOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Parent Id */
+            parent_id: number | null;
+            /** Sort Order */
+            sort_order: number;
+            /**
+             * Field Count
+             * @default 0
+             */
+            field_count: number;
+        };
         /** UploadFieldOut */
         UploadFieldOut: {
             /** Id */
@@ -1410,6 +1437,32 @@ export interface components {
             sort_order: number;
             /** Upload Fieldgroup Id */
             upload_fieldgroup_id: number | null;
+        };
+        /** UploadFieldTreeFieldOut */
+        UploadFieldTreeFieldOut: {
+            /** Id */
+            id: number;
+            /** Field Key */
+            field_key: string;
+            /** Display Name */
+            display_name: string | null;
+            detected_type: components["schemas"]["FieldType"];
+            override_type: components["schemas"]["FieldType"] | null;
+            /** Sort Order */
+            sort_order: number;
+            /** Upload Fieldgroup Id */
+            upload_fieldgroup_id: number | null;
+            /** Levels */
+            levels: components["schemas"]["UploadLevelOut"][];
+        };
+        /** UploadFieldTreeOut */
+        UploadFieldTreeOut: {
+            /** Groups */
+            groups: components["schemas"]["UploadFieldGroupOut"][];
+            /** Fields */
+            fields: components["schemas"]["UploadFieldTreeFieldOut"][];
+            /** Unassigned Fields */
+            unassigned_fields: components["schemas"]["UploadFieldTreeFieldOut"][];
         };
         /** UploadLevelOut */
         UploadLevelOut: {
@@ -1511,59 +1564,6 @@ export interface components {
          * @enum {string}
          */
         WorkerType: "jsonb_response" | "external_table";
-        /** FieldTreeFieldOut */
-        src__models__analytics__FieldTreeFieldOut: {
-            /** Id */
-            id: number;
-            /** Field Key */
-            field_key: string;
-            /** Display Name */
-            display_name: string;
-            field_type: components["schemas"]["FieldType"];
-            /** Sort Order */
-            sort_order: number;
-            /** Is Filterable */
-            is_filterable: boolean;
-        };
-        /** FieldTreeOut */
-        src__models__analytics__FieldTreeOut: {
-            /**
-             * Groups
-             * @default []
-             */
-            groups: components["schemas"]["FieldTreeGroupOut"][];
-            /**
-             * Ungrouped Fields
-             * @default []
-             */
-            ungrouped_fields: components["schemas"]["src__models__analytics__FieldTreeFieldOut"][];
-        };
-        /** FieldTreeFieldOut */
-        src__models__upload__FieldTreeFieldOut: {
-            /** Id */
-            id: number;
-            /** Field Key */
-            field_key: string;
-            /** Display Name */
-            display_name: string | null;
-            detected_type: components["schemas"]["FieldType"];
-            override_type: components["schemas"]["FieldType"] | null;
-            /** Sort Order */
-            sort_order: number;
-            /** Upload Fieldgroup Id */
-            upload_fieldgroup_id: number | null;
-            /** Levels */
-            levels: components["schemas"]["UploadLevelOut"][];
-        };
-        /** FieldTreeOut */
-        src__models__upload__FieldTreeOut: {
-            /** Groups */
-            groups: components["schemas"]["FieldGroupOut"][];
-            /** Fields */
-            fields: components["schemas"]["src__models__upload__FieldTreeFieldOut"][];
-            /** Unassigned Fields */
-            unassigned_fields: components["schemas"]["src__models__upload__FieldTreeFieldOut"][];
-        };
     };
     responses: never;
     parameters: never;
@@ -1958,7 +1958,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["src__models__analytics__FieldTreeOut"];
+                    "application/json": components["schemas"]["FieldTreeOut"];
                 };
             };
             /** @description Validation Error */
@@ -2563,7 +2563,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["src__models__upload__FieldTreeOut"];
+                    "application/json": components["schemas"]["UploadFieldTreeOut"];
                 };
             };
             /** @description Validation Error */

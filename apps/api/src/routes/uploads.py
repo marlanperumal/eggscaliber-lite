@@ -27,10 +27,10 @@ from src.models.upload import (
     DeletedOut,
     FieldGroupDetail,
     FieldMoveOut,
-    FieldTreeOut,
     SuggestedReferenceOut,
     UploadCreatedResponse,
     UploadFieldOverrideOut,
+    UploadFieldTreeOut,
     UploadLevelRead,
     UploadSessionDetail,
     UploadSessionListResponse,
@@ -244,7 +244,7 @@ async def commit_upload_session(session_id: int, session: AsyncSession = Depends
 # --- Field tree ---
 
 
-@router.get("/uploads/{session_id}/field-tree", response_model=FieldTreeOut)
+@router.get("/uploads/{session_id}/field-tree", response_model=UploadFieldTreeOut)
 async def get_field_tree(session_id: int, session: AsyncSession = Depends(get_session)):
     try:
         return await upload_service.get_field_tree(session, session_id)

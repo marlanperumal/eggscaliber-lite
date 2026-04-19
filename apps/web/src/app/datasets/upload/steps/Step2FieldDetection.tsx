@@ -1,19 +1,13 @@
 "use client"
+import type { components } from "@shared/api"
 import { useEffect, useState } from "react"
 import { api } from "@/lib/api"
 import type { WizardState, WizardStep } from "../wizard-types"
 
 const FIELD_TYPES = ["numeric", "ordinal", "categorical", "multi_response", "identifier", "weight"]
 
-interface DetectedField {
-  id: number
-  field_key: string
-  detected_type: string
-  override_type: string | null
-  sort_order: number
-  confidence: string
-  value_sample: string[]
-}
+type UploadField = components["schemas"]["UploadFieldOut"]
+type FieldType = components["schemas"]["FieldType"]
 
 interface Props {
   state: WizardState
@@ -21,7 +15,7 @@ interface Props {
 }
 
 export function Step2FieldDetection({ state, setStep }: Props) {
-  const [fields, setFields] = useState<DetectedField[]>([])
+  const [fields, setFields] = useState<UploadField[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
 
@@ -32,7 +26,7 @@ export function Step2FieldDetection({ state, setStep }: Props) {
         params: { path: { session_id: state.sessionId } },
       })
       .then(({ data }) => {
-        if (data) setFields((data as any).fields)
+        if (data) setFields(data.fields)
         setLoading(false)
       })
   }, [state.sessionId])
@@ -41,13 +35,11 @@ export function Step2FieldDetection({ state, setStep }: Props) {
     if (!state.sessionId) return
     const { data } = await api.PATCH("/api/v1/uploads/{session_id}/fields/{field_id}", {
       params: { path: { session_id: state.sessionId, field_id: fieldId } },
-      body: { override_type: overrideType },
+      body: { override_type: overrideType as FieldType | null },
     })
     if (data) {
       setFields((prev) =>
-        prev.map((f) =>
-          f.id === fieldId ? { ...f, override_type: (data as any).override_type } : f,
-        ),
+        prev.map((f) => (f.id === fieldId ? { ...f, override_type: data.override_type } : f)),
       )
     }
   }

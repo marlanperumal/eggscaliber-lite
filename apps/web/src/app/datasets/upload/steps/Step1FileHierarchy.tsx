@@ -172,9 +172,9 @@ export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }:
     form.append("collection_id", selectedCollectionId)
     form.append("collected_at", `${collectedAt}-01`)
     try {
-      const { data, error } = await api.POST("/api/v1/uploads", { body: form as any })
-      if (error) throw new Error(JSON.stringify(error))
-      setSessionId((data as any).id)
+      const { data, error } = await api.POST("/api/v1/uploads", { body: form as never })
+      if (error || !data) throw new Error(JSON.stringify(error))
+      setSessionId(data.id)
       setNeedsReconcile(true)
       setStep(2)
     } catch (e) {

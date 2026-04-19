@@ -32,16 +32,16 @@ from src.models.reconciliation import (
 from src.models.upload import (
     DeletedOut,
     FieldGroupDetail,
-    FieldGroupOut,
     FieldMoveOut,
-    FieldTreeFieldOut,
-    FieldTreeOut,
     SuggestedReferenceOut,
     UploadCreatedResponse,
     UploadField,
     UploadFieldGroup,
+    UploadFieldGroupOut,
     UploadFieldOut,
     UploadFieldOverrideOut,
+    UploadFieldTreeFieldOut,
+    UploadFieldTreeOut,
     UploadLevel,
     UploadLevelOut,
     UploadSessionDetail,
@@ -335,7 +335,7 @@ async def delete_level(
         raise LevelNotFoundError(level_id)
 
 
-async def get_field_tree(session: AsyncSession, session_id: int) -> FieldTreeOut:
+async def get_field_tree(session: AsyncSession, session_id: int) -> UploadFieldTreeOut:
     """Raises UploadSessionNotFoundError if session not found."""
     sess = await upload_repo.get_session_by_id(session, session_id)
     if sess is None:
@@ -343,9 +343,9 @@ async def get_field_tree(session: AsyncSession, session_id: int) -> FieldTreeOut
     groups = await upload_repo.get_fieldgroups_for_session(session, session_id)
     fields = await upload_repo.get_fields_for_session(session, session_id)
 
-    def _group_out(g: UploadFieldGroup) -> FieldGroupOut:
+    def _group_out(g: UploadFieldGroup) -> UploadFieldGroupOut:
         field_count = sum(1 for f in fields if f.upload_fieldgroup_id == g.id)
-        return FieldGroupOut(
+        return UploadFieldGroupOut(
             id=cast(int, g.id),
             name=g.name,
             parent_id=g.parent_id,
@@ -353,9 +353,9 @@ async def get_field_tree(session: AsyncSession, session_id: int) -> FieldTreeOut
             field_count=field_count,
         )
 
-    async def _field_out(f: UploadField) -> FieldTreeFieldOut:
+    async def _field_out(f: UploadField) -> UploadFieldTreeFieldOut:
         levels = await upload_repo.get_levels_for_field(session, cast(int, f.id))
-        return FieldTreeFieldOut(
+        return UploadFieldTreeFieldOut(
             id=cast(int, f.id),
             field_key=f.field_key,
             display_name=f.display_name,
@@ -376,7 +376,7 @@ async def get_field_tree(session: AsyncSession, session_id: int) -> FieldTreeOut
         )
 
     field_outs = await asyncio.gather(*[_field_out(f) for f in fields])
-    return FieldTreeOut(
+    return UploadFieldTreeOut(
         groups=[_group_out(g) for g in groups],
         fields=[d for d in field_outs if d.upload_fieldgroup_id is not None],
         unassigned_fields=[d for d in field_outs if d.upload_fieldgroup_id is None],

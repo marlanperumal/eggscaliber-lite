@@ -26,9 +26,11 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
     const { data } = await api.GET("/api/v1/uploads/{session_id}/field-tree", {
       params: { path: { session_id: state.sessionId } },
     })
-    setGroups((data as any).groups)
-    setFields((data as any).fields)
-    setUnassigned((data as any).unassigned_fields)
+    if (data) {
+      setGroups(data.groups)
+      setFields(data.fields)
+      setUnassigned(data.unassigned_fields)
+    }
   }
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: loadTree intentionally excluded
@@ -49,7 +51,7 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
     if (!state.sessionId) return
     await api.POST("/api/v1/uploads/{session_id}/fieldgroups", {
       params: { path: { session_id: state.sessionId! } },
-      body: { name, parent_id: parentId },
+      body: { name, parent_id: parentId, sort_order: 0 },
     })
     await loadTree()
   }
