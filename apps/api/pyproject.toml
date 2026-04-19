@@ -12,6 +12,7 @@ dependencies = [
     "asyncpg>=0.31.0",
     "python-multipart>=0.0.26",
     "fastmcp>=3.2.4",
+    "pydantic-ai>=1.84.1",
 ]
 
 [dependency-groups]
