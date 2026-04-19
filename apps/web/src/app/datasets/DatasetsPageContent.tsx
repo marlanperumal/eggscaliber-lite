@@ -1,6 +1,6 @@
 "use client"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { api } from "@/lib/api"
 
 export type Package = { id: number; name: string }
@@ -42,6 +42,7 @@ export function DatasetsPageContent({ initialPackages, initialDrafts, initialDat
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const isMounted = useRef(false)
 
   useEffect(() => {
     if (!selectedPackageId) {
@@ -60,6 +61,10 @@ export function DatasetsPageContent({ initialPackages, initialDrafts, initialDat
   }, [selectedPackageId])
 
   useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true
+      return
+    }
     setLoading(true)
     api
       .GET("/api/v1/datasets", {
