@@ -175,6 +175,9 @@ async def get_reconcile_ids(
     group: ReconciliationGroup | None = None,
     session: AsyncSession = Depends(get_session),
 ):
+    # Exception: calls repo directly — this is a pure ID projection with no business logic.
+    # No existence check is needed: a missing session_id returns an empty list, which is correct
+    # behaviour for this pagination-support endpoint.
     ids = await reconciliation_repo.get_all_ids(session, session_id, group=group)
     return ReconcileIdsOut(ids=ids)
 
@@ -237,6 +240,9 @@ async def commit_upload_session(session_id: int, session: AsyncSession = Depends
     except UploadSessionNotFoundError:
         raise HTTPException(status_code=404, detail="Upload session not found") from None
     except Exception as exc:
+        # Exception: catch-all safety net for commit — the commit service coordinates
+        # many sub-operations (migration, reconciliation, dataset creation) and can surface
+        # unexpected errors. Prefer typed domain errors for new failure modes here.
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     return CommitOut(dataset_id=dataset_id)
 

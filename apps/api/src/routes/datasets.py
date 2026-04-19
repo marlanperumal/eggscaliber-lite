@@ -81,6 +81,8 @@ async def get_weight_fields(dataset_id: int, session: AsyncSession = Depends(get
 
 
 @router.get("/datasets/{dataset_id}/download")
+# Exception: no response_model — this route returns a StreamingResponse (text/csv file download),
+# not JSON. response_model= would conflict with StreamingResponse and is not applicable here.
 async def download_dataset_csv(
     dataset_id: int,
     session: AsyncSession = Depends(get_session),

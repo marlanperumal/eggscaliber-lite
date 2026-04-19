@@ -238,15 +238,17 @@ row = await session.get(Model, id)
 result = await session.execute(select(func.count()).select_from(Model).where(...))
 count = result.scalar_one()
 
-# Insert
+# Insert — use flush (not commit); get_session commits the whole transaction on success
 session.add(obj)
-await session.commit()
+await session.flush()
 await session.refresh(obj)   # re-reads generated fields (id, created_at, etc.)
 
-# Delete
+# Delete — same: flush, let get_session commit
 await session.delete(obj)
-await session.commit()
+await session.flush()
 ```
+
+The `get_session` dependency in `database.py` calls `await session.commit()` after yielding, so repos and services must use `flush` to keep the transaction open for multi-step operations. Calling `commit` inside a repo or service would prematurely end the transaction and prevent multi-step atomicity.
 
 ### Route handlers — always `async def`
 
