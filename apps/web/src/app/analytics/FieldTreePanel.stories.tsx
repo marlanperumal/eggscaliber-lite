@@ -11,7 +11,7 @@ const MOCK_SCOPE = [
   {
     id: 1,
     name: "Brand Tracker",
-    slug: "brand-tracker",
+
     collections: [
       {
         id: 1,
