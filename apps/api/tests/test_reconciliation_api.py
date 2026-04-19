@@ -160,4 +160,4 @@ async def test_trigger_reconcile_with_near_match_field_key_links_to_ref(client, 
     gende_rows = [r for r in items if r.get("field_key") == "gende"]
     assert len(gende_rows) == 1
     assert gende_rows[0]["ref_field_key"] == "gender"
-    assert gende_rows[0]["group"] != "new_only"
+    assert gende_rows[0]["group"] == "probable"
