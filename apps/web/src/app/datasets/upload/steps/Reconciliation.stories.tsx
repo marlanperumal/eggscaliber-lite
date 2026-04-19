@@ -1,14 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { fn } from "@storybook/test"
-import { Step3Reconciliation } from "./Step3Reconciliation"
+import { Reconciliation } from "./Reconciliation"
 
-const meta: Meta<typeof Step3Reconciliation> = {
-  title: "Datasets/Upload/Step3Reconciliation",
-  component: Step3Reconciliation,
+const meta: Meta<typeof Reconciliation> = {
+  title: "Datasets/Upload/Reconciliation",
+  component: Reconciliation,
   parameters: { layout: "fullscreen" },
 }
 export default meta
-type Story = StoryObj<typeof Step3Reconciliation>
+type Story = StoryObj<typeof Reconciliation>
 
 // Pre-trigger state — shows reference dataset input (auto-populated)
 export const PreTrigger: Story = {

@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { fn } from "@storybook/test"
 import { HttpResponse, http } from "msw"
-import { Step5ReviewCommit } from "./Step5ReviewCommit"
+import { ReviewCommit } from "./ReviewCommit"
 
 const BASE = "http://localhost:8000"
 
-const meta: Meta<typeof Step5ReviewCommit> = {
-  title: "Datasets/Upload/Step5ReviewCommit",
-  component: Step5ReviewCommit,
+const meta: Meta<typeof ReviewCommit> = {
+  title: "Datasets/Upload/ReviewCommit",
+  component: ReviewCommit,
   parameters: {
     layout: "fullscreen",
     nextjs: {
@@ -19,7 +19,7 @@ const meta: Meta<typeof Step5ReviewCommit> = {
   },
 }
 export default meta
-type Story = StoryObj<typeof Step5ReviewCommit>
+type Story = StoryObj<typeof ReviewCommit>
 
 const MOCK_SESSION = {
   dataset_name: "Wave 3",

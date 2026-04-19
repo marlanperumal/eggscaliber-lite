@@ -26,7 +26,7 @@ interface Props {
 
 type Counts = Record<ReconGroup, number>
 
-export function Step3Reconciliation({ state, setStep }: Props) {
+export function Reconciliation({ state, setStep }: Props) {
   const [triggered, setTriggered] = useState(false)
   const [refDatasetId, setRefDatasetId] = useState<string>("")
   const [refDatasetName, setRefDatasetName] = useState<string>("")

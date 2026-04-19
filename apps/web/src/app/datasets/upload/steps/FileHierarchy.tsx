@@ -29,7 +29,7 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, "")
 }
 
-export function Step1FileHierarchy({ setStep, setSessionId, setNeedsReconcile }: Props) {
+export function FileHierarchy({ setStep, setSessionId, setNeedsReconcile }: Props) {
   const [file, setFile] = useState<File | null>(null)
   const [datasetName, setDatasetName] = useState("")
   const [collectedAt, setCollectedAt] = useState("")

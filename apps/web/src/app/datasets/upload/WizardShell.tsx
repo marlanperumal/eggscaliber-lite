@@ -1,9 +1,9 @@
 "use client"
-import { Step1FileHierarchy } from "./steps/Step1FileHierarchy"
-import { Step2FieldDetection } from "./steps/Step2FieldDetection"
-import { Step3Reconciliation } from "./steps/Step3Reconciliation"
-import { Step4MetadataEditor } from "./steps/Step4MetadataEditor"
-import { Step5ReviewCommit } from "./steps/Step5ReviewCommit"
+import { FieldDetection } from "./steps/FieldDetection"
+import { FileHierarchy } from "./steps/FileHierarchy"
+import { MetadataEditor } from "./steps/MetadataEditor"
+import { Reconciliation } from "./steps/Reconciliation"
+import { ReviewCommit } from "./steps/ReviewCommit"
 import { useWizardState } from "./useWizardState"
 import { STEP_LABELS, type WizardStep } from "./wizard-types"
 
@@ -60,7 +60,7 @@ function StepContent(props: ReturnType<typeof useWizardState>) {
   const { state, setStep, setSessionId, setNeedsReconcile } = props
   if (state.step === 1) {
     return (
-      <Step1FileHierarchy
+      <FileHierarchy
         state={state}
         setStep={setStep}
         setSessionId={setSessionId}
@@ -69,16 +69,16 @@ function StepContent(props: ReturnType<typeof useWizardState>) {
     )
   }
   if (state.step === 2) {
-    return <Step2FieldDetection state={state} setStep={setStep} />
+    return <FieldDetection state={state} setStep={setStep} />
   }
   if (state.step === 3) {
-    return <Step3Reconciliation state={state} setStep={setStep} />
+    return <Reconciliation state={state} setStep={setStep} />
   }
   if (state.step === 4) {
-    return <Step4MetadataEditor state={state} setStep={setStep} />
+    return <MetadataEditor state={state} setStep={setStep} />
   }
   if (state.step === 5) {
-    return <Step5ReviewCommit state={state} setStep={setStep} />
+    return <ReviewCommit state={state} setStep={setStep} />
   }
   return (
     <div className="rounded-lg border border-border p-6">

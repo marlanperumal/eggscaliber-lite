@@ -13,7 +13,7 @@ interface Props {
   setStep: (s: WizardStep) => void
 }
 
-export function Step4MetadataEditor({ state, setStep }: Props) {
+export function MetadataEditor({ state, setStep }: Props) {
   const [panelTab, setPanelTab] = useState<PanelTab>("tree")
   const [groups, setGroups] = useState<GroupNode[]>([])
   const [fields, setFields] = useState<FieldNode[]>([])

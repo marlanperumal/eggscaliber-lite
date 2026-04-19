@@ -14,7 +14,7 @@ interface Props {
   setStep: (s: WizardStep) => void
 }
 
-export function Step2FieldDetection({ state, setStep }: Props) {
+export function FieldDetection({ state, setStep }: Props) {
   const [fields, setFields] = useState<UploadField[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)

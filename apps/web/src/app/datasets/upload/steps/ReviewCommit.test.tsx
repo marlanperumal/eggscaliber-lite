@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, expect, it, vi } from "vitest"
 import { api } from "@/lib/api"
 import type { WizardState } from "../wizard-types"
-import { Step5ReviewCommit } from "./Step5ReviewCommit"
+import { ReviewCommit } from "./ReviewCommit"
 
 vi.mock("@/lib/api", () => ({
   api: { GET: vi.fn(), POST: vi.fn() },
@@ -70,13 +70,13 @@ beforeEach(() => {
 
 it("shows loading text while summary is being fetched", () => {
   mockGet.mockReturnValue(new Promise(() => {}) as never)
-  render(<Step5ReviewCommit state={makeState()} setStep={vi.fn()} />)
+  render(<ReviewCommit state={makeState()} setStep={vi.fn()} />)
   expect(screen.getByText(/loading summary/i)).toBeInTheDocument()
 })
 
 it("displays dataset name after summary loads", async () => {
   setupGetMock()
-  render(<Step5ReviewCommit state={makeState()} setStep={vi.fn()} />)
+  render(<ReviewCommit state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => expect(screen.getAllByText("Wave 3").length).toBeGreaterThan(0))
   expect(screen.getByText("Brand Tracker")).toBeInTheDocument()
 })
@@ -84,7 +84,7 @@ it("displays dataset name after summary loads", async () => {
 it("calls commit API when Commit dataset button is clicked", async () => {
   setupGetMock()
   mockPost.mockResolvedValueOnce({ error: null } as never)
-  render(<Step5ReviewCommit state={makeState()} setStep={vi.fn()} />)
+  render(<ReviewCommit state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => screen.getByRole("button", { name: /commit dataset/i }))
   await userEvent.click(screen.getByRole("button", { name: /commit dataset/i }))
   await waitFor(() =>
@@ -98,7 +98,7 @@ it("calls commit API when Commit dataset button is clicked", async () => {
 it("navigates to /datasets after successful commit", async () => {
   setupGetMock()
   mockPost.mockResolvedValueOnce({ error: null } as never)
-  render(<Step5ReviewCommit state={makeState()} setStep={vi.fn()} />)
+  render(<ReviewCommit state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => screen.getByRole("button", { name: /commit dataset/i }))
   await userEvent.click(screen.getByRole("button", { name: /commit dataset/i }))
   await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/datasets"))
@@ -107,7 +107,7 @@ it("navigates to /datasets after successful commit", async () => {
 it("shows error message when commit API returns an error", async () => {
   setupGetMock()
   mockPost.mockResolvedValueOnce({ error: { detail: "Commit failed" } } as never)
-  render(<Step5ReviewCommit state={makeState()} setStep={vi.fn()} />)
+  render(<ReviewCommit state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => screen.getByRole("button", { name: /commit dataset/i }))
   await userEvent.click(screen.getByRole("button", { name: /commit dataset/i }))
   await waitFor(() => expect(screen.getByText(/commit failed/i)).toBeInTheDocument())
@@ -117,7 +117,7 @@ it("shows error message when commit API returns an error", async () => {
 it("navigates to step 1 when Dataset details Edit is clicked", async () => {
   setupGetMock()
   const setStep = vi.fn()
-  render(<Step5ReviewCommit state={makeState()} setStep={setStep} />)
+  render(<ReviewCommit state={makeState()} setStep={setStep} />)
   await waitFor(() => expect(screen.getAllByText("Wave 3").length).toBeGreaterThan(0))
   await userEvent.click(screen.getAllByRole("button", { name: /← edit/i })[0])
   expect(setStep).toHaveBeenCalledWith(1)

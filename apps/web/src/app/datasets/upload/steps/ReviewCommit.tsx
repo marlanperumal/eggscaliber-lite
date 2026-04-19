@@ -32,7 +32,7 @@ interface Props {
   setStep: (s: WizardStep) => void
 }
 
-export function Step5ReviewCommit({ state, setStep }: Props) {
+export function ReviewCommit({ state, setStep }: Props) {
   const router = useRouter()
   const [summary, setSummary] = useState<SessionSummary | null>(null)
   const [loading, setLoading] = useState(true)

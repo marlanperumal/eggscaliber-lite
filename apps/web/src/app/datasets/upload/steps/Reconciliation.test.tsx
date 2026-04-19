@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, expect, it, vi } from "vitest"
 import { api } from "@/lib/api"
 import type { WizardState } from "../wizard-types"
+import { Reconciliation } from "./Reconciliation"
 import type { ReconRow } from "./ReconciliationRow"
-import { Step3Reconciliation } from "./Step3Reconciliation"
 
 vi.mock("@/lib/api", () => ({
   api: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() },
@@ -63,13 +63,13 @@ it("shows suggested reference dataset name fetched on mount", async () => {
       return { data: { dataset_id: 42, dataset_name: "Wave 2" } } as never
     return { data: null } as never
   })
-  render(<Step3Reconciliation state={makeState()} setStep={vi.fn()} />)
+  render(<Reconciliation state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => expect(screen.getByText("Wave 2")).toBeInTheDocument())
 })
 
 it("disables Run button when reference dataset ID is empty", async () => {
   mockGet.mockResolvedValue({ data: { dataset_id: null, dataset_name: null } } as never)
-  render(<Step3Reconciliation state={makeState()} setStep={vi.fn()} />)
+  render(<Reconciliation state={makeState()} setStep={vi.fn()} />)
   await waitFor(() =>
     expect(screen.getByRole("button", { name: /run reconciliation/i })).toBeDisabled(),
   )
@@ -78,7 +78,7 @@ it("disables Run button when reference dataset ID is empty", async () => {
 it("shows reconciliation tabs after running", async () => {
   const user = userEvent.setup()
   mockGetForTriggered()
-  render(<Step3Reconciliation state={makeState()} setStep={vi.fn()} />)
+  render(<Reconciliation state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => screen.getByRole("button", { name: /run reconciliation/i }))
   await user.type(screen.getByPlaceholderText("Reference dataset ID"), "10")
   await user.click(screen.getByRole("button", { name: /run reconciliation/i }))
@@ -91,7 +91,7 @@ it("shows reconciliation tabs after running", async () => {
 it("shows bulk action toolbar when a row is selected", async () => {
   const user = userEvent.setup()
   mockGetForTriggered(EMPTY_COUNTS, [MOCK_ROW])
-  render(<Step3Reconciliation state={makeState()} setStep={vi.fn()} />)
+  render(<Reconciliation state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => screen.getByRole("button", { name: /run reconciliation/i }))
   await user.type(screen.getByPlaceholderText("Reference dataset ID"), "10")
   await user.click(screen.getByRole("button", { name: /run reconciliation/i }))
@@ -103,7 +103,7 @@ it("shows bulk action toolbar when a row is selected", async () => {
 it("shows blocking warning and disables Next when blocking_pending > 0", async () => {
   const user = userEvent.setup()
   mockGetForTriggered({ ...EMPTY_COUNTS, blocking_pending: 2 })
-  render(<Step3Reconciliation state={makeState()} setStep={vi.fn()} />)
+  render(<Reconciliation state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => screen.getByRole("button", { name: /run reconciliation/i }))
   await user.type(screen.getByPlaceholderText("Reference dataset ID"), "10")
   await user.click(screen.getByRole("button", { name: /run reconciliation/i }))

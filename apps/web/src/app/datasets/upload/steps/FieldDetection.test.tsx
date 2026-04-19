@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, expect, it, vi } from "vitest"
 import { api } from "@/lib/api"
 import type { WizardState } from "../wizard-types"
-import { Step2FieldDetection } from "./Step2FieldDetection"
+import { FieldDetection } from "./FieldDetection"
 
 vi.mock("@/lib/api", () => ({
   api: { GET: vi.fn(), PATCH: vi.fn() },
@@ -33,13 +33,13 @@ beforeEach(() => {
 
 it("shows loading text while fetching fields", () => {
   mockGet.mockReturnValue(new Promise(() => {}) as never)
-  render(<Step2FieldDetection state={makeState()} setStep={vi.fn()} />)
+  render(<FieldDetection state={makeState()} setStep={vi.fn()} />)
   expect(screen.getByText(/loading fields/i)).toBeInTheDocument()
 })
 
 it("renders fields table after loading", async () => {
   mockGet.mockResolvedValueOnce({ data: { fields: [MOCK_FIELD] } } as never)
-  render(<Step2FieldDetection state={makeState()} setStep={vi.fn()} />)
+  render(<FieldDetection state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => expect(screen.getByTestId("field-detection-table")).toBeInTheDocument())
   expect(screen.getByText("q_gender")).toBeInTheDocument()
   expect(screen.getAllByText("categorical").length).toBeGreaterThan(0)
@@ -48,7 +48,7 @@ it("renders fields table after loading", async () => {
 it("calls PATCH and shows updated override type when override is selected", async () => {
   mockGet.mockResolvedValueOnce({ data: { fields: [MOCK_FIELD] } } as never)
   mockPatch.mockResolvedValueOnce({ data: { ...MOCK_FIELD, override_type: "numeric" } } as never)
-  render(<Step2FieldDetection state={makeState()} setStep={vi.fn()} />)
+  render(<FieldDetection state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => screen.getByTestId("field-detection-table"))
   const overrideSelect = screen.getByLabelText("Override type for q_gender")
   fireEvent.change(overrideSelect, { target: { value: "numeric" } })
@@ -64,7 +64,7 @@ it("shows Reset button after override is set and calls PATCH with null on click"
   const overriddenField = { ...MOCK_FIELD, override_type: "numeric" }
   mockGet.mockResolvedValueOnce({ data: { fields: [overriddenField] } } as never)
   mockPatch.mockResolvedValueOnce({ data: { ...MOCK_FIELD, override_type: null } } as never)
-  render(<Step2FieldDetection state={makeState()} setStep={vi.fn()} />)
+  render(<FieldDetection state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => screen.getByRole("button", { name: /reset q_gender/i }))
   await userEvent.click(screen.getByRole("button", { name: /reset q_gender/i }))
   await waitFor(() =>
@@ -78,7 +78,7 @@ it("shows Reset button after override is set and calls PATCH with null on click"
 it("routes to step 3 when needsReconcile is true", async () => {
   const setStep = vi.fn()
   mockGet.mockResolvedValueOnce({ data: { fields: [] } } as never)
-  render(<Step2FieldDetection state={makeState({ needsReconcile: true })} setStep={setStep} />)
+  render(<FieldDetection state={makeState({ needsReconcile: true })} setStep={setStep} />)
   await waitFor(() => screen.getByRole("button", { name: /next/i }))
   await userEvent.click(screen.getByRole("button", { name: /next/i }))
   expect(setStep).toHaveBeenCalledWith(3)
@@ -87,7 +87,7 @@ it("routes to step 3 when needsReconcile is true", async () => {
 it("routes to step 4 when needsReconcile is false", async () => {
   const setStep = vi.fn()
   mockGet.mockResolvedValueOnce({ data: { fields: [] } } as never)
-  render(<Step2FieldDetection state={makeState({ needsReconcile: false })} setStep={setStep} />)
+  render(<FieldDetection state={makeState({ needsReconcile: false })} setStep={setStep} />)
   await waitFor(() => screen.getByRole("button", { name: /next/i }))
   await userEvent.click(screen.getByRole("button", { name: /next/i }))
   expect(setStep).toHaveBeenCalledWith(4)

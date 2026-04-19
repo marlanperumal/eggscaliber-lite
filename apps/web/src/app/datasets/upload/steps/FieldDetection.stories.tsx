@@ -1,16 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { fn } from "@storybook/test"
 import { HttpResponse, http } from "msw"
-import { Step2FieldDetection } from "./Step2FieldDetection"
+import { FieldDetection } from "./FieldDetection"
 
 const BASE = "http://localhost:8000"
 
-const meta: Meta<typeof Step2FieldDetection> = {
-  title: "Datasets/Upload/Step2FieldDetection",
-  component: Step2FieldDetection,
+const meta: Meta<typeof FieldDetection> = {
+  title: "Datasets/Upload/FieldDetection",
+  component: FieldDetection,
 }
 export default meta
-type Story = StoryObj<typeof Step2FieldDetection>
+type Story = StoryObj<typeof FieldDetection>
 
 const MOCK_FIELDS = [
   {

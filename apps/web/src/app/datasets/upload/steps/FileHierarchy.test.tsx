@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, expect, it, vi } from "vitest"
 import { api } from "@/lib/api"
 import type { WizardState } from "../wizard-types"
-import { Step1FileHierarchy } from "./Step1FileHierarchy"
+import { FileHierarchy } from "./FileHierarchy"
 
 vi.mock("@/lib/api", () => ({
   api: { GET: vi.fn(), POST: vi.fn() },
@@ -31,7 +31,7 @@ function renderStep(
   const setNeedsReconcile = overrides.setNeedsReconcile ?? vi.fn()
   const state: WizardState = { step: 1, sessionId: null, needsReconcile: false }
   render(
-    <Step1FileHierarchy
+    <FileHierarchy
       state={state}
       setStep={setStep}
       setSessionId={setSessionId}
