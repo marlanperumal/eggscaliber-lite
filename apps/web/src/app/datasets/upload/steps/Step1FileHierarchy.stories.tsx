@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { fn, spyOn } from "@storybook/test"
+import { fn } from "@storybook/test"
+import { HttpResponse, http } from "msw"
 import { Step1FileHierarchy } from "./Step1FileHierarchy"
+
+const BASE = "http://localhost:8000"
 
 const meta: Meta<typeof Step1FileHierarchy> = {
   title: "Datasets/Upload/Step1FileHierarchy",
@@ -21,9 +24,9 @@ export const Default: Story = {
     setSessionId: fn(),
     setNeedsReconcile: fn(),
   },
-  beforeEach() {
-    spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify(MOCK_PACKAGES), { status: 200 }),
-    )
+  parameters: {
+    msw: {
+      handlers: [http.get(`${BASE}/api/v1/packages`, () => HttpResponse.json(MOCK_PACKAGES))],
+    },
   },
 }
