@@ -6,6 +6,13 @@ from sqlmodel import Field, SQLModel
 from src.models.dataset import WorkerType
 
 
+class InconsistencyType(StrEnum):
+    type_mismatch = "type_mismatch"
+    level_added = "level_added"
+    level_removed = "level_removed"
+    missing_field = "missing_field"
+
+
 class CollectionType(StrEnum):
     survey = "survey"
     market_report = "market_report"
@@ -53,5 +60,5 @@ class CollectionWithDatasets(CollectionRead):
 
 class InconsistencyOut(SQLModel):
     field_key: str
-    inconsistency_type: str
+    inconsistency_type: InconsistencyType
     detail: str

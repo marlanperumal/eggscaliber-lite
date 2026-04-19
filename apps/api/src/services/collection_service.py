@@ -1,5 +1,4 @@
 import re
-from enum import StrEnum
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,16 +9,10 @@ from src.models.collection import (
     CollectionWithDatasets,
     DatasetSummary,
     InconsistencyOut,
+    InconsistencyType,
 )
 from src.models.field import FieldType
 from src.repositories import collection_repo, dataset_repo, package_repo
-
-
-class InconsistencyType(StrEnum):
-    type_mismatch = "type_mismatch"
-    level_added = "level_added"
-    level_removed = "level_removed"
-    missing_field = "missing_field"
 
 
 def _slugify(name: str) -> str:
