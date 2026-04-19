@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, expect, it, vi } from "vitest"
 import { api } from "@/lib/api"
-import type { WizardState } from "../wizard-types"
+import type { WizardState, WizardStep } from "../wizard-types"
 import { FileHierarchy } from "./FileHierarchy"
 
 vi.mock("@/lib/api", () => ({
@@ -33,9 +33,9 @@ function renderStep(
   render(
     <FileHierarchy
       state={state}
-      setStep={setStep}
-      setSessionId={setSessionId}
-      setNeedsReconcile={setNeedsReconcile}
+      setStep={setStep as unknown as (s: WizardStep) => void}
+      setSessionId={setSessionId as unknown as (id: number) => void}
+      setNeedsReconcile={setNeedsReconcile as unknown as (v: boolean) => void}
     />,
   )
   return { setStep, setSessionId, setNeedsReconcile }
