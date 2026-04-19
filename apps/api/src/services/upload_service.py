@@ -13,6 +13,7 @@ from src.errors import (
     FieldGroupNotFoundError,
     FieldNotFoundError,
     LevelNotFoundError,
+    ReconciliationRowNotFoundError,
     UploadSessionNotFoundError,
 )
 from src.models.field import Field, FieldType
@@ -603,12 +604,12 @@ async def resolve_reconcile_row(
     ref_field_id: int | None,
     upload_field_id: int | None,
 ) -> ReconcileRowResolvedOut:
-    """Raises LevelNotFoundError (reused as RowNotFoundError) if row not found."""
+    """Raises ReconciliationRowNotFoundError if row not found."""
     row = await reconciliation_repo.resolve_row(
         session, row_id, status, ref_field_id=ref_field_id, upload_field_id=upload_field_id
     )
     if row is None:
-        raise LevelNotFoundError(row_id)
+        raise ReconciliationRowNotFoundError(row_id)
     return ReconcileRowResolvedOut(
         id=pk(row),
         status=row.status,

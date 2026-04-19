@@ -9,6 +9,7 @@ from src.errors import (
     FieldGroupNotFoundError,
     FieldNotFoundError,
     LevelNotFoundError,
+    ReconciliationRowNotFoundError,
     UploadSessionNotFoundError,
 )
 from src.models.field import FieldType
@@ -222,7 +223,7 @@ async def resolve_reconcile_row(
             ref_field_id=body.ref_field_id,
             upload_field_id=body.upload_field_id,
         )
-    except LevelNotFoundError:
+    except ReconciliationRowNotFoundError:
         raise HTTPException(status_code=404, detail="Row not found") from None
 
 

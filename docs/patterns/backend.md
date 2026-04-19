@@ -42,7 +42,9 @@ Routes catch these and map to HTTP codes. Never raise `HTTPException` in service
 
 ## CRUD Passthrough Exception
 
-The CRUD passthrough exception applies to **list endpoints** — endpoints with no entity ID in the path, where there is no existence question. Routes may call a single repository function directly for these.
+The CRUD passthrough exception applies to two cases where there is no existence question:
+
+**1. List endpoints** — no entity ID in the path:
 
 ```python
 # ALLOWED — list endpoint, no entity ID, no existence question
@@ -51,7 +53,19 @@ async def list_packages(session: AsyncSession = Depends(get_session)):
     return await package_repo.get_all(session)
 ```
 
-As soon as an endpoint has an `{entity_id}` path parameter, there is an implicit existence question — use a service.
+**2. Pure ID-projection endpoints** — has a parent entity ID but returns a flat list (e.g. for pagination support) where a missing/empty parent is semantically equivalent to an empty result:
+
+```python
+# ALLOWED — ID projection, no existence semantics: missing session_id → empty list
+@router.get("/uploads/{session_id}/reconcile/ids", response_model=ReconcileIdsOut)
+async def get_reconcile_ids(session_id: int, ...):
+    # Exception: calls repo directly — pure ID projection with no business logic.
+    # No existence check needed: missing session_id returns empty list, which is correct.
+    ids = await reconciliation_repo.get_all_ids(session, session_id, group=group)
+    return ReconcileIdsOut(ids=ids)
+```
+
+As soon as an endpoint has a meaningful existence question (i.e. a missing entity should return 404 rather than an empty result), use a service.
 
 ## Single-entity reads
 
