@@ -10,7 +10,7 @@ Five sub-projects, each with its own spec → plan → implementation cycle.
 | 4 | UX Polish | ✅ Complete | — | [plan](superpowers/plans/2026-04-15-ux-polish-iteration-3.md) |
 | 5 | Drag & Drop | ✅ Complete | — | — |
 | 6 | Data Ingestion & Metadata Editor | ✅ Complete | [spec](superpowers/specs/2026-04-16-data-ingestion-metadata-editor-design.md) | [plan](superpowers/plans/2026-04-17-data-ingestion-metadata-editor.md) |
-| 7 | AI Interface | ⏳ Pending | — | — |
+| 7 | AI Interface | ⏳ In Progress | [spec](superpowers/specs/2026-04-19-ai-interface-design.md) | [plan](superpowers/plans/2026-04-19-ai-interface.md) |
 | 8 | Full AuthN & AuthZ | ⏳ Pending | — | — |
 | 9 | MCP Interface | ⏳ Pending | — | — |
 
