@@ -32,6 +32,9 @@ semantic token utilities.
 | `bg-[--warning]` / `text-[--warning]` | Status indicators: pending, needs action |
 | `bg-[--warning-subtle]` | Soft warning badge backgrounds |
 | `text-[--warning-foreground]` | Text on warning-subtle backgrounds |
+| `bg-[--info]` / `text-[--info]` | Status indicators: new, informational, additive |
+| `bg-[--info-subtle]` | Soft info badge backgrounds |
+| `text-[--info-foreground]` | Text on info-subtle backgrounds |
 
 ### Chart series colours
 

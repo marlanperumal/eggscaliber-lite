@@ -117,6 +117,9 @@ export function generateThemeCSS(config: ThemeConfig): string {
       --warning: oklch(0.55 0.15 75deg);
       --warning-foreground: oklch(0.35 0.12 75deg);
       --warning-subtle: oklch(0.96 0.04 75deg);
+      --info: oklch(0.50 0.18 240deg);
+      --info-foreground: oklch(0.20 0.08 240deg);
+      --info-subtle: oklch(0.95 0.04 240deg);
 ${generateChartTokens(baseHue, 0.58, 0.15)}
     }
     .dark {
@@ -147,6 +150,9 @@ ${generateChartTokens(baseHue, 0.58, 0.15)}
       --warning: oklch(0.72 0.14 75deg);
       --warning-foreground: oklch(0.20 0.08 75deg);
       --warning-subtle: oklch(0.25 0.06 75deg);
+      --info: oklch(0.65 0.15 240deg);
+      --info-foreground: oklch(0.15 0.05 240deg);
+      --info-subtle: oklch(0.22 0.06 240deg);
 ${generateChartTokens(baseHue, 0.72, 0.15)}
     }
   `.trim()

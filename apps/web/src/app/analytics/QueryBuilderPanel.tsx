@@ -319,7 +319,7 @@ function FilterChip({ filter, onRemove }: { filter: FilterSpec; onRemove: (fk: s
 function GhostZoneChip({ displayName, fieldType }: { displayName?: string; fieldType?: string }) {
   const typeConfig = fieldType ? FIELD_TYPE_CONFIG[fieldType] : null
   return (
-    <div className="pointer-events-none flex items-center gap-1 rounded-full border border-dashed border-primary/50 bg-primary/10 px-1.5 py-0.5 font-medium text-[10px] text-primary opacity-[0.65]">
+    <div className="pointer-events-none flex items-center gap-1 rounded-full border border-primary/50 border-dashed bg-primary/10 px-1.5 py-0.5 font-medium text-[10px] text-primary opacity-[0.65]">
       {typeConfig ? (
         <span
           className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full font-black text-[8px] text-primary-foreground"

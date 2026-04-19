@@ -66,3 +66,23 @@ class FieldOut(SQLModel):
     field_type: FieldType
     sort_order: int
     is_filterable: bool
+
+
+class DatasetListItem(SQLModel):
+    id: int
+    name: str
+    collection_id: int
+    collection_name: str
+    package_name: str
+    collected_at: str | None
+    created_at: str
+    field_count: int
+    response_count: int
+    status: str
+
+
+class DatasetListPage(SQLModel):
+    total: int
+    page: int
+    page_size: int
+    items: list[DatasetListItem]

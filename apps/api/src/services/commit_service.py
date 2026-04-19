@@ -6,6 +6,7 @@ import re
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.errors import UploadSessionNotFoundError
 from src.models.dataset import Dataset
 from src.models.field import Field
 from src.models.field_group import FieldGroup
@@ -26,7 +27,7 @@ async def commit_upload(session: AsyncSession, upload_session_id: int) -> int:
     """Promotes staging → live. Returns new dataset.id."""
     sess = await upload_repo.get_session_by_id(session, upload_session_id)
     if sess is None:
-        raise ValueError(f"Upload session {upload_session_id} not found")
+        raise UploadSessionNotFoundError(upload_session_id)
 
     # 1. Create Dataset
     name = sess.dataset_name or "Untitled"

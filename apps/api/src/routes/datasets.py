@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_session
 from src.errors import DatasetNotFoundError
 from src.models.analytics import FieldTreeOut
-from src.models.dataset import DatasetWithFields, FieldOut
+from src.models.dataset import DatasetListPage, DatasetWithFields, FieldOut
 from src.models.response import ResponsePage
 from src.repositories import dataset_repo
 from src.services import analytics_service, dataset_service
@@ -16,7 +16,7 @@ from src.services import analytics_service, dataset_service
 router = APIRouter(tags=["datasets"])
 
 
-@router.get("/datasets")
+@router.get("/datasets", response_model=DatasetListPage)
 async def list_datasets(
     collection_id: int | None = None,
     page: int = Query(default=1, ge=1),

@@ -24,7 +24,7 @@ export interface ReconRow {
 const GROUP_DOT: Record<ReconGroup, string> = {
   exact: "bg-[--success]",
   probable: "bg-[--warning]",
-  new_only: "bg-blue-500",
+  new_only: "bg-[--info]",
   old_only: "bg-muted-foreground",
 }
 

@@ -286,7 +286,7 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
                 <span className="rounded-full bg-[--success-subtle] px-2 py-0.5 font-semibold text-[--success-foreground] text-xs">
                   ✓ {summary.recon.confirmed} confirmed
                 </span>
-                <span className="rounded-full bg-blue-100 px-2 py-0.5 font-semibold text-blue-800 text-xs">
+                <span className="rounded-full bg-[--info-subtle] px-2 py-0.5 font-semibold text-[--info-foreground] text-xs">
                   + {summary.recon.new_only} new
                 </span>
                 {summary.recon.excluded > 0 && (
