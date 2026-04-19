@@ -188,7 +188,7 @@ async def test_suggested_reference_no_collection_returns_null(client, db):
     assert ref_resp.json()["dataset_id"] is None
 
 
-async def test_reconcile_counts(client, db):
+async def test_reconcile_counts_returns_totals_per_group(client, db):
     from tests.test_reconciliation_api import _seed_ref_dataset, _upload
 
     col, ref_ds = await _seed_ref_dataset(db)
@@ -395,7 +395,7 @@ async def test_resolve_row_with_upload_field_id(client, db):
     assert patch.json()["upload_field_id"] == upload_field_id
 
 
-async def test_reconcile_counts_includes_status_counts(client, db):
+async def test_reconcile_counts_with_resolved_rows_includes_status_breakdown(client, db):
     from tests.test_reconciliation_api import _seed_ref_dataset, _upload
 
     col, ref_ds = await _seed_ref_dataset(db)
@@ -412,7 +412,7 @@ async def test_reconcile_counts_includes_status_counts(client, db):
     assert len(body["status_counts"]) >= 1
 
 
-async def test_reconcile_counts_includes_blocking_pending(client, db):
+async def test_reconcile_counts_with_pending_rows_returns_blocking_count(client, db):
     from tests.test_reconciliation_api import _seed_ref_dataset, _upload
 
     col, ref_ds = await _seed_ref_dataset(db)
