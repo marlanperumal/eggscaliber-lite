@@ -27,13 +27,14 @@ it("shows loading text while field tree is fetching", () => {
   expect(screen.getByText(/loading/i)).toBeInTheDocument()
 })
 
-it("switches to list panel when List tab is clicked", async () => {
+it("marks List tab as active when List tab is clicked", async () => {
   const user = userEvent.setup()
   mockGet.mockResolvedValue({ data: EMPTY_TREE } as never)
   render(<Step4MetadataEditor state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => expect(screen.getByRole("button", { name: /list/i })).toBeInTheDocument())
   await user.click(screen.getByRole("button", { name: /list/i }))
-  expect(screen.getByRole("button", { name: /list/i })).toHaveClass("border-b-2")
+  expect(screen.getByRole("button", { name: /list/i })).toHaveAttribute("aria-pressed", "true")
+  expect(screen.getByRole("button", { name: /tree/i })).toHaveAttribute("aria-pressed", "false")
 })
 
 it("Back navigates to step 3 when needsReconcile is true", async () => {

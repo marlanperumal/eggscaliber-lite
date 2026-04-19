@@ -90,6 +90,7 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
                 key={t}
                 type="button"
                 onClick={() => setPanelTab(t)}
+                aria-pressed={panelTab === t}
                 className={[
                   "flex-1 py-2 font-semibold text-xs",
                   panelTab === t ? "border-accent border-b-2 text-accent" : "text-muted-foreground",
