@@ -4,6 +4,8 @@ from enum import StrEnum
 from sqlmodel import Field as sql_field  # noqa: N813
 from sqlmodel import SQLModel
 
+from src.models.field import FieldType
+
 
 class ReconciliationGroup(StrEnum):
     exact = "exact"
@@ -39,3 +41,69 @@ class ReconciliationRow(ReconciliationRowBase, table=True):
 class ReconciliationRowRead(ReconciliationRowBase):
     id: int
     created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Input schema (replaces list[dict] in bulk_create_rows)
+# ---------------------------------------------------------------------------
+
+
+class ReconciliationRowCreate(SQLModel):
+    upload_session_id: int
+    upload_field_id: int | None
+    ref_field_id: int | None
+    group: ReconciliationGroup
+    status: ReconciliationStatus
+    confidence: float | None
+    note: str | None
+
+
+# ---------------------------------------------------------------------------
+# API response schemas
+# ---------------------------------------------------------------------------
+
+
+class ReconcileTriggerOut(SQLModel):
+    total: int
+
+
+class ReconcileRowOut(SQLModel):
+    id: int
+    group: ReconciliationGroup
+    status: ReconciliationStatus
+    upload_field_id: int | None
+    ref_field_id: int | None
+    field_key: str | None
+    field_type: FieldType | None
+    ref_field_key: str | None
+    confidence: float | None
+    note: str | None
+
+
+class ReconcileRowPage(SQLModel):
+    items: list[ReconcileRowOut]
+    next_cursor: int | None
+
+
+class ReconcileIdsOut(SQLModel):
+    ids: list[int]
+
+
+class ReconcileCountsOut(SQLModel):
+    exact: int = 0
+    probable: int = 0
+    new_only: int = 0
+    old_only: int = 0
+    status_counts: dict[str, int]
+    blocking_pending: int
+
+
+class ReconcileRowResolvedOut(SQLModel):
+    id: int
+    status: ReconciliationStatus
+    upload_field_id: int | None
+    ref_field_id: int | None
+
+
+class BulkResolvedOut(SQLModel):
+    resolved: int
