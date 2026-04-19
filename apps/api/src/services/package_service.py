@@ -1,10 +1,29 @@
+import re
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.errors import PackageNotFoundError
-from src.models.package import CollectionSummary, PackageWithCollections
+from src.models.package import CollectionSummary, PackageRead, PackageWithCollections
 from src.models.scope import ScopeCollection, ScopeDataset, ScopePackage
 from src.orm import pk
 from src.repositories import collection_repo, dataset_repo, package_repo
+
+
+def _slugify(name: str) -> str:
+    return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", name.lower())).strip("-")
+
+
+async def create_package(
+    session: AsyncSession,
+    name: str,
+    slug: str | None = None,
+    description: str | None = None,
+) -> PackageRead:
+    resolved_slug = slug or _slugify(name)
+    pkg = await package_repo.create_package(
+        session, name=name, slug=resolved_slug, description=description
+    )
+    return PackageRead.model_validate(pkg.model_dump())
 
 
 async def get_scope(session: AsyncSession) -> list[ScopePackage]:

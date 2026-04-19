@@ -1,5 +1,3 @@
-import re
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import SQLModel
@@ -19,16 +17,11 @@ class PackageCreate(SQLModel):
     description: str | None = None
 
 
-def _slugify(name: str) -> str:
-    return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", name.lower())).strip("-")
-
-
 @router.post("/packages", response_model=PackageRead, status_code=201)
 async def create_package(body: PackageCreate, session: AsyncSession = Depends(get_session)):
     """Create a new package."""
-    slug = body.slug or _slugify(body.name)
-    return await package_repo.create_package(
-        session, name=body.name, slug=slug, description=body.description
+    return await package_service.create_package(
+        session, name=body.name, slug=body.slug, description=body.description
     )
 
 
