@@ -15,6 +15,46 @@ const { data, error } = await api.GET("/api/v1/datasets")
 
 Never use raw `fetch` for API calls — always go through the typed client.
 
+### Never cast API response data with `as any`
+
+The typed client infers response types from `api.d.ts`. Casting response `data` with `as any` defeats this:
+
+```typescript
+// WRONG — loses type safety
+const { data } = await api.GET("/api/v1/uploads/{session_id}", { ... })
+setFields((data as any).fields)
+
+// CORRECT — data is UploadSessionDetail, .fields is typed
+const { data } = await api.GET("/api/v1/uploads/{session_id}", { ... })
+if (data) setFields(data.fields)
+```
+
+If `data` is `unknown` for an endpoint, the backend route is missing `response_model=`. Fix it there — don't work around it with `as any`.
+
+### Casting at API enum boundaries
+
+Select inputs return `string`, but API bodies may require a specific enum type (e.g. `FieldType`). Cast at the call site, not in state:
+
+```typescript
+type FieldType = components["schemas"]["FieldType"]
+
+// State stays as string (select returns string)
+const [overrideType, setOverrideType] = useState<string>("")
+
+// Cast at the API boundary
+body: { override_type: (overrideType || null) as FieldType | null }
+```
+
+### Multipart / FormData uploads
+
+`openapi-typescript` generates `file: string` (binary) for file fields, which conflicts with the `File` type. For FormData uploads, `as never` on the body is the accepted workaround — response data is still fully typed:
+
+```typescript
+const { data, error } = await api.POST("/api/v1/uploads", { body: form as never })
+if (error || !data) throw new Error(JSON.stringify(error))
+setSessionId(data.id)  // data is UploadCreatedResponse — fully typed
+```
+
 ## Component Structure
 
 Stories colocated with components:

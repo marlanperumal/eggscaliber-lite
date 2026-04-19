@@ -94,6 +94,86 @@ class CrosstabRequest(SQLModel): ...
 class CrosstabResponse(SQLModel): ...
 ```
 
+## Typing Enforcement Rules
+
+These rules exist to keep `packages/shared/api.d.ts` free of `unknown` and prevent frontend `as any` casts from leaking back into the codebase.
+
+### Every route must have `response_model=`
+
+Without `response_model=`, `openapi-typescript` generates `unknown` for that route's response, forcing `as any` on the frontend. Every route must declare a typed response model:
+
+```python
+# CORRECT
+@router.get("/uploads/{session_id}", response_model=UploadSessionDetail)
+async def get_upload_session(session_id: int, session: AsyncSession = Depends(get_session)):
+    ...
+
+# WRONG — generates unknown in api.d.ts
+@router.get("/uploads/{session_id}")
+async def get_upload_session(session_id: int, session: AsyncSession = Depends(get_session)):
+    ...
+```
+
+The only acceptable exception is routes that intentionally return arbitrary JSON (e.g. debug/sentry endpoints).
+
+### Services must return typed models, not `dict`
+
+Service functions that correspond to API routes must return a Pydantic/SQLModel instance, never a plain `dict`, `list[dict]`, or `Any`:
+
+```python
+# CORRECT
+async def get_upload_session(session: AsyncSession, session_id: int) -> UploadSessionDetail:
+    sess = await upload_repo.get_session_by_id(session, session_id)
+    ...
+    return UploadSessionDetail(id=cast(int, sess.id), ...)
+
+# WRONG — no type information flows to the route
+async def get_upload_session(session: AsyncSession, session_id: int) -> dict:
+    ...
+    return {"id": sess.id, ...}
+```
+
+### Repository functions must use typed parameters, not `**kwargs`
+
+Repo constructors and create functions must use explicit keyword arguments so call sites are visible to the type checker:
+
+```python
+# CORRECT
+async def create_session(
+    session: AsyncSession,
+    *,
+    file_path: str,
+    dataset_name: str | None,
+    collection_id: int | None,
+    status: UploadSessionStatus,
+) -> UploadSession: ...
+
+# WRONG — call sites are opaque; type errors can't be caught
+async def create_session(session: AsyncSession, **kwargs) -> UploadSession: ...
+```
+
+### Model naming must not collide across modules
+
+When two modules define models with the same class name (e.g. `FieldTreeOut` in both `models/analytics.py` and `models/upload.py`), `openapi-typescript` generates mangled names like `src__models__analytics__FieldTreeOut` that break type aliases across the codebase. Prefix domain-specific models to keep names globally unique:
+
+```python
+# models/upload.py — CORRECT, unique name
+class UploadFieldTreeOut(SQLModel): ...
+
+# models/analytics.py — CORRECT, unique name  
+class FieldTreeOut(SQLModel): ...       # no upload collision
+```
+
+### Use `just generate-types` after any route or model change
+
+After modifying any route signature, response model, or output schema, always regenerate the TypeScript types:
+
+```bash
+just generate-types
+```
+
+Verify the resulting `packages/shared/api.d.ts` contains no new `unknown` return types for the modified routes.
+
 ## Analytics / Orchestration Services
 
 Complex endpoints that coordinate multiple repos, workers, or lower-level services belong in an **orchestration service**. The route handles input validation and error-to-HTTP mapping only; the service owns the logic.
