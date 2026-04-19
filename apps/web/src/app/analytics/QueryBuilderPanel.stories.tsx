@@ -1,14 +1,40 @@
 import { DndContext } from "@dnd-kit/core"
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { fn, userEvent, within } from "@storybook/test"
+import { HttpResponse, http } from "msw"
 import type { QueryConfig } from "./analytics-types"
 import { DEFAULT_QUERY } from "./analytics-types"
 import { QueryBuilderPanel } from "./QueryBuilderPanel"
 
+const MOCK_SCOPE = [
+  {
+    id: 1,
+    name: "Brand Tracker",
+    slug: "brand-tracker",
+    collections: [
+      {
+        id: 1,
+        name: "Quarterly Survey",
+        datasets: [
+          { id: 1, name: "Wave 1" },
+          { id: 2, name: "Wave 2" },
+        ],
+      },
+    ],
+  },
+]
+
 const meta = {
   title: "Analytics/QueryBuilderPanel",
   component: QueryBuilderPanel,
-  parameters: { layout: "padded" },
+  parameters: {
+    layout: "padded",
+    msw: {
+      handlers: [
+        http.get("http://localhost:8000/api/v1/scope", () => HttpResponse.json(MOCK_SCOPE)),
+      ],
+    },
+  },
   decorators: [
     (Story) => (
       <DndContext>

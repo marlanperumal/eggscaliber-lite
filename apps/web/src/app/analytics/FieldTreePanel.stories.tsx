@@ -1,15 +1,41 @@
 import { DndContext } from "@dnd-kit/core"
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { fn } from "@storybook/test"
+import { HttpResponse, http } from "msw"
 import { api } from "@/lib/api"
 import type { QueryConfig } from "./analytics-types"
 import { DEFAULT_QUERY } from "./analytics-types"
 import { FieldTreePanel } from "./FieldTreePanel"
 
+const MOCK_SCOPE = [
+  {
+    id: 1,
+    name: "Brand Tracker",
+    slug: "brand-tracker",
+    collections: [
+      {
+        id: 1,
+        name: "Quarterly Survey",
+        datasets: [
+          { id: 1, name: "Wave 1" },
+          { id: 2, name: "Wave 2" },
+        ],
+      },
+    ],
+  },
+]
+
 const meta = {
   title: "Analytics/FieldTreePanel",
   component: FieldTreePanel,
-  parameters: { layout: "padded" },
+  parameters: {
+    layout: "padded",
+    msw: {
+      handlers: [
+        http.get("http://localhost:8000/api/v1/scope", () => HttpResponse.json(MOCK_SCOPE)),
+      ],
+    },
+  },
   decorators: [
     (Story) => (
       <DndContext>

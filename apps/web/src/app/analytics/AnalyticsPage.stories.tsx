@@ -1,6 +1,25 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
+import { HttpResponse, http } from "msw"
 import { NuqsTestingAdapter } from "nuqs/adapters/testing"
 import { AnalyticsLayout } from "./AnalyticsLayout"
+
+const MOCK_SCOPE = [
+  {
+    id: 1,
+    name: "Brand Tracker",
+    slug: "brand-tracker",
+    collections: [
+      {
+        id: 1,
+        name: "Quarterly Survey",
+        datasets: [
+          { id: 1, name: "Wave 1" },
+          { id: 2, name: "Wave 2" },
+        ],
+      },
+    ],
+  },
+]
 
 const meta = {
   title: "Analytics/AnalyticsPage",
@@ -32,4 +51,11 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   name: "Full analytics page",
+  parameters: {
+    msw: {
+      handlers: [
+        http.get("http://localhost:8000/api/v1/scope", () => HttpResponse.json(MOCK_SCOPE)),
+      ],
+    },
+  },
 }
