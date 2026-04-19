@@ -1,8 +1,12 @@
+from datetime import date
+from typing import Any
+
 from sqlalchemy import delete as sql_delete
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.collection import Collection
+from src.models.field import FieldType
 from src.models.package import Package
 from src.models.upload import (
     UploadField,
@@ -13,7 +17,9 @@ from src.models.upload import (
 )
 
 
-async def get_collection_meta(session: AsyncSession, collection_id: int) -> dict | None:
+async def get_collection_meta(
+    session: AsyncSession, collection_id: int
+) -> dict[str, str | None] | None:
     result = await session.get(Collection, collection_id)
     if result is None:
         return None
@@ -33,8 +39,24 @@ async def get_session_by_id(session: AsyncSession, session_id: int) -> UploadSes
     )
 
 
-async def create_session(session: AsyncSession, **kwargs) -> UploadSession:
-    obj = UploadSession(**kwargs)
+async def create_session(
+    session: AsyncSession,
+    *,
+    file_path: str,
+    dataset_name: str | None,
+    collection_id: int | None,
+    collected_at: date | None,
+    row_count: int | None,
+    status: UploadSessionStatus,
+) -> UploadSession:
+    obj = UploadSession(
+        file_path=file_path,
+        dataset_name=dataset_name,
+        collection_id=collection_id,
+        collected_at=collected_at,
+        row_count=row_count,
+        status=status,
+    )
     session.add(obj)
     await session.flush()
     await session.refresh(obj)
@@ -51,8 +73,24 @@ async def update_session_status(
         await session.flush()
 
 
-async def create_upload_field(session: AsyncSession, **kwargs) -> UploadField:
-    obj = UploadField(**kwargs)
+async def create_upload_field(
+    session: AsyncSession,
+    *,
+    upload_session_id: int,
+    field_key: str,
+    detected_type: FieldType,
+    sort_order: int,
+    confidence: str,
+    value_sample: list[Any] | None,
+) -> UploadField:
+    obj = UploadField(
+        upload_session_id=upload_session_id,
+        field_key=field_key,
+        detected_type=detected_type,
+        sort_order=sort_order,
+        confidence=confidence,
+        value_sample=value_sample,
+    )
     session.add(obj)
     await session.flush()
     await session.refresh(obj)
@@ -81,8 +119,20 @@ async def get_field_by_id(session: AsyncSession, field_id: int) -> UploadField |
     )
 
 
-async def create_upload_level(session: AsyncSession, **kwargs) -> UploadLevel:
-    obj = UploadLevel(**kwargs)
+async def create_upload_level(
+    session: AsyncSession,
+    *,
+    upload_field_id: int,
+    raw_value: str,
+    display_label: str,
+    sort_order: int,
+) -> UploadLevel:
+    obj = UploadLevel(
+        upload_field_id=upload_field_id,
+        raw_value=raw_value,
+        display_label=display_label,
+        sort_order=sort_order,
+    )
     session.add(obj)
     await session.flush()
     await session.refresh(obj)
@@ -103,6 +153,9 @@ async def get_levels_for_field(session: AsyncSession, field_id: int) -> list[Upl
     )
 
 
+# Exception: upsert logic lives in the repo because the insert-or-update decision
+# is driven entirely by database state (existence check), not a business rule.
+# Splitting into separate insert/update calls would require two round-trips.
 async def upsert_level(
     session: AsyncSession,
     field_id: int,
@@ -136,6 +189,8 @@ async def upsert_level(
     return level
 
 
+# Exception: ownership guard (upload_field_id == field_id) lives in the repo to prevent
+# cross-session data deletion without requiring the service to fetch the record first.
 async def delete_level(session: AsyncSession, field_id: int, level_id: int) -> bool:
     level = await session.get(UploadLevel, level_id)
     if level is None or level.upload_field_id != field_id:
@@ -145,6 +200,8 @@ async def delete_level(session: AsyncSession, field_id: int, level_id: int) -> b
     return True
 
 
+# Exception: ownership guard (upload_session_id check) lives in the repo for the same
+# reason as delete_level — prevents cross-session deletion without an extra fetch in the service.
 async def delete_field(session: AsyncSession, upload_session_id: int, field_id: int) -> bool:
     field = await session.get(UploadField, field_id)
     if field is None or field.upload_session_id != upload_session_id:
@@ -155,8 +212,20 @@ async def delete_field(session: AsyncSession, upload_session_id: int, field_id: 
     return True
 
 
-async def create_upload_fieldgroup(session: AsyncSession, **kwargs) -> UploadFieldGroup:
-    obj = UploadFieldGroup(**kwargs)
+async def create_upload_fieldgroup(
+    session: AsyncSession,
+    *,
+    upload_session_id: int,
+    name: str,
+    parent_id: int | None,
+    sort_order: int,
+) -> UploadFieldGroup:
+    obj = UploadFieldGroup(
+        upload_session_id=upload_session_id,
+        name=name,
+        parent_id=parent_id,
+        sort_order=sort_order,
+    )
     session.add(obj)
     await session.flush()
     await session.refresh(obj)

@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.errors import DatasetNotFoundError
 from src.models.dataset import DatasetWithFields, FieldWithLevels, LevelOut
-from src.models.response import ResponsePage, ResponseRead
+from src.models.response import Response, ResponsePage, ResponseRead
 from src.repositories import dataset_repo
 
 
@@ -31,7 +31,7 @@ async def delete_dataset(session: AsyncSession, dataset_id: int) -> None:
         raise DatasetNotFoundError(dataset_id)
 
 
-async def get_csv_data(session: AsyncSession, dataset_id: int) -> tuple[list[str], list]:
+async def get_csv_data(session: AsyncSession, dataset_id: int) -> tuple[list[str], list[Response]]:
     """Raises DatasetNotFoundError if dataset_id does not exist.
     Returns (field_keys, rows) for CSV generation."""
     ds = await dataset_repo.get_by_id(session, dataset_id)

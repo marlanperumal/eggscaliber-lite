@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.collection import Collection
+from src.models.collection import Collection, CollectionType
 from src.models.dataset import Dataset
 
 
@@ -29,7 +29,7 @@ async def create_collection(
     slug: str,
     package_id: int,
     description: str | None = None,
-    collection_type: str = "generic",
+    collection_type: CollectionType = CollectionType.generic,
 ) -> Collection:
     obj = Collection(
         name=name,

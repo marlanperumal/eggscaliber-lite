@@ -1,19 +1,44 @@
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.reconciliation import ReconciliationGroup, ReconciliationRow, ReconciliationStatus
+from src.models.reconciliation import (
+    ReconciliationGroup,
+    ReconciliationRow,
+    ReconciliationRowCreate,
+    ReconciliationStatus,
+)
 
 
-async def create_row(session: AsyncSession, **kwargs) -> ReconciliationRow:
-    obj = ReconciliationRow(**kwargs)
+async def create_row(
+    session: AsyncSession,
+    *,
+    upload_session_id: int,
+    upload_field_id: int | None,
+    ref_field_id: int | None,
+    group: ReconciliationGroup,
+    status: ReconciliationStatus,
+    confidence: float | None,
+    note: str | None,
+) -> ReconciliationRow:
+    obj = ReconciliationRow(
+        upload_session_id=upload_session_id,
+        upload_field_id=upload_field_id,
+        ref_field_id=ref_field_id,
+        group=group,
+        status=status,
+        confidence=confidence,
+        note=note,
+    )
     session.add(obj)
     await session.flush()
     await session.refresh(obj)
     return obj
 
 
-async def bulk_create_rows(session: AsyncSession, rows: list[dict]) -> list[ReconciliationRow]:
-    objs = [ReconciliationRow(**r) for r in rows]
+async def bulk_create_rows(
+    session: AsyncSession, rows: list[ReconciliationRowCreate]
+) -> list[ReconciliationRow]:
+    objs = [ReconciliationRow(**r.model_dump()) for r in rows]
     session.add_all(objs)
     await session.flush()
     return objs
