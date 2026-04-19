@@ -560,3 +560,49 @@ async def test_delete_fieldgroup_not_found_returns_404(client, db):
     sid = r.json()["id"]
     r2 = await client.delete(f"/api/v1/uploads/{sid}/fieldgroups/99999")
     assert r2.status_code == 404
+
+
+async def test_move_field_assigns_to_fieldgroup(client, db):
+    csv_bytes = _make_csv(["q1", "q2"], [["a", "b"]])
+    r = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "T"},
+    )
+    sid = r.json()["id"]
+    field_id = r.json()["fields"][0]["id"]
+
+    grp_r = await client.post(f"/api/v1/uploads/{sid}/fieldgroups", json={"name": "G1"})
+    gid = grp_r.json()["id"]
+
+    move_r = await client.patch(
+        f"/api/v1/uploads/{sid}/fields/{field_id}/move",
+        json={"upload_fieldgroup_id": gid},
+    )
+    assert move_r.status_code == 200
+    assert move_r.json()["id"] == field_id
+    assert move_r.json()["upload_fieldgroup_id"] == gid
+
+
+async def test_move_field_with_wrong_session_returns_404(client, db):
+    csv_bytes_a = _make_csv(["q1"], [["a"]])
+    r_a = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("a.csv", csv_bytes_a, "text/csv")},
+        data={"dataset_name": "A"},
+    )
+    field_id_a = r_a.json()["fields"][0]["id"]
+
+    csv_bytes_b = _make_csv(["q1"], [["a"]])
+    r_b = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("b.csv", csv_bytes_b, "text/csv")},
+        data={"dataset_name": "B"},
+    )
+    sid_b = r_b.json()["id"]
+
+    move_r = await client.patch(
+        f"/api/v1/uploads/{sid_b}/fields/{field_id_a}/move",
+        json={"upload_fieldgroup_id": None},
+    )
+    assert move_r.status_code == 404
