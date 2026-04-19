@@ -59,9 +59,9 @@ export function Step3Reconciliation({ state, setStep }: Props) {
         params: { path: { session_id: state.sessionId } },
       })
       .then(({ data }) => {
-        if ((data as any)?.dataset_id) {
-          setRefDatasetId(String((data as any).dataset_id))
-          setRefDatasetName((data as any).dataset_name ?? "")
+        if (data?.dataset_id) {
+          setRefDatasetId(String(data.dataset_id))
+          setRefDatasetName(data.dataset_name ?? "")
         }
       })
     if (triggered) fetchFieldTree()
@@ -70,30 +70,35 @@ export function Step3Reconciliation({ state, setStep }: Props) {
   async function fetchCounts() {
     if (!state.sessionId) return
     const { data } = await api.GET("/api/v1/uploads/{session_id}/reconcile/counts", {
-      params: { path: { session_id: state.sessionId! } },
+      params: { path: { session_id: state.sessionId } },
     })
-    setCounts(data as any)
-    setBlockingPending((data as any).blocking_pending ?? 0)
+    if (data) {
+      setCounts({
+        exact: data.exact,
+        probable: data.probable,
+        new_only: data.new_only,
+        old_only: data.old_only,
+      })
+      setBlockingPending(data.blocking_pending)
+    }
   }
 
   async function fetchFieldTree() {
     if (!state.sessionId) return
     const { data } = await api.GET("/api/v1/uploads/{session_id}/field-tree", {
-      params: { path: { session_id: state.sessionId! } },
+      params: { path: { session_id: state.sessionId } },
     })
-    const allFields: FieldNode[] = [
-      ...((data as any).fields ?? []),
-      ...((data as any).unassigned_fields ?? []),
-    ]
-    setUploadFields(allFields)
-    setUploadGroups((data as any).groups ?? [])
+    if (data) {
+      setUploadFields([...data.fields, ...data.unassigned_fields])
+      setUploadGroups(data.groups)
+    }
   }
 
   async function triggerReconcile() {
     if (!state.sessionId || !refDatasetId) return
     setBusy(true)
     await api.POST("/api/v1/uploads/{session_id}/reconcile", {
-      params: { path: { session_id: state.sessionId! } },
+      params: { path: { session_id: state.sessionId } },
       body: { reference_dataset_id: Number(refDatasetId) },
     })
     setTriggered(true)
@@ -108,12 +113,12 @@ export function Step3Reconciliation({ state, setStep }: Props) {
     setLoading(true)
     const { data } = await api.GET("/api/v1/uploads/{session_id}/reconcile", {
       params: {
-        path: { session_id: state.sessionId! },
+        path: { session_id: state.sessionId },
         query: { group: activeTab, page_size: pageSize, after_id: cursor ?? undefined },
       },
     })
-    setRows((prev) => (cursor === null ? (data as any).items : [...prev, ...(data as any).items]))
-    setNextCursor((data as any).next_cursor ?? null)
+    setRows((prev) => (cursor === null ? (data?.items ?? []) : [...prev, ...(data?.items ?? [])]))
+    setNextCursor(data?.next_cursor ?? null)
     setLoading(false)
   }
 
@@ -139,6 +144,7 @@ export function Step3Reconciliation({ state, setStep }: Props) {
   }, [showAll, nextCursor])
 
   async function handleAction(rowId: number, action: "confirm" | "reject" | "exclude" | "map") {
+    if (!state.sessionId) return
     const statusMap: Record<string, ReconStatus> = {
       confirm: "confirmed",
       reject: "rejected",
@@ -146,7 +152,7 @@ export function Step3Reconciliation({ state, setStep }: Props) {
     }
     const status = statusMap[action] as ReconStatus
     await api.PATCH("/api/v1/uploads/{session_id}/reconcile/{row_id}", {
-      params: { path: { session_id: state.sessionId!, row_id: rowId } },
+      params: { path: { session_id: state.sessionId, row_id: rowId } },
       body: { status },
     })
     setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, status } : r)))
@@ -157,7 +163,7 @@ export function Step3Reconciliation({ state, setStep }: Props) {
     if (!state.sessionId || selected.size === 0) return
     setBusy(true)
     await api.POST("/api/v1/uploads/{session_id}/reconcile/bulk", {
-      params: { path: { session_id: state.sessionId! } },
+      params: { path: { session_id: state.sessionId } },
       body: { ids: Array.from(selected), action },
     })
     setRows((prev) => prev.map((r) => (selected.has(r.id) ? { ...r, status: action } : r)))

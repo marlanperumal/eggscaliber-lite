@@ -15,10 +15,10 @@ export interface ReconRow {
   ref_field_id: number | null
   confidence: number | null
   note: string | null
-  // Enriched on the frontend after fetching field keys
-  field_key?: string
-  ref_field_key?: string
-  field_type?: string
+  // Populated from the API response (string | null) or enriched locally (undefined before fetch)
+  field_key?: string | null
+  ref_field_key?: string | null
+  field_type?: string | null
 }
 
 const GROUP_DOT: Record<ReconGroup, string> = {

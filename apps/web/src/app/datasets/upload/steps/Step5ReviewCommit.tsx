@@ -20,7 +20,7 @@ interface SessionSummary {
   package_name: string | null
   collected_at: string | null
   file_name: string | null
-  fields: { detected_type: string; override_type: string | null }[]
+  fields: { detected_type: string; override_type?: string | null }[]
   groups: { id: number; name: string; parent_id: number | null; field_count: number }[]
   unassigned_fields: unknown[]
   recon: ReconSummary | null
@@ -44,30 +44,30 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
     Promise.all([
       api
         .GET("/api/v1/uploads/{session_id}", {
-          params: { path: { session_id: state.sessionId! } },
+          params: { path: { session_id: state.sessionId } },
         })
         .then(({ data }) => data),
       api
         .GET("/api/v1/uploads/{session_id}/field-tree", {
-          params: { path: { session_id: state.sessionId! } },
+          params: { path: { session_id: state.sessionId } },
         })
         .then(({ data }) => data),
       state.needsReconcile
         ? Promise.all([
             api
               .GET("/api/v1/uploads/{session_id}/reconcile/counts", {
-                params: { path: { session_id: state.sessionId! } },
+                params: { path: { session_id: state.sessionId } },
               })
               .then(({ data }) => data),
             api
               .GET("/api/v1/uploads/{session_id}/suggested-reference", {
-                params: { path: { session_id: state.sessionId! } },
+                params: { path: { session_id: state.sessionId } },
               })
               .then(({ data }) => data),
             api
               .GET("/api/v1/uploads/{session_id}/reconcile", {
                 params: {
-                  path: { session_id: state.sessionId! },
+                  path: { session_id: state.sessionId },
                   query: { group: "old_only", page_size: 100 },
                 },
               })
@@ -75,8 +75,9 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
           ])
         : Promise.resolve(null),
     ]).then(([sessRaw, treeRaw, reconData]) => {
-      const sess = sessRaw as any
-      const tree = treeRaw as any
+      if (!sessRaw || !treeRaw) return
+      const sess = sessRaw
+      const tree = treeRaw
       let recon: ReconSummary | null = null
       let excludedKeys: string[] = []
       if (reconData) {
@@ -122,7 +123,7 @@ export function Step5ReviewCommit({ state, setStep }: Props) {
     setBusy(true)
     setError(null)
     const { error: commitError } = await api.POST("/api/v1/uploads/{session_id}/commit", {
-      params: { path: { session_id: state.sessionId! } },
+      params: { path: { session_id: state.sessionId } },
     })
     if (commitError) {
       setError("Commit failed. Please try again.")

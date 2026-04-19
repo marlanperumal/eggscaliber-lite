@@ -41,7 +41,7 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
   async function handleMoveField(fieldId: number, groupId: number | null) {
     if (!state.sessionId) return
     await api.PATCH("/api/v1/uploads/{session_id}/fields/{field_id}/move", {
-      params: { path: { session_id: state.sessionId!, field_id: fieldId } },
+      params: { path: { session_id: state.sessionId, field_id: fieldId } },
       body: { upload_fieldgroup_id: groupId },
     })
     await loadTree()
@@ -50,7 +50,7 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
   async function handleCreateGroup(name: string, parentId: number | null) {
     if (!state.sessionId) return
     await api.POST("/api/v1/uploads/{session_id}/fieldgroups", {
-      params: { path: { session_id: state.sessionId! } },
+      params: { path: { session_id: state.sessionId } },
       body: { name, parent_id: parentId, sort_order: 0 },
     })
     await loadTree()
@@ -59,7 +59,7 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
   async function handleDeleteGroup(id: number) {
     if (!state.sessionId) return
     await api.DELETE("/api/v1/uploads/{session_id}/fieldgroups/{group_id}", {
-      params: { path: { session_id: state.sessionId!, group_id: id } },
+      params: { path: { session_id: state.sessionId, group_id: id } },
     })
     await loadTree()
   }
@@ -67,7 +67,7 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
   async function handleMoveGroup(groupId: number, parentId: number | null) {
     if (!state.sessionId) return
     await api.PATCH("/api/v1/uploads/{session_id}/fieldgroups/{group_id}", {
-      params: { path: { session_id: state.sessionId!, group_id: groupId } },
+      params: { path: { session_id: state.sessionId, group_id: groupId } },
       body: { parent_id: parentId },
     })
     await loadTree()
@@ -112,7 +112,7 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
                 onRenameGroup={async (id: number, name: string) => {
                   if (!state.sessionId) return
                   await api.PATCH("/api/v1/uploads/{session_id}/fieldgroups/{group_id}", {
-                    params: { path: { session_id: state.sessionId!, group_id: id } },
+                    params: { path: { session_id: state.sessionId, group_id: id } },
                     body: { name },
                   })
                   await loadTree()
@@ -145,7 +145,7 @@ export function Step4MetadataEditor({ state, setStep }: Props) {
               if (!state.sessionId || !selectedFieldId) return
               await api.DELETE("/api/v1/uploads/{upload_session_id}/fields/{field_id}", {
                 params: {
-                  path: { upload_session_id: state.sessionId!, field_id: selectedFieldId },
+                  path: { upload_session_id: state.sessionId, field_id: selectedFieldId },
                 },
               })
               setSelectedFieldId(null)
