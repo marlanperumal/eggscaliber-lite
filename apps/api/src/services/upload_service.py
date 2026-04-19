@@ -6,7 +6,6 @@ import io
 import os
 import tempfile
 from datetime import date
-from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,6 +48,7 @@ from src.models.upload import (
     UploadSessionListResponse,
     UploadSessionStatus,
 )
+from src.orm import pk
 from src.repositories import dataset_repo, reconciliation_repo, upload_repo
 from src.services import reconciliation_service
 from src.services.detection_service import detect_fields
@@ -111,7 +111,7 @@ async def create_upload_session(
     for i, det in enumerate(detected):
         uf = await upload_repo.create_upload_field(
             session,
-            upload_session_id=cast(int, sess.id),
+            upload_session_id=pk(sess),
             field_key=det.field_key,
             detected_type=det.detected_type,
             sort_order=i,
@@ -123,14 +123,14 @@ async def create_upload_session(
             for j, val in enumerate(det.distinct_values[:100]):
                 await upload_repo.create_upload_level(
                     session,
-                    upload_field_id=cast(int, uf.id),
+                    upload_field_id=pk(uf),
                     raw_value=val,
                     display_label=val,
                     sort_order=j,
                 )
         field_records.append(
             UploadFieldOut(
-                id=cast(int, uf.id),
+                id=pk(uf),
                 field_key=uf.field_key,
                 detected_type=uf.detected_type,
                 override_type=None,
@@ -141,7 +141,7 @@ async def create_upload_session(
         )
 
     return UploadCreatedResponse(
-        id=cast(int, sess.id),
+        id=pk(sess),
         status=sess.status,
         dataset_name=sess.dataset_name,
         collection_id=sess.collection_id,
@@ -158,7 +158,7 @@ async def get_upload_session(session: AsyncSession, session_id: int) -> UploadSe
     fields = await upload_repo.get_fields_for_session(session, session_id)
     field_list = [
         UploadFieldOut(
-            id=cast(int, f.id),
+            id=pk(f),
             field_key=f.field_key,
             detected_type=f.detected_type,
             override_type=f.override_type,
@@ -174,7 +174,7 @@ async def get_upload_session(session: AsyncSession, session_id: int) -> UploadSe
     if sess.collection_id:
         collection_meta = await upload_repo.get_collection_meta(session, sess.collection_id) or {}
     return UploadSessionDetail(
-        id=cast(int, sess.id),
+        id=pk(sess),
         status=sess.status,
         dataset_name=sess.dataset_name,
         collection_id=sess.collection_id,
@@ -197,7 +197,7 @@ async def list_upload_sessions(session: AsyncSession) -> UploadSessionListRespon
             meta = await upload_repo.get_collection_meta(session, sess.collection_id) or {}
         items.append(
             UploadSessionListItem(
-                id=cast(int, sess.id),
+                id=pk(sess),
                 status=sess.status,
                 dataset_name=sess.dataset_name,
                 collection_name=meta.get("collection_name"),
@@ -226,7 +226,7 @@ async def get_suggested_reference(session: AsyncSession, session_id: int) -> Sug
     ds = await dataset_repo.get_latest_for_collection(session, sess.collection_id)
     if ds is None:
         return SuggestedReferenceOut(dataset_id=None, dataset_name=None)
-    return SuggestedReferenceOut(dataset_id=cast(int, ds.id), dataset_name=ds.name)
+    return SuggestedReferenceOut(dataset_id=pk(ds), dataset_name=ds.name)
 
 
 async def commit(session: AsyncSession, session_id: int) -> int:
@@ -269,7 +269,7 @@ async def override_field(
     session.add(f)
     await session.flush()
     return UploadFieldOverrideOut(
-        id=cast(int, f.id),
+        id=pk(f),
         field_key=f.field_key,
         detected_type=f.detected_type,
         override_type=f.override_type,
@@ -296,7 +296,7 @@ async def move_field(
     f.upload_fieldgroup_id = group_id
     session.add(f)
     await session.flush()
-    return FieldMoveOut(id=cast(int, f.id), upload_fieldgroup_id=f.upload_fieldgroup_id)
+    return FieldMoveOut(id=pk(f), upload_fieldgroup_id=f.upload_fieldgroup_id)
 
 
 async def upsert_level(
@@ -346,7 +346,7 @@ async def get_field_tree(session: AsyncSession, session_id: int) -> UploadFieldT
     def _group_out(g: UploadFieldGroup) -> UploadFieldGroupOut:
         field_count = sum(1 for f in fields if f.upload_fieldgroup_id == g.id)
         return UploadFieldGroupOut(
-            id=cast(int, g.id),
+            id=pk(g),
             name=g.name,
             parent_id=g.parent_id,
             sort_order=g.sort_order,
@@ -354,9 +354,9 @@ async def get_field_tree(session: AsyncSession, session_id: int) -> UploadFieldT
         )
 
     async def _field_out(f: UploadField) -> UploadFieldTreeFieldOut:
-        levels = await upload_repo.get_levels_for_field(session, cast(int, f.id))
+        levels = await upload_repo.get_levels_for_field(session, pk(f))
         return UploadFieldTreeFieldOut(
-            id=cast(int, f.id),
+            id=pk(f),
             field_key=f.field_key,
             display_name=f.display_name,
             detected_type=f.detected_type,
@@ -365,7 +365,7 @@ async def get_field_tree(session: AsyncSession, session_id: int) -> UploadFieldT
             upload_fieldgroup_id=f.upload_fieldgroup_id,
             levels=[
                 UploadLevelOut(
-                    id=cast(int, lvl.id),
+                    id=pk(lvl),
                     raw_value=lvl.raw_value,
                     display_label=lvl.display_label,
                     sort_order=lvl.sort_order,
@@ -394,7 +394,7 @@ async def create_fieldgroup(
         session, upload_session_id=session_id, name=name, parent_id=parent_id, sort_order=sort_order
     )
     return FieldGroupDetail(
-        id=cast(int, grp.id),
+        id=pk(grp),
         name=grp.name,
         parent_id=grp.parent_id,
         sort_order=grp.sort_order,
@@ -424,7 +424,7 @@ async def update_fieldgroup(
     session.add(grp)
     await session.flush()
     return FieldGroupDetail(
-        id=cast(int, grp.id),
+        id=pk(grp),
         name=grp.name,
         parent_id=grp.parent_id,
         sort_order=grp.sort_order,
@@ -453,9 +453,7 @@ async def trigger_reconcile(
     new_fields = await upload_repo.get_fields_for_session(session, session_id)
     new_levels_by_field: dict[int, list] = {}
     for f in new_fields:
-        new_levels_by_field[cast(int, f.id)] = await upload_repo.get_levels_for_field(
-            session, cast(int, f.id)
-        )
+        new_levels_by_field[pk(f)] = await upload_repo.get_levels_for_field(session, pk(f))
 
     ref_fields_raw = await dataset_repo.get_fields_with_levels(session, reference_dataset_id)
     ref_by_key = {f.field_key: (f, lvls) for f, lvls in ref_fields_raw}
@@ -481,7 +479,7 @@ async def trigger_reconcile(
                     best_ref, best_ref_lvls = rf, rl
                     break
 
-        upload_lvls = new_levels_by_field.get(cast(int, uf.id), [])
+        upload_lvls = new_levels_by_field.get(pk(uf), [])
         stub_lvls = [
             LiveLevel(
                 value=ul.raw_value,
@@ -497,8 +495,8 @@ async def trigger_reconcile(
         rows_to_create.append(
             ReconciliationRowCreate(
                 upload_session_id=session_id,
-                upload_field_id=cast(int, uf.id),
-                ref_field_id=cast(int, best_ref.id) if best_ref and best_ref.id else None,
+                upload_field_id=pk(uf),
+                ref_field_id=pk(best_ref) if best_ref and best_ref.id else None,
                 group=result.group,
                 status=result.status,
                 confidence=result.confidence,
@@ -512,7 +510,7 @@ async def trigger_reconcile(
                 ReconciliationRowCreate(
                     upload_session_id=session_id,
                     upload_field_id=None,
-                    ref_field_id=cast(int, rf.id) if rf.id else None,
+                    ref_field_id=pk(rf) if rf.id else None,
                     group=ReconciliationGroup.old_only,
                     status=ReconciliationStatus.pending,
                     confidence=None,
@@ -542,20 +540,18 @@ async def list_reconcile_rows(
     upload_field_ids = [r.upload_field_id for r in rows if r.upload_field_id]
     ref_field_ids = [r.ref_field_id for r in rows if r.ref_field_id]
     uf_map = {
-        cast(int, u.id): u
+        pk(u): u
         for u in await upload_repo.get_upload_fields_by_ids(session, upload_field_ids)
         if u.id
     }
     rf_map = {
-        cast(int, f.id): f
-        for f in await dataset_repo.get_fields_by_ids(session, ref_field_ids)
-        if f.id
+        pk(f): f for f in await dataset_repo.get_fields_by_ids(session, ref_field_ids) if f.id
     }
 
     return ReconcileRowPage(
         items=[
             ReconcileRowOut(
-                id=cast(int, r.id),
+                id=pk(r),
                 group=r.group,
                 status=r.status,
                 upload_field_id=r.upload_field_id,
@@ -614,7 +610,7 @@ async def resolve_reconcile_row(
     if row is None:
         raise LevelNotFoundError(row_id)
     return ReconcileRowResolvedOut(
-        id=cast(int, row.id),
+        id=pk(row),
         status=row.status,
         upload_field_id=row.upload_field_id,
         ref_field_id=row.ref_field_id,

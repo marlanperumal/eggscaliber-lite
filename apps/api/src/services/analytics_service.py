@@ -22,6 +22,7 @@ from src.models.analytics import (
 from src.models.dataset import FieldOut
 from src.models.field import Field
 from src.models.field_group import FieldGroup
+from src.orm import pk
 from src.repositories import analytics_repo, collection_repo
 from src.services import crosstab_service, trend_service
 from src.workers.factory import WorkerFactory
@@ -108,9 +109,7 @@ async def run_trend(session: AsyncSession, request: TrendRequest) -> TrendRespon
 
     field_metas: dict[str, FieldMeta] = {}
     for ds in datasets:
-        for k, v in (
-            await analytics_repo.get_field_metas(session, cast(int, ds.id), all_keys)
-        ).items():
+        for k, v in (await analytics_repo.get_field_metas(session, pk(ds), all_keys)).items():
             if k not in field_metas:
                 field_metas[k] = v
 
@@ -118,7 +117,7 @@ async def run_trend(session: AsyncSession, request: TrendRequest) -> TrendRespon
     datasets_data: list[DatasetData] = []
     for ds in datasets:
         worker = WorkerFactory.for_dataset(ds, session)
-        data = await worker.fetch(cast(int, ds.id), all_keys, {})
+        data = await worker.fetch(pk(ds), all_keys, {})
         data = crosstab_service.apply_filters(
             data, [f.model_dump() for f in request.filters], field_metas
         )
@@ -165,13 +164,13 @@ def _build_group_out(
     fields_by_group: dict[int | None, list[Field]],
 ) -> FieldTreeGroupOut:
     return FieldTreeGroupOut(
-        id=cast(int, g.id),
+        id=pk(g),
         name=g.name,
         slug=g.slug,
         sort_order=g.sort_order,
         fields=[
             FieldTreeFieldOut(
-                id=cast(int, f.id),
+                id=pk(f),
                 field_key=f.field_key,
                 display_name=f.display_name,
                 field_type=f.field_type,
@@ -210,7 +209,7 @@ async def get_field_tree(session: AsyncSession, dataset_id: int) -> FieldTreeOut
         ],
         ungrouped_fields=[
             FieldTreeFieldOut(
-                id=cast(int, f.id),
+                id=pk(f),
                 field_key=f.field_key,
                 display_name=f.display_name,
                 field_type=f.field_type,

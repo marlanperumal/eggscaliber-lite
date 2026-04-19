@@ -1,10 +1,9 @@
-from typing import cast
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.errors import PackageNotFoundError
 from src.models.package import CollectionSummary, PackageWithCollections
 from src.models.scope import ScopeCollection, ScopeDataset, ScopePackage
+from src.orm import pk
 from src.repositories import collection_repo, dataset_repo, package_repo
 
 
@@ -24,18 +23,16 @@ async def get_scope(session: AsyncSession) -> list[ScopePackage]:
 
     datasets_by_col: dict[int | None, list[ScopeDataset]] = {}
     for d in datasets:
-        datasets_by_col.setdefault(d.collection_id, []).append(
-            ScopeDataset(id=cast(int, d.id), name=d.name)
-        )
+        datasets_by_col.setdefault(d.collection_id, []).append(ScopeDataset(id=pk(d), name=d.name))
 
     collections_by_pkg: dict[int | None, list[ScopeCollection]] = {}
     for c in collections:
         collections_by_pkg.setdefault(c.package_id, []).append(
-            ScopeCollection(id=cast(int, c.id), name=c.name, datasets=datasets_by_col.get(c.id, []))
+            ScopeCollection(id=pk(c), name=c.name, datasets=datasets_by_col.get(c.id, []))
         )
 
     return [
-        ScopePackage(id=cast(int, p.id), name=p.name, collections=collections_by_pkg.get(p.id, []))
+        ScopePackage(id=pk(p), name=p.name, collections=collections_by_pkg.get(p.id, []))
         for p in packages
     ]
 
