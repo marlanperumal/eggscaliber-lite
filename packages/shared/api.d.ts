@@ -646,6 +646,11 @@ export interface components {
             ids: number[];
             action: components["schemas"]["ReconciliationStatus"];
         };
+        /** BulkResolvedOut */
+        BulkResolvedOut: {
+            /** Resolved */
+            resolved: number;
+        };
         /** CollectionCreate */
         CollectionCreate: {
             /** Name */
@@ -719,6 +724,11 @@ export interface components {
              */
             datasets: components["schemas"]["DatasetSummary"][];
         };
+        /** CommitOut */
+        CommitOut: {
+            /** Dataset Id */
+            dataset_id: number;
+        };
         /** CrosstabMeta */
         CrosstabMeta: {
             /**
@@ -785,6 +795,40 @@ export interface components {
             /** Rows */
             rows: components["schemas"]["ResultRow"][];
         };
+        /** DatasetListItem */
+        DatasetListItem: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Collection Id */
+            collection_id: number;
+            /** Collection Name */
+            collection_name: string;
+            /** Package Name */
+            package_name: string;
+            /** Collected At */
+            collected_at: string | null;
+            /** Created At */
+            created_at: string;
+            /** Field Count */
+            field_count: number;
+            /** Response Count */
+            response_count: number;
+            /** Status */
+            status: string;
+        };
+        /** DatasetListPage */
+        DatasetListPage: {
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Items */
+            items: components["schemas"]["DatasetListItem"][];
+        };
         /** DatasetSummary */
         DatasetSummary: {
             /** Id */
@@ -833,6 +877,11 @@ export interface components {
              */
             fields: components["schemas"]["FieldWithLevels"][];
         };
+        /** DeletedOut */
+        DeletedOut: {
+            /** Deleted */
+            deleted: number;
+        };
         /** FieldGroupCreate */
         FieldGroupCreate: {
             /** Name */
@@ -845,6 +894,33 @@ export interface components {
              */
             sort_order: number;
         };
+        /** FieldGroupDetail */
+        FieldGroupDetail: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Parent Id */
+            parent_id: number | null;
+            /** Sort Order */
+            sort_order: number;
+        };
+        /** FieldGroupOut */
+        FieldGroupOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Parent Id */
+            parent_id: number | null;
+            /** Sort Order */
+            sort_order: number;
+            /**
+             * Field Count
+             * @default 0
+             */
+            field_count: number;
+        };
         /** FieldGroupUpdate */
         FieldGroupUpdate: {
             /** Name */
@@ -856,6 +932,13 @@ export interface components {
         };
         /** FieldMove */
         FieldMove: {
+            /** Upload Fieldgroup Id */
+            upload_fieldgroup_id: number | null;
+        };
+        /** FieldMoveOut */
+        FieldMoveOut: {
+            /** Id */
+            id: number;
             /** Upload Fieldgroup Id */
             upload_fieldgroup_id: number | null;
         };
@@ -888,20 +971,6 @@ export interface components {
             /** Field Key */
             field_key: string;
         };
-        /** FieldTreeFieldOut */
-        FieldTreeFieldOut: {
-            /** Id */
-            id: number;
-            /** Field Key */
-            field_key: string;
-            /** Display Name */
-            display_name: string;
-            field_type: components["schemas"]["FieldType"];
-            /** Sort Order */
-            sort_order: number;
-            /** Is Filterable */
-            is_filterable: boolean;
-        };
         /** FieldTreeGroupOut */
         FieldTreeGroupOut: {
             /** Id */
@@ -916,25 +985,12 @@ export interface components {
              * Fields
              * @default []
              */
-            fields: components["schemas"]["FieldTreeFieldOut"][];
+            fields: components["schemas"]["src__models__analytics__FieldTreeFieldOut"][];
             /**
              * Children
              * @default []
              */
             children: components["schemas"]["FieldTreeGroupOut"][];
-        };
-        /** FieldTreeOut */
-        FieldTreeOut: {
-            /**
-             * Groups
-             * @default []
-             */
-            groups: components["schemas"]["FieldTreeGroupOut"][];
-            /**
-             * Ungrouped Fields
-             * @default []
-             */
-            ungrouped_fields: components["schemas"]["FieldTreeFieldOut"][];
         };
         /**
          * FieldType
@@ -981,11 +1037,15 @@ export interface components {
         InconsistencyOut: {
             /** Field Key */
             field_key: string;
-            /** Inconsistency Type */
-            inconsistency_type: string;
+            inconsistency_type: components["schemas"]["InconsistencyType"];
             /** Detail */
             detail: string;
         };
+        /**
+         * InconsistencyType
+         * @enum {string}
+         */
+        InconsistencyType: "type_mismatch" | "level_added" | "level_removed" | "missing_field";
         /** LevelOut */
         LevelOut: {
             /** Id */
@@ -1085,10 +1145,86 @@ export interface components {
              */
             collections: components["schemas"]["CollectionSummary"][];
         };
+        /** ReconcileCountsOut */
+        ReconcileCountsOut: {
+            /**
+             * Exact
+             * @default 0
+             */
+            exact: number;
+            /**
+             * Probable
+             * @default 0
+             */
+            probable: number;
+            /**
+             * New Only
+             * @default 0
+             */
+            new_only: number;
+            /**
+             * Old Only
+             * @default 0
+             */
+            old_only: number;
+            /** Status Counts */
+            status_counts: {
+                [key: string]: number;
+            };
+            /** Blocking Pending */
+            blocking_pending: number;
+        };
+        /** ReconcileIdsOut */
+        ReconcileIdsOut: {
+            /** Ids */
+            ids: number[];
+        };
+        /** ReconcileRowOut */
+        ReconcileRowOut: {
+            /** Id */
+            id: number;
+            group: components["schemas"]["ReconciliationGroup"];
+            status: components["schemas"]["ReconciliationStatus"];
+            /** Upload Field Id */
+            upload_field_id: number | null;
+            /** Ref Field Id */
+            ref_field_id: number | null;
+            /** Field Key */
+            field_key: string | null;
+            field_type: components["schemas"]["FieldType"] | null;
+            /** Ref Field Key */
+            ref_field_key: string | null;
+            /** Confidence */
+            confidence: number | null;
+            /** Note */
+            note: string | null;
+        };
+        /** ReconcileRowPage */
+        ReconcileRowPage: {
+            /** Items */
+            items: components["schemas"]["ReconcileRowOut"][];
+            /** Next Cursor */
+            next_cursor: number | null;
+        };
+        /** ReconcileRowResolvedOut */
+        ReconcileRowResolvedOut: {
+            /** Id */
+            id: number;
+            status: components["schemas"]["ReconciliationStatus"];
+            /** Upload Field Id */
+            upload_field_id: number | null;
+            /** Ref Field Id */
+            ref_field_id: number | null;
+        };
         /** ReconcileTrigger */
         ReconcileTrigger: {
             /** Reference Dataset Id */
             reference_dataset_id: number;
+        };
+        /** ReconcileTriggerOut */
+        ReconcileTriggerOut: {
+            /** Total */
+            total: number;
         };
         /**
          * ReconciliationGroup
@@ -1175,6 +1311,13 @@ export interface components {
              */
             collections: components["schemas"]["ScopeCollection"][];
         };
+        /** SuggestedReferenceOut */
+        SuggestedReferenceOut: {
+            /** Dataset Id */
+            dataset_id: number | null;
+            /** Dataset Name */
+            dataset_name: string | null;
+        };
         /** TrendMeta */
         TrendMeta: {
             /**
@@ -1220,6 +1363,136 @@ export interface components {
             /** Rows */
             rows: components["schemas"]["ResultRow"][];
         };
+        /** UploadCreatedResponse */
+        UploadCreatedResponse: {
+            /** Id */
+            id: number;
+            status: components["schemas"]["UploadSessionStatus"];
+            /** Dataset Name */
+            dataset_name: string | null;
+            /** Collection Id */
+            collection_id: number | null;
+            /** Row Count */
+            row_count: number | null;
+            /** Fields */
+            fields: components["schemas"]["UploadFieldOut"][];
+        };
+        /** UploadFieldOut */
+        UploadFieldOut: {
+            /** Id */
+            id: number;
+            /** Field Key */
+            field_key: string;
+            detected_type: components["schemas"]["FieldType"];
+            override_type?: components["schemas"]["FieldType"] | null;
+            /** Display Name */
+            display_name?: string | null;
+            /** Sort Order */
+            sort_order: number;
+            /** Upload Fieldgroup Id */
+            upload_fieldgroup_id?: number | null;
+            /** Confidence */
+            confidence: string;
+            /** Value Sample */
+            value_sample: unknown[];
+        };
+        /** UploadFieldOverrideOut */
+        UploadFieldOverrideOut: {
+            /** Id */
+            id: number;
+            /** Field Key */
+            field_key: string;
+            detected_type: components["schemas"]["FieldType"];
+            override_type: components["schemas"]["FieldType"] | null;
+            /** Display Name */
+            display_name: string | null;
+            /** Sort Order */
+            sort_order: number;
+            /** Upload Fieldgroup Id */
+            upload_fieldgroup_id: number | null;
+        };
+        /** UploadLevelOut */
+        UploadLevelOut: {
+            /** Id */
+            id: number;
+            /** Raw Value */
+            raw_value: string;
+            /** Display Label */
+            display_label: string | null;
+            /** Sort Order */
+            sort_order: number;
+            /** Is Inherited */
+            is_inherited: boolean;
+        };
+        /** UploadLevelRead */
+        UploadLevelRead: {
+            /** Upload Field Id */
+            upload_field_id: number;
+            /** Raw Value */
+            raw_value: string;
+            /** Display Label */
+            display_label?: string | null;
+            /**
+             * Sort Order
+             * @default 0
+             */
+            sort_order: number;
+            /**
+             * Is Inherited
+             * @default false
+             */
+            is_inherited: boolean;
+            /** Id */
+            id: number;
+        };
+        /** UploadSessionDetail */
+        UploadSessionDetail: {
+            /** Id */
+            id: number;
+            status: components["schemas"]["UploadSessionStatus"];
+            /** Dataset Name */
+            dataset_name: string | null;
+            /** Collection Id */
+            collection_id: number | null;
+            /** Collection Name */
+            collection_name: string | null;
+            /** Package Name */
+            package_name: string | null;
+            /** Collected At */
+            collected_at: string | null;
+            /** File Name */
+            file_name: string | null;
+            /** Row Count */
+            row_count: number | null;
+            /** Fields */
+            fields: components["schemas"]["UploadFieldOut"][];
+        };
+        /** UploadSessionListItem */
+        UploadSessionListItem: {
+            /** Id */
+            id: number;
+            status: components["schemas"]["UploadSessionStatus"];
+            /** Dataset Name */
+            dataset_name: string | null;
+            /** Collection Name */
+            collection_name: string | null;
+            /** Package Name */
+            package_name: string | null;
+            /** Collected At */
+            collected_at: string | null;
+            /** Created At */
+            created_at: string;
+        };
+        /** UploadSessionListResponse */
+        UploadSessionListResponse: {
+            /** Items */
+            items: components["schemas"]["UploadSessionListItem"][];
+        };
+        /**
+         * UploadSessionStatus
+         * @enum {string}
+         */
+        UploadSessionStatus: "pending" | "detecting" | "reconciling" | "editing" | "committed" | "abandoned";
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1238,6 +1511,59 @@ export interface components {
          * @enum {string}
          */
         WorkerType: "jsonb_response" | "external_table";
+        /** FieldTreeFieldOut */
+        src__models__analytics__FieldTreeFieldOut: {
+            /** Id */
+            id: number;
+            /** Field Key */
+            field_key: string;
+            /** Display Name */
+            display_name: string;
+            field_type: components["schemas"]["FieldType"];
+            /** Sort Order */
+            sort_order: number;
+            /** Is Filterable */
+            is_filterable: boolean;
+        };
+        /** FieldTreeOut */
+        src__models__analytics__FieldTreeOut: {
+            /**
+             * Groups
+             * @default []
+             */
+            groups: components["schemas"]["FieldTreeGroupOut"][];
+            /**
+             * Ungrouped Fields
+             * @default []
+             */
+            ungrouped_fields: components["schemas"]["src__models__analytics__FieldTreeFieldOut"][];
+        };
+        /** FieldTreeFieldOut */
+        src__models__upload__FieldTreeFieldOut: {
+            /** Id */
+            id: number;
+            /** Field Key */
+            field_key: string;
+            /** Display Name */
+            display_name: string | null;
+            detected_type: components["schemas"]["FieldType"];
+            override_type: components["schemas"]["FieldType"] | null;
+            /** Sort Order */
+            sort_order: number;
+            /** Upload Fieldgroup Id */
+            upload_fieldgroup_id: number | null;
+            /** Levels */
+            levels: components["schemas"]["UploadLevelOut"][];
+        };
+        /** FieldTreeOut */
+        src__models__upload__FieldTreeOut: {
+            /** Groups */
+            groups: components["schemas"]["FieldGroupOut"][];
+            /** Fields */
+            fields: components["schemas"]["src__models__upload__FieldTreeFieldOut"][];
+            /** Unassigned Fields */
+            unassigned_fields: components["schemas"]["src__models__upload__FieldTreeFieldOut"][];
+        };
     };
     responses: never;
     parameters: never;
@@ -1507,7 +1833,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["DatasetListPage"];
                 };
             };
             /** @description Validation Error */
@@ -1632,7 +1958,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["FieldTreeOut"];
+                    "application/json": components["schemas"]["src__models__analytics__FieldTreeOut"];
                 };
             };
             /** @description Validation Error */
@@ -1789,7 +2115,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["UploadSessionListResponse"];
                 };
             };
         };
@@ -1813,7 +2139,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["UploadCreatedResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1844,7 +2170,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["UploadSessionDetail"];
                 };
             };
             /** @description Validation Error */
@@ -1909,7 +2235,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["UploadFieldOverrideOut"];
                 };
             };
             /** @description Validation Error */
@@ -1974,7 +2300,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ReconcileRowPage"];
                 };
             };
             /** @description Validation Error */
@@ -2009,7 +2335,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ReconcileTriggerOut"];
                 };
             };
             /** @description Validation Error */
@@ -2042,7 +2368,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ReconcileIdsOut"];
                 };
             };
             /** @description Validation Error */
@@ -2073,7 +2399,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ReconcileCountsOut"];
                 };
             };
             /** @description Validation Error */
@@ -2104,7 +2430,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SuggestedReferenceOut"];
                 };
             };
             /** @description Validation Error */
@@ -2140,7 +2466,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ReconcileRowResolvedOut"];
                 };
             };
             /** @description Validation Error */
@@ -2175,7 +2501,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["BulkResolvedOut"];
                 };
             };
             /** @description Validation Error */
@@ -2206,7 +2532,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CommitOut"];
                 };
             };
             /** @description Validation Error */
@@ -2237,7 +2563,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["src__models__upload__FieldTreeOut"];
                 };
             };
             /** @description Validation Error */
@@ -2272,7 +2598,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FieldGroupDetail"];
                 };
             };
             /** @description Validation Error */
@@ -2304,7 +2630,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["DeletedOut"];
                 };
             };
             /** @description Validation Error */
@@ -2340,7 +2666,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FieldGroupDetail"];
                 };
             };
             /** @description Validation Error */
@@ -2376,7 +2702,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["UploadLevelRead"];
                 };
             };
             /** @description Validation Error */
@@ -2443,7 +2769,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FieldMoveOut"];
                 };
             };
             /** @description Validation Error */
