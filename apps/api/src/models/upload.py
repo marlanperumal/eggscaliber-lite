@@ -113,3 +113,124 @@ class UploadLevel(UploadLevelBase, table=True):
 
 class UploadLevelRead(UploadLevelBase):
     id: int
+
+
+# ---------------------------------------------------------------------------
+# API response schemas (not ORM table models)
+# ---------------------------------------------------------------------------
+
+
+class UploadFieldOut(SQLModel):
+    id: int
+    field_key: str
+    detected_type: FieldType
+    override_type: FieldType | None = None
+    display_name: str | None = None
+    sort_order: int
+    upload_fieldgroup_id: int | None = None
+    confidence: str
+    value_sample: list[Any]
+
+
+class UploadCreatedResponse(SQLModel):
+    id: int
+    status: UploadSessionStatus
+    dataset_name: str | None
+    collection_id: int | None
+    row_count: int | None
+    fields: list[UploadFieldOut]
+
+
+class UploadSessionListItem(SQLModel):
+    id: int
+    status: UploadSessionStatus
+    dataset_name: str | None
+    collection_name: str | None
+    package_name: str | None
+    collected_at: str | None
+    created_at: str
+
+
+class UploadSessionListResponse(SQLModel):
+    items: list[UploadSessionListItem]
+
+
+class UploadSessionDetail(SQLModel):
+    id: int
+    status: UploadSessionStatus
+    dataset_name: str | None
+    collection_id: int | None
+    collection_name: str | None
+    package_name: str | None
+    collected_at: str | None
+    file_name: str | None
+    row_count: int | None
+    fields: list[UploadFieldOut]
+
+
+class UploadFieldOverrideOut(SQLModel):
+    id: int
+    field_key: str
+    detected_type: FieldType
+    override_type: FieldType | None
+    display_name: str | None
+    sort_order: int
+    upload_fieldgroup_id: int | None
+
+
+class FieldMoveOut(SQLModel):
+    id: int
+    upload_fieldgroup_id: int | None
+
+
+class UploadLevelOut(SQLModel):
+    id: int
+    raw_value: str
+    display_label: str | None
+    sort_order: int
+    is_inherited: bool
+
+
+class FieldTreeFieldOut(SQLModel):
+    id: int
+    field_key: str
+    display_name: str | None
+    detected_type: FieldType
+    override_type: FieldType | None
+    sort_order: int
+    upload_fieldgroup_id: int | None
+    levels: list[UploadLevelOut]
+
+
+class FieldGroupOut(SQLModel):
+    id: int
+    name: str
+    parent_id: int | None
+    sort_order: int
+    field_count: int = 0
+
+
+class FieldTreeOut(SQLModel):
+    groups: list[FieldGroupOut]
+    fields: list[FieldTreeFieldOut]
+    unassigned_fields: list[FieldTreeFieldOut]
+
+
+class FieldGroupDetail(SQLModel):
+    id: int
+    name: str
+    parent_id: int | None
+    sort_order: int
+
+
+class DeletedOut(SQLModel):
+    deleted: int
+
+
+class CommitOut(SQLModel):
+    dataset_id: int
+
+
+class SuggestedReferenceOut(SQLModel):
+    dataset_id: int | None
+    dataset_name: str | None
