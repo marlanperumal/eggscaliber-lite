@@ -14,10 +14,8 @@ export async function DatasetsPage() {
   ])
 
   const initialPackages: Package[] = packagesRes.data ?? []
-  const initialDrafts: DraftItem[] =
-    (uploadsRes.data as { items: DraftItem[] } | undefined)?.items ?? []
-  const initialDatasets: DatasetItem[] =
-    (datasetsRes.data as { items: DatasetItem[] } | undefined)?.items ?? []
+  const initialDrafts: DraftItem[] = uploadsRes.data?.items ?? []
+  const initialDatasets: DatasetItem[] = datasetsRes.data?.items ?? []
 
   return (
     <DatasetsPageContent
