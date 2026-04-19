@@ -87,6 +87,18 @@ export const AtStep5: Story = {
     msw: {
       handlers: [
         http.get(`${BASE}/api/v1/uploads/:id/field-tree`, () => HttpResponse.json(MOCK_FIELD_TREE)),
+        http.get(`${BASE}/api/v1/uploads/:id/reconcile/counts`, () =>
+          HttpResponse.json({
+            exact: 12,
+            confirmed: 3,
+            new_only: 2,
+            status_counts: { excluded: 0 },
+          }),
+        ),
+        http.get(`${BASE}/api/v1/uploads/:id/suggested-reference`, () =>
+          HttpResponse.json({ dataset_name: "Wave 2" }),
+        ),
+        http.get(`${BASE}/api/v1/uploads/:id/reconcile`, () => HttpResponse.json({ items: [] })),
         http.get(`${BASE}/api/v1/uploads/:id`, () => HttpResponse.json(MOCK_SESSION)),
       ],
     },
