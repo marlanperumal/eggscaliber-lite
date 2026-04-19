@@ -10,6 +10,8 @@ These are enforced by hooks but check them yourself first:
 4. **Never edit `packages/shared/api.d.ts` manually** — it is AUTO-GENERATED. Run `just generate-types`.
 5. **Subagents must `Read CLAUDE.md` as their very first step** — include this instruction explicitly in every subagent prompt.
 6. **Never use raw hex colors or `text-primary` as a text color in the frontend** — use design token classes only. Never write `dark:` overrides.
+7. **Never use `git -C`** — fix the cwd with `cd` first. `git -C` bypasses allowlist approvals.
+8. **Never use bare `python3` or `pip`** — always use `uv run python3` / `uv pip`.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
