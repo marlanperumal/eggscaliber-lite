@@ -73,7 +73,7 @@ async def list_upload_sessions(session: AsyncSession = Depends(get_session)):
     return await upload_service.list_upload_sessions(session)
 
 
-@router.delete("/uploads/{session_id}", status_code=204)
+@router.delete("/uploads/{session_id}", status_code=204, response_model=None)
 async def discard_upload_session(session_id: int, session: AsyncSession = Depends(get_session)):
     """Mark an upload session as abandoned (soft delete)."""
     try:
@@ -121,7 +121,9 @@ async def override_field(
         raise HTTPException(status_code=404, detail="Field not found") from None
 
 
-@router.delete("/uploads/{upload_session_id}/fields/{field_id}", status_code=204)
+@router.delete(
+    "/uploads/{upload_session_id}/fields/{field_id}", status_code=204, response_model=None
+)
 async def delete_field(
     upload_session_id: int,
     field_id: int,
@@ -363,6 +365,7 @@ async def upsert_level_route(
 @router.delete(
     "/uploads/{upload_session_id}/fields/{field_id}/levels/{level_id}",
     status_code=204,
+    response_model=None,
 )
 async def delete_level_route(
     upload_session_id: int,

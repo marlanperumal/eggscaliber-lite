@@ -39,7 +39,7 @@ async def get_dataset(dataset_id: int, session: AsyncSession = Depends(get_sessi
         raise HTTPException(status_code=404, detail="Dataset not found") from None
 
 
-@router.delete("/datasets/{dataset_id}", status_code=204)
+@router.delete("/datasets/{dataset_id}", status_code=204, response_model=None)
 async def delete_dataset(dataset_id: int, session: AsyncSession = Depends(get_session)):
     """Delete a dataset and all associated fields, levels, and responses."""
     try:
