@@ -1,8 +1,11 @@
 import { withThemeByClassName } from "@storybook/addon-themes"
 import type { Preview, Renderer } from "@storybook/nextjs-vite"
+import { initialize, mswLoader } from "msw-storybook-addon"
 import "../src/app/globals.css"
 import { themeConfig } from "../src/config/theme.config"
 import { generateThemeCSS } from "../src/lib/theme"
+
+initialize()
 
 // Inject theme CSS so CSS custom properties resolve correctly in stories.
 // This mirrors what layout.tsx does in the app.
@@ -17,6 +20,7 @@ if (typeof document !== "undefined") {
 }
 
 const preview: Preview = {
+  loaders: [mswLoader],
   decorators: [
     withThemeByClassName<Renderer>({
       themes: {

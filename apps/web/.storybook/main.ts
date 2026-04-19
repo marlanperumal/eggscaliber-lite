@@ -3,6 +3,7 @@ import tailwindcss from "@tailwindcss/vite"
 
 const config: StorybookConfig = {
   stories: ["../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
+  staticDirs: ["../public"],
   addons: [
     "@storybook/addon-docs",
     "@storybook/addon-a11y",
