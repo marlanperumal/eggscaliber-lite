@@ -49,6 +49,8 @@ class Settings(BaseSettings):
 
     auth_mode: str = "dev"
     dev_jwt_secret: str = "dev-secret-change-in-production"
+    clerk_jwt_key: str = ""
+    clerk_webhook_secret: str = ""
 
     sentry_dsn: str | None = None
     environment: str = "development"
