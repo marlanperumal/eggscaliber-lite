@@ -1,11 +1,12 @@
 import sentry_sdk
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastmcp import FastMCP
 from fastmcp.server.providers.openapi import MCPType, RouteMap
 from fastmcp.utilities.lifespan import combine_lifespans
 
+from src.auth import get_current_user
 from src.config import settings
 from src.database import lifespan as db_lifespan
 from src.errors import DomainError
@@ -50,13 +51,13 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
 
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(sentry.router, prefix="/api/v1")
-app.include_router(packages.router, prefix="/api/v1")
-app.include_router(scope.router, prefix="/api/v1")
-app.include_router(collections.router, prefix="/api/v1")
-app.include_router(datasets.router, prefix="/api/v1")
-app.include_router(analytics.router, prefix="/api/v1")
-app.include_router(ai.router, prefix="/api/v1")
-app.include_router(uploads.router, prefix="/api/v1")
+app.include_router(packages.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
+app.include_router(scope.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
+app.include_router(collections.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
+app.include_router(datasets.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
+app.include_router(analytics.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
+app.include_router(ai.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
+app.include_router(uploads.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 
 mcp = FastMCP.from_fastapi(
     app,

@@ -6,6 +6,7 @@ import src.models  # noqa: F401 — ensures all table metadata is registered bef
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel
+from src.auth import CurrentUser, get_current_user
 from src.config import settings
 from src.database import get_session
 from src.main import app
@@ -51,7 +52,11 @@ async def client(db: AsyncSession):
     async def override_get_session():
         yield db
 
+    def override_get_current_user() -> CurrentUser:
+        return CurrentUser(clerk_id="test_user", email="test@example.com", org_id=None)
+
     app.dependency_overrides[get_session] = override_get_session
+    app.dependency_overrides[get_current_user] = override_get_current_user
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()
