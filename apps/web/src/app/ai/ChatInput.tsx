@@ -24,7 +24,7 @@ export function ChatInput({ input, isLoading, onInputChange, onSubmit }: Props) 
     <form
       ref={formRef}
       onSubmit={onSubmit}
-      className="flex items-end gap-2 border-t border-border p-3"
+      className="flex items-end gap-2 border-border border-t p-3"
     >
       <Textarea
         data-testid="chat-input"
