@@ -1,3 +1,4 @@
+import { ClerkProvider } from "@clerk/nextjs"
 import { PostHogPageView, PostHogProvider } from "@posthog/next"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
@@ -17,30 +18,35 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* Theme CSS injected here so tokens resolve before first paint */}
-        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: CSS-only content, no user input */}
-        <style dangerouslySetInnerHTML={{ __html: generateThemeCSS(themeConfig) }} />
-      </head>
-      <body className={`${inter.className} flex min-h-screen flex-col`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <NuqsAdapter>
-            <PostHogProvider
-              clientOptions={{ api_host: "/ingest", debug: process.env.NODE_ENV === "development" }}
-            >
-              <PostHogPageView />
-              <TopNav />
-              <main className="flex-1 overflow-hidden">{children}</main>
-            </PostHogProvider>
-          </NuqsAdapter>
-        </ThemeProvider>
-      </body>
-    </html>
+    <ClerkProvider afterSignOutUrl="/">
+      <html lang="en" suppressHydrationWarning>
+        <head>
+          {/* Theme CSS injected here so tokens resolve before first paint */}
+          {/* biome-ignore lint/security/noDangerouslySetInnerHtml: CSS-only content, no user input */}
+          <style dangerouslySetInnerHTML={{ __html: generateThemeCSS(themeConfig) }} />
+        </head>
+        <body className={`${inter.className} flex min-h-screen flex-col`}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <NuqsAdapter>
+              <PostHogProvider
+                clientOptions={{
+                  api_host: "/ingest",
+                  debug: process.env.NODE_ENV === "development",
+                }}
+              >
+                <PostHogPageView />
+                <TopNav />
+                <main className="flex-1 overflow-hidden">{children}</main>
+              </PostHogProvider>
+            </NuqsAdapter>
+          </ThemeProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }
