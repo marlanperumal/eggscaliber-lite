@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.errors import (
     FieldGroupNotFoundError,
     FieldNotFoundError,
+    InvalidFileTypeError,
     LevelNotFoundError,
     ReconciliationRowNotFoundError,
     UploadSessionNotFoundError,
@@ -57,9 +58,6 @@ from src.services.detection_service import detect_fields
 _UPLOAD_DIR = os.environ.get("UPLOAD_DIR", tempfile.gettempdir())
 _ALLOWED_TYPES = {"text/csv", "application/csv", "application/octet-stream"}
 _MAX_SAMPLE = 200
-
-
-class InvalidFileTypeError(Exception): ...
 
 
 async def create_upload_session(
@@ -265,6 +263,8 @@ async def override_field(
         f.upload_fieldgroup_id = upload_fieldgroup_id
     if sort_order is not None:
         f.sort_order = sort_order
+    # Exception: f is already tracked by the session; session.add() + flush() is the standard
+    # SQLAlchemy in-place update idiom. A repo save_field() wrapper would be empty boilerplate.
     session.add(f)
     await session.flush()
     return UploadFieldOverrideOut(
@@ -293,6 +293,7 @@ async def move_field(
     if f is None or f.upload_session_id != session_id:
         raise FieldNotFoundError(field_id)
     f.upload_fieldgroup_id = group_id
+    # Exception: same in-place update idiom — tracked object, no query, no business logic.
     session.add(f)
     await session.flush()
     return FieldMoveOut(id=pk(f), upload_fieldgroup_id=f.upload_fieldgroup_id)
@@ -420,6 +421,7 @@ async def update_fieldgroup(
         grp.parent_id = parent_id
     if sort_order is not None:
         grp.sort_order = sort_order
+    # Exception: same in-place update idiom — tracked object, no query, no business logic.
     session.add(grp)
     await session.flush()
     return FieldGroupDetail(
@@ -519,6 +521,7 @@ async def trigger_reconcile(
 
     await reconciliation_repo.bulk_create_rows(session, rows_to_create)
     sess.reference_dataset_id = reference_dataset_id
+    # Exception: same in-place update idiom — tracked object, persisted alongside bulk_create_rows.
     session.add(sess)
     await session.flush()
     return ReconcileTriggerOut(total=len(rows_to_create))

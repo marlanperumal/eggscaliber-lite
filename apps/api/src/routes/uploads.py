@@ -8,6 +8,7 @@ from src.database import get_session
 from src.errors import (
     FieldGroupNotFoundError,
     FieldNotFoundError,
+    InvalidFileTypeError,
     LevelNotFoundError,
     ReconciliationRowNotFoundError,
     UploadSessionNotFoundError,
@@ -38,7 +39,6 @@ from src.models.upload import (
 )
 from src.repositories import reconciliation_repo
 from src.services import upload_service
-from src.services.upload_service import InvalidFileTypeError
 
 router = APIRouter(tags=["uploads"])
 
