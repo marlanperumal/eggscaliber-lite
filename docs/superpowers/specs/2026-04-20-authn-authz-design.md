@@ -56,9 +56,10 @@ No custom auth UI is built — all identity screens use Clerk's hosted component
 A `get_current_user` dependency is added to `src/auth.py`. It:
 
 1. Extracts the Bearer token from `Authorization` header
-2. Fetches Clerk's JWKS (cached; refreshed on key rotation)
-3. Verifies the JWT signature and expiry
-4. Returns a `CurrentUser` dataclass with `clerk_id`, `email`, and `org_id`
+2. Verifies the JWT using Clerk's PEM public key (`CLERK_JWT_KEY` env var) — networkless, no JWKS fetch per request
+3. Returns a `CurrentUser` dataclass with `clerk_id`, `email`, and `org_id`
+
+JWT verification uses `PyJWT` + `cryptography` (RS256). `CLERK_JWT_KEY` is the PEM-encoded public key copied from the Clerk dashboard (API Keys → Advanced → JWT public key). This is the recommended approach over JWKS fetching for server-side backends.
 
 When `AUTH_MODE=dev`, the dependency returns a hardcoded `CurrentUser` without any JWT verification. This preserves the existing local dev workflow.
 
@@ -165,15 +166,18 @@ Org admins send invites via `<OrganizationProfile />` (built-in invite-by-email 
 CLERK_SECRET_KEY=sk_...
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
 CLERK_WEBHOOK_SECRET=whsec_...
+CLERK_JWT_KEY="-----BEGIN PUBLIC KEY-----\n..."   # PEM key from Clerk dashboard
 
-# Sign-in/sign-up redirect URLs (Clerk dashboard config)
+# Sign-in/sign-up redirect URLs
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/analytics
 NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/analytics
 ```
 
-All already stubbed as comments in `.env.example`.
+`CLERK_SECRET_KEY` and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` are already stubbed as comments in `.env.example`. `CLERK_JWT_KEY` and `CLERK_WEBHOOK_SECRET` are new additions.
+
+**New Python dependencies (Phase 1):** `pyjwt[crypto]` (includes `cryptography`) for JWT verification; `svix` for webhook signature verification.
 
 ---
 
@@ -194,6 +198,18 @@ All already stubbed as comments in `.env.example`.
 
 - Clerk's own UI components — that is Clerk's responsibility.
 - Webhook delivery — handlers are tested in isolation; Clerk's webhook infrastructure is not simulated.
+
+---
+
+## Package Versions (verified 2026-04-20)
+
+| Package | Version | Notes |
+|---------|---------|-------|
+| `@clerk/nextjs` | 7.2.3 | Next.js SDK — middleware, components |
+| `@clerk/backend` | 3.2.13 | Optional: admin API calls from Node |
+| `@clerk/testing` | 2.0.17 | Mock auth state in frontend tests |
+| `svix` | 1.90.0 | Webhook signature verification (Python) |
+| `pyjwt[crypto]` | latest | JWT verification in FastAPI |
 
 ---
 
