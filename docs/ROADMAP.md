@@ -11,7 +11,7 @@ Five sub-projects, each with its own spec → plan → implementation cycle.
 | 5 | Drag & Drop | ✅ Complete | — | — |
 | 6 | Data Ingestion & Metadata Editor | ✅ Complete | [spec](superpowers/specs/2026-04-16-data-ingestion-metadata-editor-design.md) | [plan](superpowers/plans/2026-04-17-data-ingestion-metadata-editor.md) |
 | 7 | AI Interface | ✅ Complete | [spec](superpowers/specs/2026-04-19-ai-interface-design.md) | [plan](superpowers/plans/2026-04-19-ai-interface.md) |
-| 8 | Full AuthN & AuthZ | ⏳ Pending | — | — |
+| 8 | Full AuthN & AuthZ | ⏳ In Progress | [spec](superpowers/specs/2026-04-20-authn-authz-design.md) | [plan](superpowers/plans/2026-04-20-authn-authz-phase1.md) |
 | 9 | MCP Interface | ⏳ Pending | — | — |
 
 ---
@@ -60,15 +60,10 @@ NL query → PydanticAI identifies relevant data sources → executes queries in
 
 ---
 
-### 8 — Full AuthN & AuthZ ⏳
-Multi-tenant identity layer: users belong to organisations; organisations have groups that control access to packages. Roles: application super-user, organisation admin, regular user.
+### 8 — Full AuthN & AuthZ
 
-- **Registration & login** — individual and organisation sign-up flows, email/password auth, JWT sessions
-- **Forgot password & email verification** — transactional email via a mailer service (architected for reuse in future notification flows)
-- **Organisation invite flow** — admins invite users by email; invite tokens expire
-- **Access control** — packages are granted to organisation groups; group membership gates analytics access
-- **Account management** — users manage personal profile/password; org admins manage users, subscriptions, and group assignments
-- **Mailer service** — standalone service (e.g. SMTP / SendGrid / Resend) wired up for auth flows and ready for future notifications
+- **Phase 1 — Identity Stack** ⏳ In Progress — Clerk wired end-to-end: sign-in/sign-up/account UI, Next.js middleware route protection, FastAPI JWT verification, webhook-synced `users`/`organisations`/`org_memberships` tables, org creation and invite flows via Clerk's built-in UI.
+- **Phase 2 — Access Control** ⏳ Pending — `groups` table (org-scoped), `group_memberships`, `group_packages`; analytics and package endpoints filter by group membership; super-user role.
 
 **Done when:** A user can register, join an org, be assigned to a group, and access only the packages that group is entitled to — end-to-end in production.
 
