@@ -37,6 +37,11 @@ async def commit_upload(session: AsyncSession, upload_session_id: int) -> int:
         collection_id=sess.collection_id,
         collected_at=sess.collected_at,
     )
+    # Exception: direct session.add() used throughout this function — commit is an atomic
+    # ETL that creates 5 entity types in strict order, each requiring flush+refresh to obtain
+    # the generated id for use in subsequent inserts. Extracting each insert to a repo method
+    # would produce 6 single-use wrappers with no encapsulation benefit. All reads delegate
+    # to upload_repo; only the promotion inserts live here.
     session.add(ds)
     await session.flush()
     await session.refresh(ds)
