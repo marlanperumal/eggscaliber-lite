@@ -14,7 +14,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { themeConfig } from "@/config/theme.config"
 
-const NAV_LINKS = [{ href: "/analytics", label: "Analytics" }]
+const NAV_LINKS = [
+  { href: "/analytics", label: "Analytics" },
+  { href: "/ai", label: "AI" },
+]
 
 export function TopNav() {
   const pathname = usePathname()
