@@ -6,13 +6,16 @@ const chatHandlers = [
   http.post(
     /\/api\/v1\/ai\/chat/,
     () =>
-      new HttpResponse('0:"Hello from the AI assistant."\nd:{"finishReason":"stop"}\n', {
-        status: 200,
-        headers: {
-          "Content-Type": "text/plain; charset=utf-8",
-          "X-Vercel-AI-Data-Stream": "v1",
+      new HttpResponse(
+        'data: {"type":"start"}\n\ndata: {"type":"start-step"}\n\ndata: {"type":"text-start","id":"msg_1"}\n\ndata: {"type":"text-delta","id":"msg_1","delta":"Hello from the AI assistant."}\n\ndata: {"type":"text-end","id":"msg_1"}\n\ndata: {"type":"finish-step"}\n\ndata: {"type":"finish","finishReason":"stop"}\n\n',
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "text/event-stream",
+            "x-vercel-ai-ui-message-stream": "v1",
+          },
         },
-      }),
+      ),
   ),
 ]
 
