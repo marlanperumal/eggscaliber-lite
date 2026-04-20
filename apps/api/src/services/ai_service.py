@@ -33,6 +33,18 @@ def encode_text_end(msg_id: str) -> str:
     return _sse({"type": "text-end", "id": msg_id})
 
 
+def encode_start() -> str:
+    return _sse({"type": "start"})
+
+
+def encode_start_step() -> str:
+    return _sse({"type": "start-step"})
+
+
+def encode_finish_step() -> str:
+    return _sse({"type": "finish-step"})
+
+
 def encode_data_part(data_type: str, data_id: str, data: dict) -> str:
     """Encode a custom data part (e.g. crosstab_result, trend_result)."""
     return _sse({"type": f"data-{data_type}", "id": data_id, "data": data})
@@ -221,6 +233,8 @@ async def stream_response(
 
     try:
         agent = get_agent()
+        yield encode_start()
+        yield encode_start_step()
         yield encode_text_start(text_id)
         async with agent.run_stream(
             user_prompt, message_history=message_history, deps=deps
@@ -233,6 +247,7 @@ async def stream_response(
             data_type = part["type"]
             yield encode_data_part(data_type, f"data-{i}", part)
 
+        yield encode_finish_step()
         yield encode_finish()
     except Exception as e:
         yield encode_error(str(e))

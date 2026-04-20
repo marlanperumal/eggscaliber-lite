@@ -81,6 +81,27 @@ class TestStreamEncoder:
         assert data["type"] == "error"
         assert data["errorText"] == "something went wrong"
 
+    def test_encode_start(self):
+        from src.services.ai_service import encode_start
+
+        result = encode_start()
+        data = self._parse_sse(result)
+        assert data["type"] == "start"
+
+    def test_encode_start_step(self):
+        from src.services.ai_service import encode_start_step
+
+        result = encode_start_step()
+        data = self._parse_sse(result)
+        assert data["type"] == "start-step"
+
+    def test_encode_finish_step(self):
+        from src.services.ai_service import encode_finish_step
+
+        result = encode_finish_step()
+        data = self._parse_sse(result)
+        assert data["type"] == "finish-step"
+
 
 @pytest_asyncio.fixture
 async def ai_dataset(db):
@@ -292,9 +313,12 @@ class TestStreamResponse:
         parsed = self._parse_events(events)
         types = [p["type"] for p in parsed]
 
-        assert types[0] == "text-start"
+        assert types[0] == "start"
+        assert types[1] == "start-step"
+        assert types[2] == "text-start"
         assert any(t == "text-delta" for t in types)
         assert "text-end" in types
+        assert "finish-step" in types
         assert types[-1] == "finish"
         assert parsed[-1]["finishReason"] == "stop"
 
