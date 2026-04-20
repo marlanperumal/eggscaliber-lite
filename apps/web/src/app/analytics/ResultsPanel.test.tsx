@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import type { AnalyticsResult, QueryConfig } from "./analytics-types"
 import { ResultsPanel } from "./ResultsPanel"
 
-vi.mock("./AnalyticsChart", () => ({
+vi.mock("@/components/analytics/AnalyticsChart", () => ({
   AnalyticsChart: () => <div data-testid="analytics-chart" />,
 }))
 

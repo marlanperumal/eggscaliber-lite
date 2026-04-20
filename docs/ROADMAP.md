@@ -10,7 +10,7 @@ Five sub-projects, each with its own spec → plan → implementation cycle.
 | 4 | UX Polish | ✅ Complete | — | [plan](superpowers/plans/2026-04-15-ux-polish-iteration-3.md) |
 | 5 | Drag & Drop | ✅ Complete | — | — |
 | 6 | Data Ingestion & Metadata Editor | ✅ Complete | [spec](superpowers/specs/2026-04-16-data-ingestion-metadata-editor-design.md) | [plan](superpowers/plans/2026-04-17-data-ingestion-metadata-editor.md) |
-| 7 | AI Interface | ⏳ In Progress | [spec](superpowers/specs/2026-04-19-ai-interface-design.md) | [plan](superpowers/plans/2026-04-19-ai-interface.md) |
+| 7 | AI Interface | ✅ Complete | [spec](superpowers/specs/2026-04-19-ai-interface-design.md) | [plan](superpowers/plans/2026-04-19-ai-interface.md) |
 | 8 | Full AuthN & AuthZ | ⏳ Pending | — | — |
 | 9 | MCP Interface | ⏳ Pending | — | — |
 
@@ -54,7 +54,7 @@ Drag fields from the field tree into the Rows, Columns, and Breakdown zones. Dra
 File upload (CSV, SPSS), metadata GUI (field types, display names, multi-response config), template from previous dataset instance. Analytics engine serves as the immediate testbed.  
 **Done when:** Upload a real dataset → configure metadata → query it in the analytics engine.
 
-### 7 — AI Interface ⏳
+### 7 — AI Interface ✅
 NL query → PydanticAI identifies relevant data sources → executes queries in parallel → streams structured results (text + tables + charts) to frontend via Vercel AI SDK. Responses grounded in real data only — no LLM world knowledge.  
 **Done when:** Ask "how has X changed over 5 years?" → receive a cited, data-grounded response with tables and charts.
 
