@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
+import type { AnalyticsResult } from "@/app/analytics/analytics-types"
 import { AnalyticsChart } from "@/components/analytics/AnalyticsChart"
-import type { AnalyticsResult } from "./analytics-types"
 
 const meta = {
   title: "Analytics/AnalyticsChart",
