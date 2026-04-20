@@ -21,6 +21,7 @@ from src.routes import (
     scope,
     sentry,
     uploads,
+    webhooks,
 )
 
 if settings.sentry_dsn:
@@ -51,6 +52,7 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
 
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(sentry.router, prefix="/api/v1")
+app.include_router(webhooks.router, prefix="/api/v1")
 app.include_router(packages.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 app.include_router(scope.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 app.include_router(collections.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
