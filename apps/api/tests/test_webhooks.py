@@ -75,7 +75,7 @@ async def test_user_updated_updates_user(client: AsyncClient, db: AsyncSession):
     mock_wh.verify.return_value = payload
 
     with patch("src.routes.webhooks.Webhook", return_value=mock_wh):
-        await client.post(
+        response = await client.post(
             "/api/v1/webhooks/clerk",
             content=json.dumps(payload),
             headers={
@@ -86,6 +86,7 @@ async def test_user_updated_updates_user(client: AsyncClient, db: AsyncSession):
             },
         )
 
+    assert response.status_code == 200
     user = await user_repo.get_user_by_clerk_id(db, "user_wh2")
     assert user is not None
     assert user.email == "new@example.com"
@@ -178,7 +179,7 @@ async def test_membership_deleted_removes_membership(client: AsyncClient, db: As
     mock_wh.verify.return_value = payload
 
     with patch("src.routes.webhooks.Webhook", return_value=mock_wh):
-        await client.post(
+        response = await client.post(
             "/api/v1/webhooks/clerk",
             content=json.dumps(payload),
             headers={
@@ -189,6 +190,7 @@ async def test_membership_deleted_removes_membership(client: AsyncClient, db: As
             },
         )
 
+    assert response.status_code == 200
     membership = await user_repo.get_membership(
         db, user_id=cast(int, user.id), org_id=cast(int, org.id)
     )
@@ -214,3 +216,95 @@ async def test_unknown_event_type_returns_200(client: AsyncClient):
         )
 
     assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_organization_updated_updates_org_name(client: AsyncClient, db: AsyncSession):
+    await user_repo.upsert_organisation(db, clerk_org_id="org_upd1", name="Old Name")
+    payload = {
+        "type": "organization.updated",
+        "data": {"id": "org_upd1", "name": "New Name"},
+    }
+    mock_wh = MagicMock()
+    mock_wh.verify.return_value = payload
+
+    with patch("src.routes.webhooks.Webhook", return_value=mock_wh):
+        response = await client.post(
+            "/api/v1/webhooks/clerk",
+            content=json.dumps(payload),
+            headers={
+                "content-type": "application/json",
+                "svix-id": "m",
+                "svix-timestamp": "1",
+                "svix-signature": "v1,x",
+            },
+        )
+
+    assert response.status_code == 200
+    org = await user_repo.get_org_by_clerk_id(db, "org_upd1")
+    assert org is not None
+    assert org.name == "New Name"
+
+
+@pytest.mark.asyncio
+async def test_membership_created_noop_when_user_not_synced(client: AsyncClient, db: AsyncSession):
+    await user_repo.upsert_organisation(db, clerk_org_id="org_noop1", name="Noop Org")
+    payload = {
+        "type": "organizationMembership.created",
+        "data": {
+            "organization": {"id": "org_noop1"},
+            "public_user_data": {"user_id": "user_never_synced"},
+            "role": "org:member",
+        },
+    }
+    mock_wh = MagicMock()
+    mock_wh.verify.return_value = payload
+
+    with patch("src.routes.webhooks.Webhook", return_value=mock_wh):
+        response = await client.post(
+            "/api/v1/webhooks/clerk",
+            content=json.dumps(payload),
+            headers={
+                "content-type": "application/json",
+                "svix-id": "m",
+                "svix-timestamp": "1",
+                "svix-signature": "v1,x",
+            },
+        )
+
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_user_updated_updates_user_returns_200(client: AsyncClient, db: AsyncSession):
+    await user_repo.upsert_user(
+        db, clerk_id="user_wh2b", email="old@example.com", display_name="Old"
+    )
+    payload = {
+        "type": "user.updated",
+        "data": {
+            "id": "user_wh2b",
+            "email_addresses": [{"email_address": "new2@example.com"}],
+            "first_name": "New",
+            "last_name": "Name",
+        },
+    }
+    mock_wh = MagicMock()
+    mock_wh.verify.return_value = payload
+
+    with patch("src.routes.webhooks.Webhook", return_value=mock_wh):
+        response = await client.post(
+            "/api/v1/webhooks/clerk",
+            content=json.dumps(payload),
+            headers={
+                "content-type": "application/json",
+                "svix-id": "m",
+                "svix-timestamp": "1",
+                "svix-signature": "v1,x",
+            },
+        )
+
+    assert response.status_code == 200
+    user = await user_repo.get_user_by_clerk_id(db, "user_wh2b")
+    assert user is not None
+    assert user.email == "new2@example.com"
