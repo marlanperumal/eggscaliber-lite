@@ -4,13 +4,13 @@ import { WizardShell } from "./WizardShell"
 
 const BASE = "http://localhost:8000"
 
-const meta: Meta<typeof WizardShell> = {
+const meta = {
   title: "Datasets/Upload/WizardShell",
   component: WizardShell,
   parameters: { layout: "fullscreen" },
-}
+} satisfies Meta<typeof WizardShell>
 export default meta
-type Story = StoryObj<typeof WizardShell>
+type Story = StoryObj<typeof meta>
 
 const MOCK_PACKAGES = [
   { id: 1, name: "Brand Tracker", slug: "brand-tracker", created_at: "2025-01-01T00:00:00Z" },

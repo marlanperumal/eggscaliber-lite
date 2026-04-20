@@ -3,12 +3,12 @@ import { fn } from "@storybook/test"
 import { FieldPicker } from "./FieldPicker"
 import type { FieldNode, GroupNode } from "./FieldTree"
 
-const meta: Meta<typeof FieldPicker> = {
+const meta = {
   title: "Datasets/Upload/FieldPicker",
   component: FieldPicker,
-}
+} satisfies Meta<typeof FieldPicker>
 export default meta
-type Story = StoryObj<typeof FieldPicker>
+type Story = StoryObj<typeof meta>
 
 const GROUPS: GroupNode[] = [{ id: 1, name: "Brand Tracker", parent_id: null, sort_order: 0 }]
 

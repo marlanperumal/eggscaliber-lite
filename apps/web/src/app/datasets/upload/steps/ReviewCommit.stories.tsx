@@ -5,7 +5,7 @@ import { ReviewCommit } from "./ReviewCommit"
 
 const BASE = "http://localhost:8000"
 
-const meta: Meta<typeof ReviewCommit> = {
+const meta = {
   title: "Datasets/Upload/ReviewCommit",
   component: ReviewCommit,
   parameters: {
@@ -17,9 +17,9 @@ const meta: Meta<typeof ReviewCommit> = {
       },
     },
   },
-}
+} satisfies Meta<typeof ReviewCommit>
 export default meta
-type Story = StoryObj<typeof ReviewCommit>
+type Story = StoryObj<typeof meta>
 
 const MOCK_SESSION = {
   dataset_name: "Wave 3",

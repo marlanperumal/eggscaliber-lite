@@ -91,6 +91,10 @@ async def list_enriched(
     page_size: int = 50,
 ) -> tuple[int, list[dict]]:
     """Return datasets enriched with collection/package names and counts."""
+    # Exception: returns list[dict] rather than ORM objects because this query
+    # joins Dataset + Collection + Package + two count subqueries into a single
+    # result set with no single ORM model representation. The calling route uses
+    # response_model=DatasetListPage which validates and serializes the dicts.
     field_count_sq = (
         select(Field.dataset_id, func.count().label("field_count"))
         .group_by(Field.dataset_id)

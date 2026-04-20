@@ -3,12 +3,12 @@ import { fn } from "@storybook/test"
 import { FieldList } from "./FieldList"
 import type { FieldNode, GroupNode } from "./FieldTree"
 
-const meta: Meta<typeof FieldList> = {
+const meta = {
   title: "Datasets/Upload/FieldList",
   component: FieldList,
-}
+} satisfies Meta<typeof FieldList>
 export default meta
-type Story = StoryObj<typeof FieldList>
+type Story = StoryObj<typeof meta>
 
 const GROUPS: GroupNode[] = [
   { id: 1, name: "Brand Tracker", parent_id: null, sort_order: 0 },

@@ -5,12 +5,12 @@ import { FieldDetection } from "./FieldDetection"
 
 const BASE = "http://localhost:8000"
 
-const meta: Meta<typeof FieldDetection> = {
+const meta = {
   title: "Datasets/Upload/FieldDetection",
   component: FieldDetection,
-}
+} satisfies Meta<typeof FieldDetection>
 export default meta
-type Story = StoryObj<typeof FieldDetection>
+type Story = StoryObj<typeof meta>
 
 const MOCK_FIELDS = [
   {

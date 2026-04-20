@@ -2,12 +2,12 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { fn } from "@storybook/test"
 import { FieldTree } from "./FieldTree"
 
-const meta: Meta<typeof FieldTree> = {
+const meta = {
   title: "Datasets/Upload/FieldTree",
   component: FieldTree,
-}
+} satisfies Meta<typeof FieldTree>
 export default meta
-type Story = StoryObj<typeof FieldTree>
+type Story = StoryObj<typeof meta>
 
 const GROUPS = [
   { id: 1, name: "Brand Tracker", parent_id: null, sort_order: 0 },

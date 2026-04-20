@@ -51,7 +51,7 @@ from src.models.upload import (
 )
 from src.orm import pk
 from src.repositories import dataset_repo, reconciliation_repo, upload_repo
-from src.services import reconciliation_service
+from src.services import commit_service, reconciliation_service
 from src.services.detection_service import detect_fields
 
 _UPLOAD_DIR = os.environ.get("UPLOAD_DIR", tempfile.gettempdir())
@@ -233,8 +233,6 @@ async def get_suggested_reference(session: AsyncSession, session_id: int) -> Sug
 async def commit(session: AsyncSession, session_id: int) -> int:
     """Raises UploadSessionNotFoundError if session_id does not exist.
     Returns the new dataset_id."""
-    from src.services import commit_service
-
     sess = await upload_repo.get_session_by_id(session, session_id)
     if sess is None:
         raise UploadSessionNotFoundError(session_id)

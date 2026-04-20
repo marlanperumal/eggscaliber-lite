@@ -2,12 +2,12 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { fn } from "@storybook/test"
 import { ReconciliationRow } from "./ReconciliationRow"
 
-const meta: Meta<typeof ReconciliationRow> = {
+const meta = {
   title: "Datasets/Upload/ReconciliationRow",
   component: ReconciliationRow,
-}
+} satisfies Meta<typeof ReconciliationRow>
 export default meta
-type Story = StoryObj<typeof ReconciliationRow>
+type Story = StoryObj<typeof meta>
 
 const base = { checked: false, onCheck: fn(), onAction: fn() }
 

@@ -3,12 +3,12 @@ import { fn } from "@storybook/test"
 import { FieldEditorPanel } from "./FieldEditorPanel"
 import type { FieldNode, GroupNode } from "./FieldTree"
 
-const meta: Meta<typeof FieldEditorPanel> = {
+const meta = {
   title: "Datasets/Upload/FieldEditorPanel",
   component: FieldEditorPanel,
-}
+} satisfies Meta<typeof FieldEditorPanel>
 export default meta
-type Story = StoryObj<typeof FieldEditorPanel>
+type Story = StoryObj<typeof meta>
 
 const GROUPS: GroupNode[] = [
   { id: 1, name: "Brand Tracker", parent_id: null, sort_order: 0 },

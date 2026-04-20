@@ -6,13 +6,13 @@ import {
   type Package,
 } from "./DatasetsPageContent"
 
-const meta: Meta<typeof DatasetsPageContent> = {
+const meta = {
   title: "Datasets/DatasetsPage",
   component: DatasetsPageContent,
   parameters: { layout: "fullscreen" },
-}
+} satisfies Meta<typeof DatasetsPageContent>
 export default meta
-type Story = StoryObj<typeof DatasetsPageContent>
+type Story = StoryObj<typeof meta>
 
 const PACKAGES: Package[] = [
   { id: 1, name: "Research" },
