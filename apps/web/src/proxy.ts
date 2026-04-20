@@ -1,14 +1,24 @@
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 import { postHogMiddleware } from "@posthog/next"
-import type { NextRequest } from "next/server"
 
-const handler = postHogMiddleware({
+const postHogHandler = postHogMiddleware({
   proxy: { host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com" },
 })
 
-export async function proxy(request: NextRequest) {
-  return handler(request)
-}
+const isPublicRoute = createRouteMatcher(["/", "/sign-in(.*)", "/sign-up(.*)"])
+
+export const proxy = clerkMiddleware(async (auth, req) => {
+  if (req.nextUrl.pathname.startsWith("/ingest")) {
+    return postHogHandler(req)
+  }
+  if (!isPublicRoute(req)) {
+    await auth.protect()
+  }
+})
 
 export const proxyConfig = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
+  ],
 }
