@@ -8,6 +8,7 @@ import { MessageList } from "./MessageList"
 
 export function AIChatPage() {
   const [input, setInput] = useState("")
+  const [key, setKey] = useState(0)
 
   const { messages, sendMessage, status, error } = useChat({
     transport: new DefaultChatTransport({
@@ -25,10 +26,17 @@ export function AIChatPage() {
   }
 
   return (
-    <div data-testid="ai-chat-page" className="flex h-full flex-col">
+    <div key={key} data-testid="ai-chat-page" className="flex h-full flex-col">
       {error && (
-        <div className="border-b border-border bg-destructive/10 px-4 py-2 text-sm text-destructive">
-          Something went wrong. Please try again.
+        <div className="flex items-center gap-3 border-b border-border bg-destructive/10 px-4 py-2 text-sm text-destructive">
+          <span>Something went wrong.</span>
+          <button
+            type="button"
+            onClick={() => setKey((k) => k + 1)}
+            className="underline underline-offset-2 hover:no-underline"
+          >
+            Try again
+          </button>
         </div>
       )}
       <MessageList messages={messages} isLoading={isLoading} />
