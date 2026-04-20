@@ -5,14 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_session
-from src.errors import (
-    FieldGroupNotFoundError,
-    FieldNotFoundError,
-    InvalidFileTypeError,
-    LevelNotFoundError,
-    ReconciliationRowNotFoundError,
-    UploadSessionNotFoundError,
-)
+from src.errors import DomainError
 from src.models.field import FieldType
 from src.models.reconciliation import (
     BulkResolvedOut,
@@ -53,19 +46,15 @@ async def create_upload(
 ):
     content = await file.read()
     collected_at_date: date | None = date.fromisoformat(collected_at) if collected_at else None
-    try:
-        result = await upload_service.create_upload_session(
-            session,
-            filename=file.filename or "upload.csv",
-            content=content,
-            content_type=file.content_type or "",
-            dataset_name=dataset_name,
-            collection_id=collection_id,
-            collected_at=collected_at_date,
-        )
-    except InvalidFileTypeError:
-        raise HTTPException(status_code=422, detail="Only CSV files are accepted") from None
-    return result
+    return await upload_service.create_upload_session(
+        session,
+        filename=file.filename or "upload.csv",
+        content=content,
+        content_type=file.content_type or "",
+        dataset_name=dataset_name,
+        collection_id=collection_id,
+        collected_at=collected_at_date,
+    )
 
 
 @router.get("/uploads", response_model=UploadSessionListResponse)
@@ -77,18 +66,12 @@ async def list_upload_sessions(session: AsyncSession = Depends(get_session)):
 @router.delete("/uploads/{session_id}", status_code=204, response_model=None)
 async def discard_upload_session(session_id: int, session: AsyncSession = Depends(get_session)):
     """Mark an upload session as abandoned (soft delete)."""
-    try:
-        await upload_service.discard_session(session, session_id)
-    except UploadSessionNotFoundError:
-        raise HTTPException(status_code=404, detail="Upload session not found") from None
+    await upload_service.discard_session(session, session_id)
 
 
 @router.get("/uploads/{session_id}", response_model=UploadSessionDetail)
 async def get_upload_session(session_id: int, session: AsyncSession = Depends(get_session)):
-    try:
-        return await upload_service.get_upload_session(session, session_id)
-    except UploadSessionNotFoundError:
-        raise HTTPException(status_code=404, detail="Upload session not found") from None
+    return await upload_service.get_upload_session(session, session_id)
 
 
 class FieldOverride(BaseModel):
@@ -105,21 +88,16 @@ async def override_field(
     body: FieldOverride,
     session: AsyncSession = Depends(get_session),
 ):
-    try:
-        return await upload_service.override_field(
-            session,
-            session_id,
-            field_id,
-            override_type=body.override_type,
-            display_name=body.display_name,
-            upload_fieldgroup_id=body.upload_fieldgroup_id,
-            sort_order=body.sort_order,
-            fieldgroup_id_set="upload_fieldgroup_id" in body.model_fields_set,
-        )
-    except UploadSessionNotFoundError:
-        raise HTTPException(status_code=404, detail="Upload session not found") from None
-    except FieldNotFoundError:
-        raise HTTPException(status_code=404, detail="Field not found") from None
+    return await upload_service.override_field(
+        session,
+        session_id,
+        field_id,
+        override_type=body.override_type,
+        display_name=body.display_name,
+        upload_fieldgroup_id=body.upload_fieldgroup_id,
+        sort_order=body.sort_order,
+        fieldgroup_id_set="upload_fieldgroup_id" in body.model_fields_set,
+    )
 
 
 @router.delete(
@@ -130,10 +108,7 @@ async def delete_field(
     field_id: int,
     session: AsyncSession = Depends(get_session),
 ):
-    try:
-        await upload_service.delete_field(session, upload_session_id, field_id)
-    except FieldNotFoundError:
-        raise HTTPException(status_code=404, detail="Field not found") from None
+    await upload_service.delete_field(session, upload_session_id, field_id)
 
 
 class ReconcileTrigger(BaseModel):
@@ -151,12 +126,7 @@ async def trigger_reconcile(
     body: ReconcileTrigger,
     session: AsyncSession = Depends(get_session),
 ):
-    try:
-        return await upload_service.trigger_reconcile(
-            session, session_id, body.reference_dataset_id
-        )
-    except UploadSessionNotFoundError:
-        raise HTTPException(status_code=404, detail="Upload session not found") from None
+    return await upload_service.trigger_reconcile(session, session_id, body.reference_dataset_id)
 
 
 @router.get("/uploads/{session_id}/reconcile", response_model=ReconcileRowPage)
@@ -187,18 +157,12 @@ async def get_reconcile_ids(
 
 @router.get("/uploads/{session_id}/reconcile/counts", response_model=ReconcileCountsOut)
 async def get_reconcile_counts(session_id: int, session: AsyncSession = Depends(get_session)):
-    try:
-        return await upload_service.get_reconcile_counts(session, session_id)
-    except UploadSessionNotFoundError:
-        raise HTTPException(status_code=404, detail="Upload session not found") from None
+    return await upload_service.get_reconcile_counts(session, session_id)
 
 
 @router.get("/uploads/{session_id}/suggested-reference", response_model=SuggestedReferenceOut)
 async def get_suggested_reference(session_id: int, session: AsyncSession = Depends(get_session)):
-    try:
-        return await upload_service.get_suggested_reference(session, session_id)
-    except UploadSessionNotFoundError:
-        raise HTTPException(status_code=404, detail="Upload session not found") from None
+    return await upload_service.get_suggested_reference(session, session_id)
 
 
 class RowResolve(BaseModel):
@@ -214,17 +178,14 @@ async def resolve_reconcile_row(
     body: RowResolve,
     session: AsyncSession = Depends(get_session),
 ):
-    try:
-        return await upload_service.resolve_reconcile_row(
-            session,
-            session_id,
-            row_id,
-            body.status,
-            ref_field_id=body.ref_field_id,
-            upload_field_id=body.upload_field_id,
-        )
-    except ReconciliationRowNotFoundError:
-        raise HTTPException(status_code=404, detail="Row not found") from None
+    return await upload_service.resolve_reconcile_row(
+        session,
+        session_id,
+        row_id,
+        body.status,
+        ref_field_id=body.ref_field_id,
+        upload_field_id=body.upload_field_id,
+    )
 
 
 @router.post("/uploads/{session_id}/reconcile/bulk", response_model=BulkResolvedOut)
@@ -240,8 +201,9 @@ async def bulk_resolve_rows(
 async def commit_upload_session(session_id: int, session: AsyncSession = Depends(get_session)):
     try:
         dataset_id = await upload_service.commit(session, session_id)
-    except UploadSessionNotFoundError:
-        raise HTTPException(status_code=404, detail="Upload session not found") from None
+    except DomainError:
+        # Let domain errors (e.g. UploadSessionNotFoundError) propagate to the central handler.
+        raise
     except Exception as exc:
         # Exception: catch-all safety net for commit — the commit service coordinates
         # many sub-operations (migration, reconciliation, dataset creation) and can surface
@@ -255,10 +217,7 @@ async def commit_upload_session(session_id: int, session: AsyncSession = Depends
 
 @router.get("/uploads/{session_id}/field-tree", response_model=UploadFieldTreeOut)
 async def get_field_tree(session_id: int, session: AsyncSession = Depends(get_session)):
-    try:
-        return await upload_service.get_field_tree(session, session_id)
-    except UploadSessionNotFoundError:
-        raise HTTPException(status_code=404, detail="Upload session not found") from None
+    return await upload_service.get_field_tree(session, session_id)
 
 
 # --- Field group CRUD ---
@@ -282,16 +241,13 @@ async def create_fieldgroup(
     body: FieldGroupCreate,
     session: AsyncSession = Depends(get_session),
 ):
-    try:
-        return await upload_service.create_fieldgroup(
-            session,
-            session_id,
-            name=body.name,
-            parent_id=body.parent_id,
-            sort_order=body.sort_order,
-        )
-    except UploadSessionNotFoundError:
-        raise HTTPException(status_code=404, detail="Upload session not found") from None
+    return await upload_service.create_fieldgroup(
+        session,
+        session_id,
+        name=body.name,
+        parent_id=body.parent_id,
+        sort_order=body.sort_order,
+    )
 
 
 @router.patch("/uploads/{session_id}/fieldgroups/{group_id}", response_model=FieldGroupDetail)
@@ -301,18 +257,15 @@ async def update_fieldgroup(
     body: FieldGroupUpdate,
     session: AsyncSession = Depends(get_session),
 ):
-    try:
-        return await upload_service.update_fieldgroup(
-            session,
-            session_id,
-            group_id,
-            name=body.name,
-            parent_id=body.parent_id,
-            parent_id_set="parent_id" in body.model_fields_set,
-            sort_order=body.sort_order,
-        )
-    except FieldGroupNotFoundError:
-        raise HTTPException(status_code=404, detail="Group not found") from None
+    return await upload_service.update_fieldgroup(
+        session,
+        session_id,
+        group_id,
+        name=body.name,
+        parent_id=body.parent_id,
+        parent_id_set="parent_id" in body.model_fields_set,
+        sort_order=body.sort_order,
+    )
 
 
 @router.delete("/uploads/{session_id}/fieldgroups/{group_id}", response_model=DeletedOut)
@@ -321,10 +274,7 @@ async def delete_fieldgroup(
     group_id: int,
     session: AsyncSession = Depends(get_session),
 ):
-    try:
-        return await upload_service.delete_fieldgroup_svc(session, session_id, group_id)
-    except FieldGroupNotFoundError:
-        raise HTTPException(status_code=404, detail="Group not found") from None
+    return await upload_service.delete_fieldgroup_svc(session, session_id, group_id)
 
 
 # --- Levels CRUD ---
@@ -348,19 +298,15 @@ async def upsert_level_route(
     body: LevelUpsert,
     session: AsyncSession = Depends(get_session),
 ):
-    try:
-        level = await upload_service.upsert_level(
-            session,
-            upload_session_id,
-            field_id,
-            raw_value=body.raw_value,
-            display_label=body.display_label,
-            sort_order=body.sort_order,
-            is_inherited=body.is_inherited,
-        )
-    except FieldNotFoundError:
-        raise HTTPException(status_code=404, detail="Field not found") from None
-    return level
+    return await upload_service.upsert_level(
+        session,
+        upload_session_id,
+        field_id,
+        raw_value=body.raw_value,
+        display_label=body.display_label,
+        sort_order=body.sort_order,
+        is_inherited=body.is_inherited,
+    )
 
 
 @router.delete(
@@ -374,12 +320,7 @@ async def delete_level_route(
     level_id: int,
     session: AsyncSession = Depends(get_session),
 ):
-    try:
-        await upload_service.delete_level(session, upload_session_id, field_id, level_id)
-    except FieldNotFoundError:
-        raise HTTPException(status_code=404, detail="Field not found") from None
-    except LevelNotFoundError:
-        raise HTTPException(status_code=404, detail="Level not found") from None
+    await upload_service.delete_level(session, upload_session_id, field_id, level_id)
 
 
 # --- Field move ---
@@ -396,9 +337,4 @@ async def move_field(
     body: FieldMove,
     session: AsyncSession = Depends(get_session),
 ):
-    try:
-        return await upload_service.move_field(
-            session, session_id, field_id, body.upload_fieldgroup_id
-        )
-    except FieldNotFoundError:
-        raise HTTPException(status_code=404, detail="Field not found") from None
+    return await upload_service.move_field(session, session_id, field_id, body.upload_fieldgroup_id)

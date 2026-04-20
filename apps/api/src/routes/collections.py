@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_session
-from src.errors import CollectionNotFoundError, PackageNotFoundError
 from src.models.collection import (
     CollectionCreate,
     CollectionRead,
@@ -17,19 +16,13 @@ router = APIRouter(tags=["collections"])
 @router.post("/collections", response_model=CollectionRead, status_code=201)
 async def create_collection(body: CollectionCreate, session: AsyncSession = Depends(get_session)):
     """Create a new collection within a package."""
-    try:
-        return await collection_service.create_collection(session, body)
-    except PackageNotFoundError:
-        raise HTTPException(status_code=404, detail="Package not found") from None
+    return await collection_service.create_collection(session, body)
 
 
 @router.get("/collections/{collection_id}", response_model=CollectionWithDatasets)
 async def get_collection(collection_id: int, session: AsyncSession = Depends(get_session)):
     """Get a collection with all its datasets."""
-    try:
-        return await collection_service.get_with_datasets(session, collection_id)
-    except CollectionNotFoundError:
-        raise HTTPException(status_code=404, detail="Collection not found") from None
+    return await collection_service.get_with_datasets(session, collection_id)
 
 
 @router.get(
@@ -40,7 +33,4 @@ async def get_collection_consistency(
     collection_id: int, session: AsyncSession = Depends(get_session)
 ):
     """List field inconsistencies across datasets in a collection (e.g. mismatched types or labels)."""
-    try:
-        return await collection_service.get_consistency(session, collection_id)
-    except CollectionNotFoundError:
-        raise HTTPException(status_code=404, detail="Collection not found") from None
+    return await collection_service.get_consistency(session, collection_id)

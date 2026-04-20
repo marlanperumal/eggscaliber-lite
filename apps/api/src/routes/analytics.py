@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_session
-from src.errors import CollectionNotFoundError, DatasetNotFoundError
 from src.models.analytics import (
     CrosstabRequest,
     CrosstabResponse,
@@ -23,16 +22,10 @@ async def run_crosstab(request: CrosstabRequest, session: AsyncSession = Depends
         raise HTTPException(422, "Stacked row mode supports at most 5 fields")
     if request.col_mode == "nested" and len(request.columns) > 2:
         raise HTTPException(422, "Nested col mode supports at most 2 fields")
-    try:
-        return await analytics_service.run_crosstab(session, request)
-    except DatasetNotFoundError:
-        raise HTTPException(status_code=404, detail="Dataset not found") from None
+    return await analytics_service.run_crosstab(session, request)
 
 
 @router.post("/analytics/trend", response_model=TrendResponse)
 async def run_trend(request: TrendRequest, session: AsyncSession = Depends(get_session)):
     """Run a trend analysis: track a field's distribution across datasets in a collection over time."""
-    try:
-        return await analytics_service.run_trend(session, request)
-    except CollectionNotFoundError:
-        raise HTTPException(status_code=404, detail="Collection not found") from None
+    return await analytics_service.run_trend(session, request)
