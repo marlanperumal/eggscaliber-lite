@@ -9,7 +9,15 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-const base = { checked: false, onCheck: fn(), onAction: fn() }
+const base = {
+  checked: false,
+  onCheck: fn(),
+  onAction: fn(),
+  fields: [],
+  groups: [],
+  sessionId: null,
+  onResolved: fn(),
+}
 
 export const Exact: Story = {
   args: {

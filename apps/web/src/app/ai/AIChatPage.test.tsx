@@ -16,12 +16,14 @@ const mockUseChat = vi.mocked(useChat)
 
 function makeUseChat(overrides: Partial<ReturnType<typeof useChat>>) {
   return {
+    id: "test-chat-id",
     messages: [],
     sendMessage: vi.fn(),
+    setMessages: vi.fn(),
     status: "ready" as const,
     error: undefined,
     ...overrides,
-  }
+  } as ReturnType<typeof useChat>
 }
 
 describe("AIChatPage", () => {
