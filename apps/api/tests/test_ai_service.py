@@ -177,11 +177,11 @@ class TestListPackagesTool:
         assert "AI Test Col" in result
         assert "AI Test DS" in result
 
-    async def test_empty_when_no_packages(self, db):
+    async def test_no_packages_returns_informative_message(self, db):
         from src.services.ai_service import _list_packages_impl
 
         result = await _list_packages_impl(db)
-        assert isinstance(result, str)
+        assert "no" in result.lower() and "package" in result.lower()
 
 
 class TestGetFieldTreeTool:
