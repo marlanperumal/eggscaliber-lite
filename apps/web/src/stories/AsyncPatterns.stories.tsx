@@ -11,6 +11,7 @@ function DataCard({ isLoading, data, error }: DataCardProps) {
     return (
       <div
         role="status"
+        aria-label="Loading data"
         aria-busy="true"
         className="flex h-32 w-64 items-center justify-center rounded-md border border-border bg-card"
       >
