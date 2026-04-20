@@ -1,3 +1,5 @@
+import { useMemo } from "react"
+
 export interface ApiError {
   status: number
   code: string
@@ -38,14 +40,16 @@ export interface ApiErrorState {
 }
 
 export function useApiError(error: unknown): ApiErrorState {
-  if (!isApiError(error)) {
-    return { isApiError: false, code: null, detail: null, isNotFound: false, isRetryable: false }
-  }
-  return {
-    isApiError: true,
-    code: error.code,
-    detail: error.detail,
-    isNotFound: NOT_FOUND_CODES.has(error.code),
-    isRetryable: RETRYABLE_STATUSES.has(error.status),
-  }
+  return useMemo(() => {
+    if (!isApiError(error)) {
+      return { isApiError: false, code: null, detail: null, isNotFound: false, isRetryable: false }
+    }
+    return {
+      isApiError: true,
+      code: error.code,
+      detail: error.detail,
+      isNotFound: NOT_FOUND_CODES.has(error.code),
+      isRetryable: RETRYABLE_STATUSES.has(error.status),
+    }
+  }, [error])
 }

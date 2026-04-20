@@ -17,6 +17,10 @@ describe("isApiError", () => {
     expect(isApiError({ status: 404, detail: "something" })).toBe(false)
   })
 
+  it("returns false when detail is missing", () => {
+    expect(isApiError({ status: 404, code: "dataset_not_found" })).toBe(false)
+  })
+
   it("returns false when status is not a number", () => {
     expect(isApiError({ status: "404", code: "dataset_not_found", detail: "..." })).toBe(false)
   })
