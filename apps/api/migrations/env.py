@@ -20,8 +20,11 @@ from src.models import (  # noqa: E402, F401
     Dataset,
     Field,
     Level,
+    Organisation,
+    OrgMembership,
     Package,
     Response,
+    User,
 )
 
 target_metadata = SQLModel.metadata
