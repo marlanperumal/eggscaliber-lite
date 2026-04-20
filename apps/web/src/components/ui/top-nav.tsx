@@ -1,5 +1,6 @@
 "use client"
 
+import { useFeatureFlag } from "@posthog/next"
 import { Moon, Sun } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -14,20 +15,26 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { themeConfig } from "@/config/theme.config"
 
-const NAV_LINKS = [
-  { href: "/analytics", label: "Analytics" },
-  { href: "/ai", label: "AI" },
+const ALL_NAV_LINKS = [
+  { href: "/analytics", label: "Analytics", flag: null },
+  { href: "/ai", label: "AI", flag: "ai-interface" as const },
 ]
 
 export function TopNav() {
   const pathname = usePathname()
   const { setTheme } = useTheme()
+  const aiFlag = useFeatureFlag("ai-interface")
+
+  const navLinks = ALL_NAV_LINKS.filter(({ flag }) => {
+    if (flag === "ai-interface") return aiFlag?.enabled === true
+    return true
+  })
 
   return (
     <nav className="flex h-12 shrink-0 items-center gap-4 bg-nav px-4 text-nav-foreground">
       <span className="font-bold text-sm tracking-tight">{themeConfig.brand.name}</span>
       <div className="flex gap-1">
-        {NAV_LINKS.map(({ href, label }) => {
+        {navLinks.map(({ href, label }) => {
           const isActive = pathname?.startsWith(href) ?? false
           return (
             <Link
