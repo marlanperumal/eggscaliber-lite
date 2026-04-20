@@ -239,3 +239,86 @@ class TestRunTrendTool:
         )
         result = await _run_trend_impl(db, request, [])
         assert "error" in result.lower() or "not found" in result.lower()
+
+
+class TestStreamResponse:
+    import json
+
+    def _parse_events(self, events: list[str]) -> list[dict]:
+        import json
+
+        parsed = []
+        for e in events:
+            assert e.startswith("data: "), f"Expected SSE 'data: ' prefix, got: {e!r}"
+            assert e.endswith("\n\n"), f"Expected SSE '\\n\\n' suffix, got: {e!r}"
+            parsed.append(json.loads(e[6:].strip()))
+        return parsed
+
+    async def test_empty_messages_yields_error_then_finish(self, db):
+        import src.services.ai_service as ai_svc
+
+        events = []
+        async for chunk in ai_svc.stream_response(db, []):
+            events.append(chunk)
+
+        parsed = self._parse_events(events)
+        types = [p["type"] for p in parsed]
+        assert types[0] == "error"
+        assert types[-1] == "finish"
+
+    async def test_single_user_message_yields_full_text_sequence(self, db):
+        import src.services.ai_service as ai_svc
+        from pydantic_ai import Agent
+        from pydantic_ai.models.test import TestModel
+        from src.models.ai import ChatMessage
+        from src.services.ai_service import SYSTEM_PROMPT, AIServiceDeps
+
+        test_agent: Agent[AIServiceDeps, str] = Agent(
+            model=TestModel(custom_output_text="Hello from test."),
+            system_prompt=SYSTEM_PROMPT,
+            deps_type=AIServiceDeps,
+        )
+
+        original = ai_svc._agent
+        ai_svc._agent = test_agent
+        try:
+            messages = [ChatMessage(role="user", content="What data is available?")]
+            events = []
+            async for chunk in ai_svc.stream_response(db, messages):
+                events.append(chunk)
+        finally:
+            ai_svc._agent = original
+
+        parsed = self._parse_events(events)
+        types = [p["type"] for p in parsed]
+
+        assert types[0] == "text-start"
+        assert any(t == "text-delta" for t in types)
+        assert "text-end" in types
+        assert types[-1] == "finish"
+        assert parsed[-1]["finishReason"] == "stop"
+
+    async def test_exception_yields_error_then_finish_error(self, db):
+        import src.services.ai_service as ai_svc
+        from src.models.ai import ChatMessage
+
+        def _raising_get_agent():
+            raise RuntimeError("bad model config")
+
+        original_get_agent = ai_svc.get_agent
+        ai_svc.get_agent = _raising_get_agent
+        try:
+            messages = [ChatMessage(role="user", content="Hello")]
+            events = []
+            async for chunk in ai_svc.stream_response(db, messages):
+                events.append(chunk)
+        finally:
+            ai_svc.get_agent = original_get_agent
+
+        parsed = self._parse_events(events)
+        types = [p["type"] for p in parsed]
+
+        assert types[0] == "error"
+        assert "bad model config" in parsed[0]["errorText"]
+        assert types[-1] == "finish"
+        assert parsed[-1]["finishReason"] == "error"
