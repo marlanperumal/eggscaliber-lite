@@ -16,6 +16,8 @@ Always generate migrations with `just db-migration "describe change"`. Never wri
 
 After any model change, run `just test-api` before committing to ensure all 3 migration tests pass.
 
+For reversible vs irreversible changes and the full migration checklist, see [docs/patterns/migrations.md](migrations.md).
+
 ## CI
 
 Two workflows:
