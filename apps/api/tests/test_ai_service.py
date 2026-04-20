@@ -346,3 +346,30 @@ class TestStreamResponse:
         assert "bad model config" in parsed[0]["errorText"]
         assert types[-1] == "finish"
         assert parsed[-1]["finishReason"] == "error"
+
+
+class TestChatRoute:
+    async def test_chat_endpoint_returns_event_stream_with_correct_headers(self, client, db):
+        import src.services.ai_service as ai_svc
+        from pydantic_ai import Agent
+        from pydantic_ai.models.test import TestModel
+        from src.services.ai_service import SYSTEM_PROMPT, AIServiceDeps
+
+        test_agent: Agent[AIServiceDeps, str] = Agent(
+            model=TestModel(custom_output_text="Test response."),
+            system_prompt=SYSTEM_PROMPT,
+            deps_type=AIServiceDeps,
+        )
+        original = ai_svc._agent
+        ai_svc._agent = test_agent
+        try:
+            resp = await client.post(
+                "/api/v1/ai/chat",
+                json={"messages": [{"role": "user", "content": "What data is available?"}]},
+            )
+        finally:
+            ai_svc._agent = original
+
+        assert resp.status_code == 200
+        assert "text/event-stream" in resp.headers["content-type"]
+        assert resp.headers.get("x-vercel-ai-ui-message-stream") == "v1"

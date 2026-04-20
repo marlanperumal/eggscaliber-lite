@@ -175,3 +175,52 @@ async def test_list_datasets_includes_collection_and_package(client, db):
     assert item["package_name"] == "Tracker"
     assert "response_count" in item
     assert "field_count" in item
+
+
+async def test_delete_dataset_cascades_to_fields_levels_and_responses(client, db):
+    from sqlalchemy import select
+    from src.models.field import Field
+    from src.models.level import Level
+    from src.models.response import Response as ResponseModel
+
+    ds = await _seed_dataset(db)
+    dataset_id = ds.id
+
+    fields_before = (
+        (await db.execute(select(Field).where(Field.dataset_id == dataset_id))).scalars().all()
+    )
+    assert len(fields_before) == 1
+    field_id = fields_before[0].id
+
+    levels_before = (
+        (await db.execute(select(Level).where(Level.field_id == field_id))).scalars().all()
+    )
+    assert len(levels_before) == 2
+
+    responses_before = (
+        (await db.execute(select(ResponseModel).where(ResponseModel.dataset_id == dataset_id)))
+        .scalars()
+        .all()
+    )
+    assert len(responses_before) == 2
+
+    await db.commit()
+    resp = await client.delete(f"/api/v1/datasets/{dataset_id}")
+    assert resp.status_code == 204
+
+    fields_after = (
+        (await db.execute(select(Field).where(Field.dataset_id == dataset_id))).scalars().all()
+    )
+    assert len(fields_after) == 0
+
+    levels_after = (
+        (await db.execute(select(Level).where(Level.field_id == field_id))).scalars().all()
+    )
+    assert len(levels_after) == 0
+
+    responses_after = (
+        (await db.execute(select(ResponseModel).where(ResponseModel.dataset_id == dataset_id)))
+        .scalars()
+        .all()
+    )
+    assert len(responses_after) == 0

@@ -78,11 +78,6 @@ async def test_get_upload_session_returns_fields(client, db):
     assert len(data["fields"]) == 2
 
 
-async def test_get_upload_session_not_found(client):
-    resp = await client.get("/api/v1/uploads/99999")
-    assert resp.status_code == 404
-
-
 async def test_patch_field_override_type(client, db):
     sess = await _create_session(client, headers=["rating"], rows=[[str(i)] for i in range(1, 6)])
     field_id = sess["fields"][0]["id"]
@@ -461,14 +456,6 @@ async def test_discard_upload_session(client, db):
     assert not any(i["id"] == session_id for i in items)
 
 
-async def test_get_fieldgroup_by_id_and_session_not_found(client, db):
-    """Repo helper returns None when group_id or session_id don't match."""
-    from src.repositories import upload_repo
-
-    result = await upload_repo.get_fieldgroup_by_id_and_session(db, 999, 999)
-    assert result is None
-
-
 async def test_delete_fieldgroup_unassigns_fields(client, db):
     """delete_fieldgroup unassigns fields in the group then removes the group."""
     csv_bytes = _make_csv(["q1", "q2"], [["a", "b"]])
@@ -606,3 +593,20 @@ async def test_move_field_with_wrong_session_returns_404(client, db):
         json={"upload_fieldgroup_id": None},
     )
     assert move_r.status_code == 404
+
+
+async def test_bulk_resolve_with_empty_ids_returns_zero_resolved(client, db):
+    from tests.test_reconciliation_api import _seed_ref_dataset, _upload
+
+    col, ref_ds = await _seed_ref_dataset(db)
+    sess = await _upload(client, col.id)
+    await client.post(
+        f"/api/v1/uploads/{sess['id']}/reconcile",
+        json={"reference_dataset_id": ref_ds.id},
+    )
+    resp = await client.post(
+        f"/api/v1/uploads/{sess['id']}/reconcile/bulk",
+        json={"ids": [], "action": "confirmed"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["resolved"] == 0

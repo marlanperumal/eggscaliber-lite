@@ -10,6 +10,7 @@ vi.mock("@/lib/api", () => ({
 }))
 
 const mockPush = vi.fn()
+// Not URL state — mocking useRouter for post-commit navigation, not nuqs URL params
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }))
