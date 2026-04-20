@@ -80,3 +80,28 @@ async def bare_dataset(db: AsyncSession):
     await db.flush()
     await db.refresh(ds)
     return ds
+
+
+@pytest_asyncio.fixture
+async def seeded_package(db: AsyncSession):
+    """A single Package, ready for route-level tests that need only a package."""
+    pkg = Package(name="Seeded Package", slug="seeded-pkg-fixture")
+    db.add(pkg)
+    await db.flush()
+    await db.refresh(pkg)
+    return pkg
+
+
+@pytest_asyncio.fixture
+async def seeded_collection(db: AsyncSession, seeded_package):
+    """A Collection under seeded_package, ready for route-level tests."""
+    col = Collection(
+        name="Seeded Collection",
+        slug="seeded-col-fixture",
+        package_id=seeded_package.id,
+        collection_type=CollectionType.survey,
+    )
+    db.add(col)
+    await db.flush()
+    await db.refresh(col)
+    return col

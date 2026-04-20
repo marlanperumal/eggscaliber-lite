@@ -70,3 +70,17 @@ async def test_get_package_with_collections(client, db):
     assert len(data["collections"]) == 1
     assert data["collections"][0]["name"] == "Brand Tracker"
     assert data["collections"][0]["collection_type"] == "survey"
+
+
+async def test_get_package_not_found_returns_error_code(client):
+    response = await client.get("/api/v1/packages/99999")
+    assert response.status_code == 404
+    body = response.json()
+    assert body["code"] == "package_not_found"
+    assert body["status"] == 404
+
+
+async def test_seeded_package_fixture_is_retrievable(client, seeded_package):
+    response = await client.get(f"/api/v1/packages/{seeded_package.id}")
+    assert response.status_code == 200
+    assert response.json()["name"] == seeded_package.name

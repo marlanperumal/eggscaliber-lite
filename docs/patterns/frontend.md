@@ -190,6 +190,9 @@ src/stories/
   DesignTokens.stories.tsx  ← documentation-only, no component to colocate with
 ```
 
+For async data patterns, error-state coverage, play() guidance, and mock strategy,
+see [docs/patterns/storybook.md](storybook.md).
+
 ## Design System
 
 Follow `docs/patterns/design-system.md` for all styling decisions. Key rules:

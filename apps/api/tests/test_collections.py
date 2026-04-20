@@ -95,3 +95,17 @@ async def test_get_collection_with_datasets(client, db):
     assert len(data["datasets"]) == 2
     sort_orders = [d["sort_order"] for d in data["datasets"]]
     assert sort_orders == sorted(sort_orders)
+
+
+async def test_get_collection_not_found_returns_error_code(client):
+    response = await client.get("/api/v1/collections/99999")
+    assert response.status_code == 404
+    body = response.json()
+    assert body["code"] == "collection_not_found"
+    assert body["status"] == 404
+
+
+async def test_seeded_collection_fixture_is_retrievable(client, seeded_collection):
+    response = await client.get(f"/api/v1/collections/{seeded_collection.id}")
+    assert response.status_code == 200
+    assert response.json()["name"] == seeded_collection.name
