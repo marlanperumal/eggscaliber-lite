@@ -9,35 +9,77 @@ from src.models.response import Response
 
 
 class TestStreamEncoder:
-    def test_encode_text_chunk(self):
-        from src.services.ai_service import encode_text_chunk
+    def _parse_sse(self, result: str) -> dict:
+        import json
 
-        result = encode_text_chunk("Hello ")
-        assert result == '0:"Hello "\n'
+        assert result.startswith("data: "), f"Expected SSE 'data: ' prefix, got: {result!r}"
+        assert result.endswith("\n\n"), f"Expected SSE '\\n\\n' suffix, got: {result!r}"
+        return json.loads(result[6:].strip())
 
-    def test_encode_text_chunk_escapes_quotes(self):
-        from src.services.ai_service import encode_text_chunk
+    def test_encode_text_start(self):
+        from src.services.ai_service import encode_text_start
 
-        result = encode_text_chunk('say "hi"')
-        assert result == '0:"say \\"hi\\""\n'
+        result = encode_text_start("id1")
+        data = self._parse_sse(result)
+        assert data["type"] == "text-start"
+        assert data["id"] == "id1"
 
-    def test_encode_annotation_part(self):
-        from src.services.ai_service import encode_annotation_part
+    def test_encode_text_delta(self):
+        from src.services.ai_service import encode_text_delta
 
-        result = encode_annotation_part({"type": "crosstab_result", "query_config": {}})
-        assert result == 'a:[{"type": "crosstab_result", "query_config": {}}]\n'
+        result = encode_text_delta("id1", "Hello ")
+        data = self._parse_sse(result)
+        assert data["type"] == "text-delta"
+        assert data["id"] == "id1"
+        assert data["delta"] == "Hello "
+
+    def test_encode_text_delta_escapes_quotes(self):
+        from src.services.ai_service import encode_text_delta
+
+        result = encode_text_delta("id1", 'say "hi"')
+        data = self._parse_sse(result)
+        assert data["delta"] == 'say "hi"'
+
+    def test_encode_text_end(self):
+        from src.services.ai_service import encode_text_end
+
+        result = encode_text_end("id1")
+        data = self._parse_sse(result)
+        assert data["type"] == "text-end"
+        assert data["id"] == "id1"
+
+    def test_encode_data_part(self):
+        from src.services.ai_service import encode_data_part
+
+        result = encode_data_part("crosstab_result", "data-0", {"key": "val"})
+        data = self._parse_sse(result)
+        assert data["type"] == "data-crosstab_result"
+        assert data["id"] == "data-0"
+        assert data["data"] == {"key": "val"}
 
     def test_encode_finish(self):
         from src.services.ai_service import encode_finish
 
         result = encode_finish()
-        assert result == 'd:{"finishReason": "stop"}\n'
+        data = self._parse_sse(result)
+        assert data["type"] == "finish"
+        assert data["finishReason"] == "stop"
+
+    def test_encode_finish_error(self):
+        from src.services.ai_service import encode_finish
+
+        result = encode_finish("error")
+        data = self._parse_sse(result)
+        assert data["type"] == "finish"
+        assert data["finishReason"] == "error"
 
     def test_encode_error(self):
         from src.services.ai_service import encode_error
 
         result = encode_error("something went wrong")
-        assert result == '3:"something went wrong"\n'
+        data = self._parse_sse(result)
+        assert data["type"] == "error"
+        assert data["errorText"] == "something went wrong"
 
 
 @pytest_asyncio.fixture

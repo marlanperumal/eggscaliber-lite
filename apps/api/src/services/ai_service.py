@@ -1,4 +1,5 @@
 import json
+import uuid
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 
@@ -14,20 +15,34 @@ from src.services import analytics_service, package_service
 # ── Stream encoding ────────────────────────────────────────────────────────────
 
 
-def encode_text_chunk(text: str) -> str:
-    return f"0:{json.dumps(text)}\n"
+def _sse(data: dict) -> str:
+    """Encode a single SSE event."""
+    return f"data: {json.dumps(data)}\n\n"
 
 
-def encode_annotation_part(data: dict) -> str:
-    return f"a:{json.dumps([data])}\n"
+def encode_text_start(msg_id: str) -> str:
+    return _sse({"type": "text-start", "id": msg_id})
+
+
+def encode_text_delta(msg_id: str, delta: str) -> str:
+    return _sse({"type": "text-delta", "id": msg_id, "delta": delta})
+
+
+def encode_text_end(msg_id: str) -> str:
+    return _sse({"type": "text-end", "id": msg_id})
+
+
+def encode_data_part(data_type: str, data_id: str, data: dict) -> str:
+    """Encode a custom data part (e.g. crosstab_result, trend_result)."""
+    return _sse({"type": f"data-{data_type}", "id": data_id, "data": data})
 
 
 def encode_finish(finish_reason: str = "stop") -> str:
-    return f"d:{json.dumps({'finishReason': finish_reason})}\n"
+    return _sse({"type": "finish", "finishReason": finish_reason})
 
 
 def encode_error(message: str) -> str:
-    return f"3:{json.dumps(message)}\n"
+    return _sse({"type": "error", "errorText": message})
 
 
 # ── Tool implementation functions (called by agent tools and tested directly) ──
@@ -203,17 +218,21 @@ async def stream_response(
     deps = AIServiceDeps(session=session)
     message_history = _to_model_messages(messages[:-1])
     user_prompt = messages[-1].content
+    text_id = str(uuid.uuid4())
 
     try:
         agent = get_agent()
+        yield encode_text_start(text_id)
         async with agent.run_stream(
             user_prompt, message_history=message_history, deps=deps
         ) as result:
             async for chunk in result.stream_text(delta=True):
-                yield encode_text_chunk(chunk)
+                yield encode_text_delta(text_id, chunk)
+        yield encode_text_end(text_id)
 
-        for part in deps.result_parts:
-            yield encode_annotation_part(part)
+        for i, part in enumerate(deps.result_parts):
+            data_type = part["type"]
+            yield encode_data_part(data_type, f"data-{i}", part)
 
         yield encode_finish()
     except Exception as e:
