@@ -128,7 +128,9 @@ async def get_upload_session(session_id: int, session: AsyncSession = Depends(ge
     ...
 ```
 
-The only acceptable exception is routes that intentionally return arbitrary JSON (e.g. debug/sentry endpoints).
+Two acceptable exceptions:
+- Routes that intentionally return arbitrary JSON (e.g. debug/sentry endpoints)
+- Streaming endpoints that use `response_class=StreamingResponse` with an explicit `responses=` dict documenting the content type (e.g. SSE endpoints)
 
 ### Services must return typed models, not `dict`
 

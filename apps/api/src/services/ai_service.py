@@ -7,6 +7,7 @@ from pydantic_ai import Agent, RunContext
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, TextPart, UserPromptPart
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
 from src.errors import CollectionNotFoundError, DatasetNotFoundError
 from src.models.ai import AICrosstabResultPart, AITrendResultPart, ChatMessage
 from src.models.analytics import CrosstabRequest, TrendRequest
@@ -150,8 +151,6 @@ When answering:
 
 
 def _build_agent() -> "Agent[AIServiceDeps, str]":
-    from src.config import settings
-
     agent: Agent[AIServiceDeps, str] = Agent(
         model=settings.ai_model,
         system_prompt=SYSTEM_PROMPT,
