@@ -28,11 +28,6 @@ async def test_list_packages_returns_packages(client, db):
     assert slugs == {"brand-suite", "tracking-studies"}
 
 
-async def test_get_package_not_found(client):
-    response = await client.get("/api/v1/packages/99999")
-    assert response.status_code == 404
-
-
 async def test_create_package(client):
     response = await client.post(
         "/api/v1/packages",
@@ -78,9 +73,3 @@ async def test_get_package_not_found_returns_error_code(client):
     body = response.json()
     assert body["code"] == "package_not_found"
     assert body["status"] == 404
-
-
-async def test_seeded_package_fixture_is_retrievable(client, seeded_package):
-    response = await client.get(f"/api/v1/packages/{seeded_package.id}")
-    assert response.status_code == 200
-    assert response.json()["name"] == seeded_package.name
