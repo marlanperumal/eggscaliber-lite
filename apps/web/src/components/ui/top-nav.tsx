@@ -1,11 +1,11 @@
 "use client"
 
+import { OrganizationSwitcher, UserButton } from "@clerk/nextjs"
 import { useFeatureFlag } from "@posthog/next"
 import { Moon, Sun } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTheme } from "next-themes"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -73,11 +73,8 @@ export function TopNav() {
             <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Avatar className="h-7 w-7">
-          <AvatarFallback className="bg-nav-foreground/20 font-bold text-[10px] text-nav-foreground">
-            MP
-          </AvatarFallback>
-        </Avatar>
+        <OrganizationSwitcher />
+        <UserButton userProfileUrl="/account" />
       </div>
     </nav>
   )

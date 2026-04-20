@@ -13,6 +13,11 @@ vi.mock("next-themes", () => ({
   useTheme: vi.fn(() => ({ setTheme: vi.fn() })),
 }))
 
+vi.mock("@clerk/nextjs", () => ({
+  OrganizationSwitcher: () => null,
+  UserButton: () => null,
+}))
+
 import { useFeatureFlag } from "@posthog/next"
 import { TopNav } from "./top-nav"
 
