@@ -1,3 +1,4 @@
+from httpx import AsyncClient
 from src.errors import (
     AIServiceError,
     CollectionNotFoundError,
@@ -29,3 +30,12 @@ def test_all_domain_errors_have_metadata():
         err = cls()
         assert err.status_code == expected_status, f"{cls.__name__}.status_code"
         assert err.code == expected_code, f"{cls.__name__}.code"
+
+
+async def test_domain_error_returns_error_response_shape(client: AsyncClient):
+    response = await client.get("/api/v1/packages/99999")
+    assert response.status_code == 404
+    body = response.json()
+    assert body["code"] == "package_not_found"
+    assert body["status"] == 404
+    assert "detail" in body

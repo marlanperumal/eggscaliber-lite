@@ -1,12 +1,15 @@
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastmcp import FastMCP
 from fastmcp.server.providers.openapi import MCPType, RouteMap
 from fastmcp.utilities.lifespan import combine_lifespans
 
 from src.config import settings
 from src.database import lifespan as db_lifespan
+from src.errors import DomainError
+from src.models.error import ErrorResponse
 from src.routes import (
     ai,
     analytics,
@@ -34,6 +37,16 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(DomainError)
+async def domain_error_handler(request: Request, exc: DomainError) -> JSONResponse:
+    detail = exc.code.replace("_", " ").capitalize()
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=ErrorResponse(status=exc.status_code, code=exc.code, detail=detail).model_dump(),
+    )
+
 
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(sentry.router, prefix="/api/v1")

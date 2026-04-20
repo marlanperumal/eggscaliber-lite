@@ -1,9 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import SQLModel
 
 from src.database import get_session
-from src.errors import PackageNotFoundError
 from src.models.package import PackageRead, PackageWithCollections
 from src.repositories import package_repo
 from src.services import package_service
@@ -34,7 +33,4 @@ async def list_packages(session: AsyncSession = Depends(get_session)):
 @router.get("/packages/{package_id}", response_model=PackageWithCollections)
 async def get_package(package_id: int, session: AsyncSession = Depends(get_session)):
     """Get a package with its collections."""
-    try:
-        return await package_service.get_with_collections(session, package_id)
-    except PackageNotFoundError:
-        raise HTTPException(status_code=404, detail="Package not found") from None
+    return await package_service.get_with_collections(session, package_id)
