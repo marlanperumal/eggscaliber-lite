@@ -30,15 +30,34 @@ class DatasetRead(DatasetBase):          # output schema
 
 ## Error Handling
 
-Define typed errors in `src/errors.py`:
+Define typed errors in `src/errors.py`. Every subclass declares its HTTP status code and a machine-readable `code` string:
 
 ```python
-class DomainError(Exception): ...
-class DatasetAlreadyExistsError(DomainError): ...
-class DatasetNotFoundError(DomainError): ...
+class DomainError(Exception):
+    status_code: int = 500
+    code: str = "internal_error"
+
+class DatasetNotFoundError(DomainError):
+    status_code = 404
+    code = "dataset_not_found"
 ```
 
-Routes catch these and map to HTTP codes. Never raise `HTTPException` in services.
+A centralised `@app.exception_handler(DomainError)` in `main.py` converts any unhandled `DomainError` into a typed `ErrorResponse` JSON body:
+
+```json
+{ "status": 404, "code": "dataset_not_found", "detail": "Dataset not found" }
+```
+
+Routes **do not** need try/except blocks for domain errors — they just call the service and return:
+
+```python
+@router.get("/datasets/{dataset_id}", response_model=DatasetWithFields)
+async def get_dataset(dataset_id: int, session: AsyncSession = Depends(get_session)):
+    """Get a dataset with all its fields and metadata."""
+    return await dataset_service.get_with_fields(session, dataset_id)
+```
+
+`HTTPException` is still correct for **input validation guards** in routes — business-rule limits that can't be expressed in Pydantic (e.g. "nested mode supports at most 2 fields"). Never raise `HTTPException` in services.
 
 ## CRUD Passthrough Exception
 
@@ -75,15 +94,13 @@ Single-entity endpoints (those with an `{entity_id}` path parameter) must go thr
 - **Route** only handles HTTP concerns — it calls the service and catches domain errors, mapping them to HTTP status codes
 
 ```python
-# ROUTE — only HTTP concerns
+# ROUTE — delegates to service; domain errors propagate to the central handler
 @router.get("/collections/{collection_id}", response_model=CollectionWithDatasets)
 async def get_collection(collection_id: int, session: AsyncSession = Depends(get_session)):
-    try:
-        return await collection_service.get_with_datasets(session, collection_id)
-    except CollectionNotFoundError:
-        raise HTTPException(status_code=404, detail="Collection not found") from None
+    """Get a collection with all its datasets."""
+    return await collection_service.get_with_datasets(session, collection_id)
 
-# SERVICE — owns existence semantics
+# SERVICE — owns existence semantics; raises typed DomainError
 async def get_with_datasets(session: AsyncSession, collection_id: int) -> CollectionWithDatasets:
     col = await collection_repo.get_by_id(session, collection_id)
     if col is None:
@@ -195,17 +212,15 @@ Verify the resulting `packages/shared/api.d.ts` contains no new `unknown` return
 Complex endpoints that coordinate multiple repos, workers, or lower-level services belong in an **orchestration service**. The route handles input validation and error-to-HTTP mapping only; the service owns the logic.
 
 ```python
-# Route: validates input, calls one service method, maps errors
+# Route: validates input, calls one service method; domain errors → central handler
 @router.post("/analytics/crosstab", response_model=CrosstabResponse)
 async def run_crosstab(request: CrosstabRequest, session: AsyncSession = Depends(get_session)):
+    """Run a cross-tabulation query."""
     if request.row_mode == "nested" and len(request.rows) > 2:
         raise HTTPException(422, "Nested row mode supports at most 2 fields")
-    try:
-        return await analytics_service.run_crosstab(session, request)
-    except DatasetNotFoundError:
-        raise HTTPException(status_code=404, detail="Dataset not found")
+    return await analytics_service.run_crosstab(session, request)
 
-# Service: owns all orchestration
+# Service: owns all orchestration; raises typed DomainError
 async def run_crosstab(session: AsyncSession, request: CrosstabRequest) -> CrosstabResponse:
     dataset = await analytics_repo.get_dataset(session, request.dataset_id)
     if dataset is None:

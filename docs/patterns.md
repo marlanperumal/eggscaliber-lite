@@ -15,16 +15,14 @@ Strict 3-layer architecture. **No layer may reach past its immediate neighbour.*
 - No business logic, no direct DB access
 
 ```python
-# CORRECT
-@router.post("/datasets", status_code=201)
+# CORRECT — domain errors propagate to the central @app.exception_handler(DomainError)
+@router.post("/datasets", status_code=201, response_model=DatasetRead)
 async def create_dataset(
     payload: DatasetCreate,
     session: AsyncSession = Depends(get_session),
-) -> DatasetRead:
-    try:
-        return await dataset_service.create(session, payload)
-    except DatasetAlreadyExistsError:
-        raise HTTPException(status_code=409, detail="Dataset already exists")
+):
+    """Create a new dataset."""
+    return await dataset_service.create(session, payload)
 
 # WRONG — business logic in route handler
 @router.post("/datasets")
