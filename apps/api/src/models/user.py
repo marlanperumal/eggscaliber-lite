@@ -48,3 +48,11 @@ class OrgMembership(OrgMembershipBase, table=True):
     __tablename__ = "org_memberships"
 
     id: int | None = Field(default=None, primary_key=True)
+
+
+class OrgMembershipRead(OrgMembershipBase):
+    id: int
+
+
+class WebhookAck(SQLModel):
+    status: str

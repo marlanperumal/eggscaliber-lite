@@ -31,6 +31,13 @@ def _make_token(private_pem: str, payload: dict) -> str:
     return jwt.encode(payload, private_pem, algorithm="RS256")
 
 
+# Config patching is used here (not mocking a service). The auth dependency
+# reads settings at call time, so patching settings attributes is the only way
+# to test both dev-mode and production-mode paths in a unit test without
+# requiring real Clerk credentials or route-level fixtures. This is distinct
+# from the "no internal service mocks" rule, which targets business logic, not config.
+
+
 def test_dev_mode_returns_dev_user():
     with patch.object(settings, "auth_mode", "dev"):
         user = get_current_user(credentials=None)

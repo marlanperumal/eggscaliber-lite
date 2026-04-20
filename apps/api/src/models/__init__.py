@@ -27,4 +27,12 @@ from .upload import (  # noqa: F401
     UploadSessionRead,
     UploadSessionStatus,
 )
-from .user import Organisation, OrganisationRead, OrgMembership, User, UserRead  # noqa: F401
+from .user import (  # noqa: F401
+    Organisation,
+    OrganisationRead,
+    OrgMembership,
+    OrgMembershipRead,
+    User,
+    UserRead,
+    WebhookAck,
+)
