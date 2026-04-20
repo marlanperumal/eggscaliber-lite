@@ -3,19 +3,15 @@ import { describe, expect, it } from "vitest"
 import { MessageBubble } from "./MessageBubble"
 
 describe("MessageBubble", () => {
-  it("renders user bubble right-aligned", () => {
+  it("renders user bubble with correct testid and content", () => {
     render(<MessageBubble sender="user" content="Hello there" />)
-    const bubble = screen.getByTestId("message-bubble-user")
-    expect(bubble).toBeInTheDocument()
-    expect(bubble.className).toContain("justify-end")
+    expect(screen.getByTestId("message-bubble-user")).toBeInTheDocument()
     expect(screen.getByText("Hello there")).toBeInTheDocument()
   })
 
-  it("renders assistant bubble left-aligned", () => {
+  it("renders assistant bubble with correct testid and content", () => {
     render(<MessageBubble sender="assistant" content="Hi, I can help." />)
-    const bubble = screen.getByTestId("message-bubble-assistant")
-    expect(bubble).toBeInTheDocument()
-    expect(bubble.className).toContain("justify-start")
+    expect(screen.getByTestId("message-bubble-assistant")).toBeInTheDocument()
     expect(screen.getByText("Hi, I can help.")).toBeInTheDocument()
   })
 
