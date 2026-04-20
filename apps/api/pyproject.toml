@@ -13,6 +13,8 @@ dependencies = [
     "python-multipart>=0.0.26",
     "fastmcp>=3.2.4",
     "pydantic-ai>=1.84.1",
+    "pyjwt[crypto]>=2.12.1",
+    "svix>=1.90.0",
 ]
 
 [dependency-groups]
