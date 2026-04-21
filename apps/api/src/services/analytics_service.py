@@ -23,7 +23,7 @@ from src.models.dataset import FieldOut
 from src.models.field import Field
 from src.models.field_group import FieldGroup
 from src.orm import pk
-from src.repositories import analytics_repo, collection_repo
+from src.repositories import analytics_repo, collection_repo, package_repo
 from src.services import crosstab_service, trend_service
 from src.workers.factory import WorkerFactory
 
@@ -36,20 +36,10 @@ async def _assert_dataset_accessible(
     """Raise ForbiddenError if the dataset's package is not in accessible_ids."""
     if accessible_ids is None:
         return
-    from sqlalchemy import select
-
-    from src.models.dataset import Dataset
-    from src.models.group import PackageCollection
-
-    ds = await session.get(Dataset, dataset_id)
+    ds = await analytics_repo.get_dataset(session, dataset_id)
     if ds is None:
         return
-    result = await session.execute(
-        select(PackageCollection.package_id).where(
-            PackageCollection.collection_id == ds.collection_id
-        )
-    )
-    pkg_ids = set(result.scalars().all())
+    pkg_ids = await package_repo.get_package_ids_for_collection(session, ds.collection_id)
     if not pkg_ids.intersection(accessible_ids):
         raise ForbiddenError("Dataset not accessible")
 
@@ -130,14 +120,7 @@ async def _assert_collection_accessible(
     """Raise ForbiddenError if the collection's package is not in accessible_ids."""
     if accessible_ids is None:
         return
-    from sqlalchemy import select
-
-    from src.models.group import PackageCollection
-
-    result = await session.execute(
-        select(PackageCollection.package_id).where(PackageCollection.collection_id == collection_id)
-    )
-    pkg_ids = set(result.scalars().all())
+    pkg_ids = await package_repo.get_package_ids_for_collection(session, collection_id)
     if not pkg_ids.intersection(accessible_ids):
         raise ForbiddenError("Collection not accessible")
 

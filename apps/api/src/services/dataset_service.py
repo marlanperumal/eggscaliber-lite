@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.errors import DatasetNotFoundError
 from src.models.dataset import DatasetWithFields, FieldWithLevels, LevelOut
 from src.models.response import Response, ResponsePage, ResponseRead
-from src.repositories import dataset_repo
+from src.repositories import dataset_repo, package_repo
 
 
 async def get_with_fields(
@@ -14,8 +14,6 @@ async def get_with_fields(
     if ds is None:
         raise DatasetNotFoundError(dataset_id)
     if accessible_ids is not None:
-        from src.repositories import package_repo
-
         pkg_ids = await package_repo.get_package_ids_for_dataset(session, dataset_id)
         if not pkg_ids & accessible_ids:
             raise DatasetNotFoundError(dataset_id)
@@ -40,8 +38,6 @@ async def delete_dataset(
     if ds is None:
         raise DatasetNotFoundError(dataset_id)
     if accessible_ids is not None:
-        from src.repositories import package_repo
-
         pkg_ids = await package_repo.get_package_ids_for_dataset(session, dataset_id)
         if not pkg_ids & accessible_ids:
             raise DatasetNotFoundError(dataset_id)
@@ -59,8 +55,6 @@ async def get_csv_data(
     if ds is None:
         raise DatasetNotFoundError(dataset_id)
     if accessible_ids is not None:
-        from src.repositories import package_repo
-
         pkg_ids = await package_repo.get_package_ids_for_dataset(session, dataset_id)
         if not pkg_ids & accessible_ids:
             raise DatasetNotFoundError(dataset_id)
@@ -81,8 +75,6 @@ async def get_responses(
     if ds is None:
         raise DatasetNotFoundError(dataset_id)
     if accessible_ids is not None:
-        from src.repositories import package_repo
-
         pkg_ids = await package_repo.get_package_ids_for_dataset(session, dataset_id)
         if not pkg_ids & accessible_ids:
             raise DatasetNotFoundError(dataset_id)

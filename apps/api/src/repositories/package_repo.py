@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from src.auth import CurrentUser
 
 from src.models.collection import Collection
+from src.models.dataset import Dataset
 from src.models.group import (
     Group,
     GroupMembership,
@@ -50,6 +51,21 @@ async def get_collections_for_package(session: AsyncSession, package_id: int) ->
     return list(result.scalars().all())
 
 
+type PackageCollectionPair = tuple[int | None, Collection]
+
+
+async def get_collections_for_packages(
+    session: AsyncSession, package_ids: list[int]
+) -> list[PackageCollectionPair]:
+    """Return (package_id, Collection) pairs for all given package IDs."""
+    rows = await session.execute(
+        select(PackageCollection.package_id, Collection)
+        .join(Collection, Collection.id == PackageCollection.collection_id)
+        .where(PackageCollection.package_id.in_(package_ids))
+    )
+    return list(rows.all())
+
+
 async def get_package_ids_for_collection(session: AsyncSession, collection_id: int) -> set[int]:
     """Return the set of package IDs that contain the given collection."""
     result = await session.execute(
@@ -60,8 +76,6 @@ async def get_package_ids_for_collection(session: AsyncSession, collection_id: i
 
 async def get_package_ids_for_dataset(session: AsyncSession, dataset_id: int) -> set[int]:
     """Return the set of package IDs that contain the given dataset's collection."""
-    from src.models.dataset import Dataset  # local import to avoid circular
-
     dataset_subq = select(Dataset.collection_id).where(Dataset.id == dataset_id).scalar_subquery()
     result = await session.execute(
         select(PackageCollection.package_id).where(PackageCollection.collection_id == dataset_subq)

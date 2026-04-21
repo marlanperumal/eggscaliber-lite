@@ -57,7 +57,31 @@ async def get_dataset(dataset_id: int, session: AsyncSession = Depends(get_sessi
     return await dataset_service.get_with_fields(session, dataset_id)
 ```
 
-`HTTPException` is still correct for **input validation guards** in routes — business-rule limits that can't be expressed in Pydantic (e.g. "nested mode supports at most 2 fields"). Never raise `HTTPException` in services.
+`HTTPException` is still correct in two route-layer situations:
+
+**1. Input validation guards** — business-rule limits that can't be expressed in Pydantic:
+
+```python
+# CORRECT — validation guard that Pydantic can't express
+if request.row_mode == "nested" and len(request.rows) > 2:
+    raise HTTPException(422, "Nested row mode supports at most 2 fields")
+```
+
+**2. Auth guard dependencies** — FastAPI dependency functions that enforce authentication or organisational membership. These live outside the main route handler but are still part of the request layer:
+
+```python
+# CORRECT — auth guard as a FastAPI dependency
+def _require_superuser(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    if not current_user.is_superuser:
+        raise HTTPException(403, "Super-user access required")
+    return current_user
+
+# CORRECT — org membership guard inside a route handler
+if current_user.org_id is None:
+    raise HTTPException(403, "No active organisation")
+```
+
+Never raise `HTTPException` in services — domain errors raised there are caught by the central `@app.exception_handler(DomainError)` handler.
 
 ## CRUD Passthrough Exception
 
