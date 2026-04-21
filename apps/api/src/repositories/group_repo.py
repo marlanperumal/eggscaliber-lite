@@ -1,0 +1,92 @@
+from typing import cast
+
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.models.group import Group, GroupMembership, GroupPackage
+
+
+async def create_group(
+    session: AsyncSession,
+    *,
+    org_id: int,
+    name: str,
+    is_default: bool = False,
+) -> Group:
+    grp = Group(org_id=org_id, name=name, is_default=is_default)
+    session.add(grp)
+    await session.flush()
+    await session.refresh(grp)
+    return grp
+
+
+async def get_default_group(session: AsyncSession, org_id: int) -> Group | None:
+    result = await session.execute(
+        select(Group).where(Group.org_id == org_id, Group.is_default == True)  # noqa: E712
+    )
+    return result.scalars().first()
+
+
+async def get_groups_for_org(session: AsyncSession, org_id: int) -> list[Group]:
+    result = await session.execute(select(Group).where(Group.org_id == org_id))
+    return list(result.scalars().all())
+
+
+async def get_group_by_id(session: AsyncSession, group_id: int) -> Group | None:
+    return await session.get(Group, group_id)
+
+
+async def delete_group(session: AsyncSession, group: Group) -> None:
+    await session.delete(group)
+    await session.flush()
+
+
+async def add_member(session: AsyncSession, *, group_id: int, user_id: int) -> None:
+    gm = GroupMembership(group_id=group_id, user_id=user_id)
+    session.add(gm)
+    await session.flush()
+
+
+async def remove_member(session: AsyncSession, *, group_id: int, user_id: int) -> None:
+    await session.execute(
+        delete(GroupMembership).where(
+            GroupMembership.group_id == group_id,
+            GroupMembership.user_id == user_id,
+        )
+    )
+    await session.flush()
+
+
+async def remove_user_from_org_groups(session: AsyncSession, *, user_id: int, org_id: int) -> None:
+    group_ids_result = await session.execute(select(Group.id).where(Group.org_id == org_id))
+    group_ids = [gid for gid in group_ids_result.scalars().all() if gid is not None]
+    if group_ids:
+        await session.execute(
+            delete(GroupMembership).where(
+                GroupMembership.group_id.in_(group_ids),
+                GroupMembership.user_id == user_id,
+            )
+        )
+        await session.flush()
+
+
+async def add_user_to_default_group(session: AsyncSession, *, user_id: int, org_id: int) -> None:
+    grp = await get_default_group(session, org_id)
+    if grp is not None:
+        await add_member(session, group_id=cast(int, grp.id), user_id=user_id)
+
+
+async def assign_package(session: AsyncSession, *, group_id: int, package_id: int) -> None:
+    gp = GroupPackage(group_id=group_id, package_id=package_id)
+    session.add(gp)
+    await session.flush()
+
+
+async def unassign_package(session: AsyncSession, *, group_id: int, package_id: int) -> None:
+    await session.execute(
+        delete(GroupPackage).where(
+            GroupPackage.group_id == group_id,
+            GroupPackage.package_id == package_id,
+        )
+    )
+    await session.flush()
