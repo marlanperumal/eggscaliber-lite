@@ -28,7 +28,7 @@ export function AIChatPage() {
   return (
     <div key={key} data-testid="ai-chat-page" className="flex h-full flex-col">
       {error && (
-        <div className="flex items-center gap-3 border-b border-border bg-destructive/10 px-4 py-2 text-sm text-destructive">
+        <div className="flex items-center gap-3 border-border border-b bg-destructive/10 px-4 py-2 text-destructive text-sm">
           <span>Something went wrong.</span>
           <button
             type="button"

@@ -109,7 +109,7 @@ export function DatasetsPageContent({ initialPackages, initialDrafts, initialDat
         <h1 className="font-bold text-2xl text-foreground">Datasets</h1>
         <Link
           href="/datasets/upload"
-          className="rounded-lg bg-accent px-4 py-2 font-semibold text-sm text-white hover:opacity-90"
+          className="rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground text-sm hover:opacity-90"
         >
           Upload dataset
         </Link>
@@ -182,7 +182,7 @@ export function DatasetsPageContent({ initialPackages, initialDrafts, initialDat
                 <div className="flex gap-3">
                   <Link
                     href={resumeUrl(d)}
-                    className="rounded-lg bg-accent px-3 py-1.5 font-semibold text-sm text-white hover:opacity-90"
+                    className="rounded-lg bg-primary px-3 py-1.5 font-semibold text-primary-foreground text-sm hover:opacity-90"
                   >
                     Resume →
                   </Link>

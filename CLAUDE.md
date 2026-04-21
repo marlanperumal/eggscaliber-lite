@@ -69,6 +69,18 @@ just audit          # pip-audit + pnpm audit
 - `packages/shared/api.d.ts` — **AUTO-GENERATED** TypeScript types from FastAPI OpenAPI spec. Never edit manually. Run `just generate-types`.
 - `docker/init/` — SQL bootstrap only (create DBs + extensions). All schema lives in `apps/api/migrations/`.
 
+## Browser Automation
+
+Use **`agent-browser`** (CLI) for all interactive browser work — UI testing, visual verification, scraping. Never reach for Playwright MCP; it has been removed. The Playwright test runner (`playwright.config.ts`) remains for the E2E test suite and is separate.
+
+```bash
+agent-browser open <url>       # navigate
+agent-browser snapshot -i      # accessibility tree (compact, AI-friendly)
+agent-browser click @e2        # click by ref from snapshot
+agent-browser fill @e3 <text>  # type into field
+agent-browser screenshot       # capture
+```
+
 ## MCP Servers
 
 Two MCP servers are available in Claude Code sessions for local dev:

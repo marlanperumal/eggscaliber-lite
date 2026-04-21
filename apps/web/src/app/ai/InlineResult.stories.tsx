@@ -26,8 +26,8 @@ const crosstabPart: AICrosstabResultPart = {
       level_labels: { gender: { M: "Male", F: "Female" } },
     },
     rows: [
-      { key: ["M"], values: { Total: 52.0 } },
-      { key: ["F"], values: { Total: 48.0 } },
+      { key: ["gender", "M"], values: { Total: 52.0 } },
+      { key: ["gender", "F"], values: { Total: 48.0 } },
     ],
   },
 }
