@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date as date_type
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from sqlalchemy import select, union
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,6 +48,25 @@ async def get_collections_for_package(session: AsyncSession, package_id: int) ->
         .where(PackageCollection.package_id == package_id)
     )
     return list(result.scalars().all())
+
+
+async def get_package_ids_for_collection(session: AsyncSession, collection_id: int) -> set[int]:
+    """Return the set of package IDs that contain the given collection."""
+    result = await session.execute(
+        select(PackageCollection.package_id).where(PackageCollection.collection_id == collection_id)
+    )
+    return {cast(int, row) for row in result.scalars().all()}
+
+
+async def get_package_ids_for_dataset(session: AsyncSession, dataset_id: int) -> set[int]:
+    """Return the set of package IDs that contain the given dataset's collection."""
+    from src.models.dataset import Dataset  # local import to avoid circular
+
+    dataset_subq = select(Dataset.collection_id).where(Dataset.id == dataset_id).scalar_subquery()
+    result = await session.execute(
+        select(PackageCollection.package_id).where(PackageCollection.collection_id == dataset_subq)
+    )
+    return {cast(int, row) for row in result.scalars().all()}
 
 
 async def get_accessible_ids(session: AsyncSession, user: CurrentUser) -> set[int]:

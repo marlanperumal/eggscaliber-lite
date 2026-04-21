@@ -13,6 +13,7 @@ from src.models.group import (
 )
 from src.models.package import Package, PackageVisibility
 from src.models.user import Organisation, User
+from src.repositories import package_repo
 
 
 @pytest.fixture(autouse=True)
@@ -233,3 +234,15 @@ async def test_analytics_rejects_inaccessible_dataset(client, db, bare_dataset, 
     app.dependency_overrides.pop(get_accessible_package_ids, None)
 
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_get_package_ids_for_collection(db, seeded_collection, seeded_package):
+    ids = await package_repo.get_package_ids_for_collection(db, cast(int, seeded_collection.id))
+    assert cast(int, seeded_package.id) in ids
+
+
+@pytest.mark.asyncio
+async def test_get_package_ids_for_dataset(db, bare_dataset):
+    ids = await package_repo.get_package_ids_for_dataset(db, cast(int, bare_dataset.id))
+    assert len(ids) == 1
