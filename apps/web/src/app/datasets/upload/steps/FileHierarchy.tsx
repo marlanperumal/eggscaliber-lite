@@ -38,7 +38,6 @@ export function FileHierarchy({ setStep, setSessionId, setNeedsReconcile }: Prop
   const [collections, setCollections] = useState<CollectionOption[]>([])
   const [selectedPackageId, setSelectedPackageId] = useState<string>("")
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>("")
-  const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -180,7 +179,6 @@ export function FileHierarchy({ setStep, setSessionId, setNeedsReconcile }: Prop
   async function handleNext() {
     if (!file || !canProceed) return
     setBusy(true)
-    setError(null)
     const form = new FormData()
     form.append("file", file)
     form.append("dataset_name", datasetName)
@@ -379,8 +377,6 @@ export function FileHierarchy({ setStep, setSessionId, setNeedsReconcile }: Prop
           />
         </div>
       </div>
-
-      {error && <p className="text-destructive text-xs">{error}</p>}
 
       <div className="flex justify-end">
         <button
