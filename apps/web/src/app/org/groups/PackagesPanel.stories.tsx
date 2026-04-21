@@ -9,5 +9,5 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const NoSelection: Story = {}
+export const NoGroupSelected: Story = {}
 export const WithGroup: Story = { args: { groupId: 1 } }
