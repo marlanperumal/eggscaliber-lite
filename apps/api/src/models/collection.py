@@ -25,7 +25,6 @@ class CollectionBase(SQLModel):
     slug: str
     description: str | None = None
     collection_type: CollectionType = CollectionType.generic
-    package_id: int = Field(foreign_key="package.id")
 
 
 class CollectionCreate(SQLModel):

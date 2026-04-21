@@ -1,14 +1,21 @@
 from datetime import UTC, datetime
+from enum import StrEnum
 
 from sqlmodel import Field, SQLModel
 
 from src.models.collection import CollectionType
 
 
+class PackageVisibility(StrEnum):
+    public = "public"
+    private = "private"
+
+
 class PackageBase(SQLModel):
     name: str
     slug: str
     description: str | None = None
+    visibility: PackageVisibility = PackageVisibility.public
 
 
 class Package(PackageBase, table=True):

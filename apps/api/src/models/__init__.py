@@ -2,8 +2,25 @@ from .collection import Collection, CollectionBase, CollectionRead, CollectionTy
 from .dataset import Dataset, DatasetBase, DatasetRead, WorkerType  # noqa: F401
 from .field import Field, FieldBase, FieldRead, FieldType  # noqa: F401
 from .field_group import FieldGroup, FieldGroupBase, FieldGroupRead  # noqa: F401
+from .group import (  # noqa: F401
+    Group,
+    GroupMembership,
+    GroupPackage,
+    GroupRead,
+    OrgSubscription,
+    OrgSubscriptionRead,
+    PackageCollection,
+    PackageCollectionDataset,
+    PackageCollectionRead,
+)
 from .level import Level, LevelBase, LevelRead  # noqa: F401
-from .package import Package, PackageBase, PackageRead  # noqa: F401
+from .package import (  # noqa: F401
+    Package,
+    PackageBase,
+    PackageRead,
+    PackageVisibility,
+    PackageWithCollections,
+)
 from .reconciliation import (  # noqa: F401
     ReconciliationGroup,
     ReconciliationRow,
