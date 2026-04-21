@@ -4,7 +4,13 @@ from sqlmodel import SQLModel
 
 from src.auth import CurrentUser, get_current_user
 from src.database import get_session
-from src.models.group import GroupCreate, GroupRead, GroupWithCounts
+from src.models.group import (
+    GroupCreate,
+    GroupMemberRead,
+    GroupPackageRead,
+    GroupRead,
+    GroupWithCounts,
+)
 from src.services import group_service
 
 router = APIRouter(tags=["groups"])
@@ -109,3 +115,27 @@ async def unassign_package(
     await group_service.unassign_package(
         session, group_id, package_id, current_user.org_id, current_user
     )
+
+
+@router.get("/groups/{group_id}/members", response_model=list[GroupMemberRead])
+async def list_group_members(
+    group_id: int,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """List members of a group with their org role."""
+    if current_user.org_id is None:
+        return []
+    return await group_service.list_group_members(session, group_id, current_user.org_id)
+
+
+@router.get("/groups/{group_id}/packages", response_model=list[GroupPackageRead])
+async def list_group_packages(
+    group_id: int,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """List packages assigned to a group."""
+    if current_user.org_id is None:
+        return []
+    return await group_service.list_group_packages(session, group_id, current_user.org_id)

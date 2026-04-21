@@ -110,3 +110,31 @@ async def count_packages(session: AsyncSession, group_id: int) -> int:
         select(func.count()).select_from(GroupPackage).where(GroupPackage.group_id == group_id)
     )
     return result.scalar_one()
+
+
+async def get_members_for_group(session: AsyncSession, group_id: int, org_id: int) -> list[tuple]:
+    """Return (user_id, clerk_id, email, display_name, role) rows for all members of a group."""
+    from src.models.user import OrgMembership, User
+
+    result = await session.execute(
+        select(User.id, User.clerk_id, User.email, User.display_name, OrgMembership.role)
+        .join(GroupMembership, GroupMembership.user_id == User.id)
+        .join(
+            OrgMembership,
+            (OrgMembership.user_id == User.id) & (OrgMembership.org_id == org_id),
+        )
+        .where(GroupMembership.group_id == group_id)
+    )
+    return list(result.all())
+
+
+async def get_packages_for_group(session: AsyncSession, group_id: int) -> list:
+    """Return Package ORM objects for all packages assigned to a group."""
+    from src.models.package import Package
+
+    result = await session.execute(
+        select(Package)
+        .join(GroupPackage, GroupPackage.package_id == Package.id)
+        .where(GroupPackage.group_id == group_id)
+    )
+    return list(result.scalars().all())

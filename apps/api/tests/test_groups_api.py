@@ -112,6 +112,66 @@ async def test_cannot_delete_default_group(client, db):
 
 
 @pytest.mark.asyncio
+async def test_list_group_members_returns_members(client, db, group_fixtures):
+    """GET /groups/{id}/members returns the users currently in that group."""
+    from src.auth import CurrentUser, get_current_user
+    from src.main import app
+    from src.models.group import GroupMembership
+
+    f = group_fixtures
+
+    gm = GroupMembership(group_id=cast(int, f["group"].id), user_id=cast(int, f["user"].id))
+    db.add(gm)
+    await db.flush()
+
+    def override_user() -> CurrentUser:
+        return CurrentUser(
+            clerk_id=f["user"].clerk_id,
+            email=f["user"].email,
+            org_id=f["org"].clerk_org_id,
+        )
+
+    app.dependency_overrides[get_current_user] = override_user
+    resp = await client.get(f"/api/v1/groups/{f['group'].id}/members")
+    app.dependency_overrides.pop(get_current_user, None)
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list)
+    assert any(m["email"] == f["user"].email for m in data)
+
+
+@pytest.mark.asyncio
+async def test_list_group_packages_returns_assigned_packages(client, db, group_fixtures):
+    """GET /groups/{id}/packages returns the packages assigned to that group."""
+    from src.auth import CurrentUser, get_current_user
+    from src.main import app
+    from src.models.group import GroupPackage
+
+    f = group_fixtures
+
+    gp = GroupPackage(group_id=cast(int, f["group"].id), package_id=cast(int, f["pkg"].id))
+    db.add(gp)
+    await db.flush()
+
+    def override_user() -> CurrentUser:
+        return CurrentUser(
+            clerk_id=f["user"].clerk_id,
+            email=f["user"].email,
+            org_id=f["org"].clerk_org_id,
+        )
+
+    app.dependency_overrides[get_current_user] = override_user
+    resp = await client.get(f"/api/v1/groups/{f['group'].id}/packages")
+    app.dependency_overrides.pop(get_current_user, None)
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list)
+    assert any(p["slug"] == f["pkg"].slug for p in data)
+
+
+@pytest.mark.asyncio
 async def test_cannot_manage_other_org_group(client, db, group_fixtures):
     from src.auth import CurrentUser, get_current_user
     from src.main import app

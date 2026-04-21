@@ -3,7 +3,13 @@ from typing import TYPE_CHECKING, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.errors import CannotDeleteDefaultGroupError, ForbiddenError, GroupNotFoundError
-from src.models.group import GroupCreate, GroupRead, GroupWithCounts
+from src.models.group import (
+    GroupCreate,
+    GroupMemberRead,
+    GroupPackageRead,
+    GroupRead,
+    GroupWithCounts,
+)
 from src.repositories import group_repo, user_repo
 
 if TYPE_CHECKING:
@@ -133,3 +139,50 @@ async def unassign_package(
     if org is None or grp.org_id != org.id:
         raise ForbiddenError("Group belongs to a different org")
     await group_repo.unassign_package(session, group_id=group_id, package_id=package_id)
+
+
+async def list_group_members(
+    session: AsyncSession, group_id: int, clerk_org_id: str
+) -> list[GroupMemberRead]:
+    org = await user_repo.get_org_by_clerk_id(session, clerk_org_id)
+    if org is None:
+        return []
+    grp = await group_repo.get_group_by_id(session, group_id)
+    if grp is None:
+        raise GroupNotFoundError(group_id)
+    if grp.org_id != org.id:
+        raise ForbiddenError("Group belongs to a different org")
+    rows = await group_repo.get_members_for_group(session, group_id, cast(int, org.id))
+    return [
+        GroupMemberRead(
+            user_id=row[0],
+            clerk_id=row[1],
+            email=row[2],
+            display_name=row[3],
+            role=row[4],
+        )
+        for row in rows
+    ]
+
+
+async def list_group_packages(
+    session: AsyncSession, group_id: int, clerk_org_id: str
+) -> list[GroupPackageRead]:
+    org = await user_repo.get_org_by_clerk_id(session, clerk_org_id)
+    if org is None:
+        return []
+    grp = await group_repo.get_group_by_id(session, group_id)
+    if grp is None:
+        raise GroupNotFoundError(group_id)
+    if grp.org_id != org.id:
+        raise ForbiddenError("Group belongs to a different org")
+    pkgs = await group_repo.get_packages_for_group(session, group_id)
+    return [
+        GroupPackageRead(
+            package_id=cast(int, p.id),
+            name=p.name,
+            slug=p.slug,
+            visibility=p.visibility,
+        )
+        for p in pkgs
+    ]
