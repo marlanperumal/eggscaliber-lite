@@ -59,13 +59,13 @@ export function GroupsList({ selectedGroupId, onSelect }: Props) {
   }
 
   const handleDelete = async (groupId: number) => {
+    setDeletingId(null)
     const { error } = await mutate(
       () => api.DELETE("/api/v1/groups/{group_id}", { params: { path: { group_id: groupId } } }),
       { errorMessage: "Failed to delete group. Please try again." },
     )
     if (error) return
     if (selectedGroupId === groupId) onSelect(null)
-    setDeletingId(null)
     await fetchGroups()
   }
 
