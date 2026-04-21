@@ -2,11 +2,12 @@ import re
 from datetime import date
 from typing import cast
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.errors import PackageNotFoundError
 from src.models.collection import CollectionRead
-from src.models.group import OrgSubscriptionRead
+from src.models.group import OrgSubscriptionRead, PackageCollectionDetail, PackageCollectionScope
 from src.models.package import PackageCreate, PackageRead, PackageVisibility
 from src.models.user import OrganisationRead
 from src.repositories import admin_repo, collection_repo, package_repo
@@ -105,3 +106,107 @@ async def create_package(session: AsyncSession, body: PackageCreate) -> PackageR
 async def list_collections(session: AsyncSession) -> list[CollectionRead]:
     cols = await collection_repo.get_all(session)
     return [CollectionRead.model_validate(c.model_dump()) for c in cols]
+
+
+async def list_package_collections(
+    session: AsyncSession, package_id: int
+) -> list[PackageCollectionDetail]:
+    rows = await admin_repo.get_package_collections(session, package_id)
+    result = []
+    for pc, col, ds_ids in rows:
+        result.append(
+            PackageCollectionDetail(
+                package_id=pc.package_id,
+                collection_id=pc.collection_id,
+                scope=pc.scope,
+                collection_name=col.name if col else "",
+                collection_slug=col.slug if col else "",
+                collection_type=str(col.collection_type) if col else "",
+                dataset_ids=ds_ids,
+            )
+        )
+    return result
+
+
+async def add_collection_to_package(
+    session: AsyncSession,
+    *,
+    package_id: int,
+    collection_id: int,
+    scope: PackageCollectionScope,
+) -> PackageCollectionDetail:
+    pc = await admin_repo.add_collection_to_package(
+        session, package_id=package_id, collection_id=collection_id, scope=scope
+    )
+    col = await collection_repo.get_by_id(session, collection_id)
+    return PackageCollectionDetail(
+        package_id=pc.package_id,
+        collection_id=pc.collection_id,
+        scope=pc.scope,
+        collection_name=col.name if col else "",
+        collection_slug=col.slug if col else "",
+        collection_type=str(col.collection_type) if col else "",
+        dataset_ids=[],
+    )
+
+
+async def update_collection_scope(
+    session: AsyncSession,
+    *,
+    package_id: int,
+    collection_id: int,
+    scope: PackageCollectionScope,
+) -> PackageCollectionDetail:
+    from src.models.group import PackageCollectionDataset
+
+    pc = await admin_repo.update_collection_scope(
+        session, package_id=package_id, collection_id=collection_id, scope=scope
+    )
+    if pc is None:
+        raise PackageNotFoundError(package_id)
+    col = await collection_repo.get_by_id(session, collection_id)
+    ds_ids = list(
+        (
+            await session.execute(
+                select(PackageCollectionDataset.dataset_id).where(
+                    PackageCollectionDataset.package_id == package_id,
+                    PackageCollectionDataset.collection_id == collection_id,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return PackageCollectionDetail(
+        package_id=pc.package_id,
+        collection_id=pc.collection_id,
+        scope=pc.scope,
+        collection_name=col.name if col else "",
+        collection_slug=col.slug if col else "",
+        collection_type=str(col.collection_type) if col else "",
+        dataset_ids=ds_ids,
+    )
+
+
+async def remove_collection_from_package(
+    session: AsyncSession, *, package_id: int, collection_id: int
+) -> None:
+    await admin_repo.remove_collection_from_package(
+        session, package_id=package_id, collection_id=collection_id
+    )
+
+
+async def add_dataset_inclusion(
+    session: AsyncSession, *, package_id: int, collection_id: int, dataset_id: int
+) -> None:
+    await admin_repo.add_dataset_inclusion(
+        session, package_id=package_id, collection_id=collection_id, dataset_id=dataset_id
+    )
+
+
+async def remove_dataset_inclusion(
+    session: AsyncSession, *, package_id: int, collection_id: int, dataset_id: int
+) -> None:
+    await admin_repo.remove_dataset_inclusion(
+        session, package_id=package_id, collection_id=collection_id, dataset_id=dataset_id
+    )

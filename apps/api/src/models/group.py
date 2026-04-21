@@ -114,3 +114,26 @@ class PackageCollectionDataset(SQLModel, table=True):
     package_id: int = Field(primary_key=True)
     collection_id: int = Field(primary_key=True)
     dataset_id: int = Field(foreign_key="dataset.id", primary_key=True)
+
+
+class PackageCollectionDetail(SQLModel):
+    package_id: int
+    collection_id: int
+    scope: PackageCollectionScope
+    collection_name: str
+    collection_slug: str
+    collection_type: str
+    dataset_ids: list[int]
+
+
+class AddCollectionBody(SQLModel):
+    collection_id: int
+    scope: PackageCollectionScope = PackageCollectionScope.all
+
+
+class UpdateScopeBody(SQLModel):
+    scope: PackageCollectionScope
+
+
+class AddDatasetBody(SQLModel):
+    dataset_id: int
