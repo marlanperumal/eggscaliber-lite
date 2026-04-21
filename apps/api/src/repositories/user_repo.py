@@ -97,6 +97,22 @@ async def get_membership(
     return result.scalars().first()
 
 
+async def get_user_org_role(
+    session: AsyncSession, user_clerk_id: str, org_clerk_id: str
+) -> str | None:
+    """Returns the user's role in the org, or None if not a member."""
+    result = await session.execute(
+        select(OrgMembership.role)
+        .join(User, User.id == OrgMembership.user_id)
+        .join(Organisation, Organisation.id == OrgMembership.org_id)
+        .where(
+            User.clerk_id == user_clerk_id,
+            Organisation.clerk_org_id == org_clerk_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def delete_membership(
     session: AsyncSession,
     *,

@@ -90,3 +90,23 @@ async def unassign_package(session: AsyncSession, *, group_id: int, package_id: 
         )
     )
     await session.flush()
+
+
+async def count_members(session: AsyncSession, group_id: int) -> int:
+    from sqlalchemy import func
+
+    result = await session.execute(
+        select(func.count())
+        .select_from(GroupMembership)
+        .where(GroupMembership.group_id == group_id)
+    )
+    return result.scalar_one()
+
+
+async def count_packages(session: AsyncSession, group_id: int) -> int:
+    from sqlalchemy import func
+
+    result = await session.execute(
+        select(func.count()).select_from(GroupPackage).where(GroupPackage.group_id == group_id)
+    )
+    return result.scalar_one()

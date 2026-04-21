@@ -1,4 +1,4 @@
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,26 +6,45 @@ from src.errors import CannotDeleteDefaultGroupError, ForbiddenError, GroupNotFo
 from src.models.group import GroupCreate, GroupRead, GroupWithCounts
 from src.repositories import group_repo, user_repo
 
+if TYPE_CHECKING:
+    from src.auth import CurrentUser
+
+
+async def _require_admin(session: AsyncSession, current_user: "CurrentUser") -> None:
+    """Raises ForbiddenError if user is not an org admin."""
+    if current_user.org_id is None:
+        raise ForbiddenError("No active organisation")
+    role = await user_repo.get_user_org_role(session, current_user.clerk_id, current_user.org_id)
+    if role != "admin":
+        raise ForbiddenError("Organisation admin access required")
+
 
 async def list_groups(session: AsyncSession, clerk_org_id: str) -> list[GroupWithCounts]:
     org = await user_repo.get_org_by_clerk_id(session, clerk_org_id)
     if org is None:
         return []
     groups = await group_repo.get_groups_for_org(session, cast(int, org.id))
-    return [
-        GroupWithCounts(
-            id=cast(int, g.id),
-            org_id=cast(int, g.org_id),
-            name=g.name,
-            is_default=g.is_default,
-            member_count=0,
-            package_count=0,
+    result = []
+    for g in groups:
+        member_count = await group_repo.count_members(session, cast(int, g.id))
+        package_count = await group_repo.count_packages(session, cast(int, g.id))
+        result.append(
+            GroupWithCounts(
+                id=cast(int, g.id),
+                org_id=cast(int, g.org_id),
+                name=g.name,
+                is_default=g.is_default,
+                member_count=member_count,
+                package_count=package_count,
+            )
         )
-        for g in groups
-    ]
+    return result
 
 
-async def create_group(session: AsyncSession, clerk_org_id: str, body: GroupCreate) -> GroupRead:
+async def create_group(
+    session: AsyncSession, clerk_org_id: str, body: GroupCreate, current_user: "CurrentUser"
+) -> GroupRead:
+    await _require_admin(session, current_user)
     org = await user_repo.get_org_by_clerk_id(session, clerk_org_id)
     if org is None:
         raise ForbiddenError("Organisation not found")
@@ -33,7 +52,10 @@ async def create_group(session: AsyncSession, clerk_org_id: str, body: GroupCrea
     return GroupRead.model_validate(grp.model_dump())
 
 
-async def delete_group(session: AsyncSession, group_id: int, clerk_org_id: str) -> None:
+async def delete_group(
+    session: AsyncSession, group_id: int, clerk_org_id: str, current_user: "CurrentUser"
+) -> None:
+    await _require_admin(session, current_user)
     grp = await group_repo.get_group_by_id(session, group_id)
     if grp is None:
         raise GroupNotFoundError(group_id)
@@ -45,7 +67,14 @@ async def delete_group(session: AsyncSession, group_id: int, clerk_org_id: str) 
     await group_repo.delete_group(session, grp)
 
 
-async def add_member(session: AsyncSession, group_id: int, user_id: int, clerk_org_id: str) -> None:
+async def add_member(
+    session: AsyncSession,
+    group_id: int,
+    user_id: int,
+    clerk_org_id: str,
+    current_user: "CurrentUser",
+) -> None:
+    await _require_admin(session, current_user)
     grp = await group_repo.get_group_by_id(session, group_id)
     if grp is None:
         raise GroupNotFoundError(group_id)
@@ -56,8 +85,13 @@ async def add_member(session: AsyncSession, group_id: int, user_id: int, clerk_o
 
 
 async def remove_member(
-    session: AsyncSession, group_id: int, user_id: int, clerk_org_id: str
+    session: AsyncSession,
+    group_id: int,
+    user_id: int,
+    clerk_org_id: str,
+    current_user: "CurrentUser",
 ) -> None:
+    await _require_admin(session, current_user)
     grp = await group_repo.get_group_by_id(session, group_id)
     if grp is None:
         raise GroupNotFoundError(group_id)
@@ -68,8 +102,13 @@ async def remove_member(
 
 
 async def assign_package(
-    session: AsyncSession, group_id: int, package_id: int, clerk_org_id: str
+    session: AsyncSession,
+    group_id: int,
+    package_id: int,
+    clerk_org_id: str,
+    current_user: "CurrentUser",
 ) -> None:
+    await _require_admin(session, current_user)
     grp = await group_repo.get_group_by_id(session, group_id)
     if grp is None:
         raise GroupNotFoundError(group_id)
@@ -80,8 +119,13 @@ async def assign_package(
 
 
 async def unassign_package(
-    session: AsyncSession, group_id: int, package_id: int, clerk_org_id: str
+    session: AsyncSession,
+    group_id: int,
+    package_id: int,
+    clerk_org_id: str,
+    current_user: "CurrentUser",
 ) -> None:
+    await _require_admin(session, current_user)
     grp = await group_repo.get_group_by_id(session, group_id)
     if grp is None:
         raise GroupNotFoundError(group_id)

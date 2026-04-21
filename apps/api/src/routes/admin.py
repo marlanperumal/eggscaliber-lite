@@ -83,8 +83,6 @@ async def delete_subscription(
 
 class PackageUpdate(SQLModel):
     visibility: PackageVisibility | None = None
-    name: str | None = None
-    description: str | None = None
 
 
 @router.patch("/admin/packages/{package_id}", response_model=PackageRead)

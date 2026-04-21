@@ -53,7 +53,7 @@ export function GroupsList({ selectedGroupId, onSelect }: Props) {
             onClick={() => onSelect(g.id)}
             className={`flex w-full items-center gap-2 border-border border-b px-4 py-2 text-left text-sm transition-colors last:border-b-0 ${
               selectedGroupId === g.id
-                ? "border-l-2 border-l-[--primary] bg-primary/10 font-semibold text-foreground"
+                ? "border-l-2 border-l-primary bg-primary/10 font-semibold text-foreground"
                 : "text-foreground hover:bg-muted"
             }`}
           >
