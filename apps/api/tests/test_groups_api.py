@@ -357,3 +357,114 @@ async def test_unassign_package_without_org_returns_403(client):
     """DELETE /groups/{id}/packages/{package_id} returns 403 when the caller has no active organisation."""
     response = await client.delete("/api/v1/groups/999/packages/1")
     assert response.status_code == 403
+
+
+@pytest_asyncio.fixture
+async def non_admin_group_fixtures(db, client):
+    """Org + group + a user whose membership role is 'member' (not 'admin')."""
+    org = Organisation(clerk_org_id="org_non_admin", name="Non Admin Org")
+    db.add(org)
+    await db.flush()
+    await db.refresh(org)
+
+    user = User(clerk_id="user_non_admin", email="nonadmin@example.com")
+    db.add(user)
+    await db.flush()
+    await db.refresh(user)
+
+    membership = OrgMembership(user_id=cast(int, user.id), org_id=cast(int, org.id), role="member")
+    db.add(membership)
+
+    grp = Group(org_id=cast(int, org.id), name="Members Group")
+    db.add(grp)
+    await db.flush()
+    await db.refresh(grp)
+
+    pkg = Package(name="Non Admin Pkg", slug="non-admin-pkg", visibility=PackageVisibility.private)
+    db.add(pkg)
+    await db.flush()
+    await db.refresh(pkg)
+
+    return {"org": org, "user": user, "group": grp, "pkg": pkg}
+
+
+@pytest.mark.asyncio
+async def test_add_member_as_non_admin_returns_403(client, non_admin_group_fixtures, db):
+    """POST /groups/{id}/members returns 403 when caller has org_id but is not an admin."""
+    from src.auth import CurrentUser, get_current_user
+    from src.main import app
+
+    f = non_admin_group_fixtures
+
+    def override_user() -> CurrentUser:
+        return CurrentUser(
+            clerk_id=f["user"].clerk_id, email=f["user"].email, org_id=f["org"].clerk_org_id
+        )
+
+    app.dependency_overrides[get_current_user] = override_user
+    resp = await client.post(f"/api/v1/groups/{f['group'].id}/members", json={"user_id": 99})
+    app.dependency_overrides.pop(get_current_user, None)
+
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_remove_member_as_non_admin_returns_403(client, non_admin_group_fixtures, db):
+    """DELETE /groups/{id}/members/{user_id} returns 403 when caller has org_id but is not an admin."""
+    from src.auth import CurrentUser, get_current_user
+    from src.main import app
+
+    f = non_admin_group_fixtures
+
+    def override_user() -> CurrentUser:
+        return CurrentUser(
+            clerk_id=f["user"].clerk_id, email=f["user"].email, org_id=f["org"].clerk_org_id
+        )
+
+    app.dependency_overrides[get_current_user] = override_user
+    resp = await client.delete(f"/api/v1/groups/{f['group'].id}/members/99")
+    app.dependency_overrides.pop(get_current_user, None)
+
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_assign_package_as_non_admin_returns_403(client, non_admin_group_fixtures, db):
+    """POST /groups/{id}/packages returns 403 when caller has org_id but is not an admin."""
+    from src.auth import CurrentUser, get_current_user
+    from src.main import app
+
+    f = non_admin_group_fixtures
+
+    def override_user() -> CurrentUser:
+        return CurrentUser(
+            clerk_id=f["user"].clerk_id, email=f["user"].email, org_id=f["org"].clerk_org_id
+        )
+
+    app.dependency_overrides[get_current_user] = override_user
+    resp = await client.post(
+        f"/api/v1/groups/{f['group'].id}/packages", json={"package_id": f["pkg"].id}
+    )
+    app.dependency_overrides.pop(get_current_user, None)
+
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_unassign_package_as_non_admin_returns_403(client, non_admin_group_fixtures, db):
+    """DELETE /groups/{id}/packages/{package_id} returns 403 when caller has org_id but is not an admin."""
+    from src.auth import CurrentUser, get_current_user
+    from src.main import app
+
+    f = non_admin_group_fixtures
+
+    def override_user() -> CurrentUser:
+        return CurrentUser(
+            clerk_id=f["user"].clerk_id, email=f["user"].email, org_id=f["org"].clerk_org_id
+        )
+
+    app.dependency_overrides[get_current_user] = override_user
+    resp = await client.delete(f"/api/v1/groups/{f['group'].id}/packages/{f['pkg'].id}")
+    app.dependency_overrides.pop(get_current_user, None)
+
+    assert resp.status_code == 403
