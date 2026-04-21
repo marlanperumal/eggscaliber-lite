@@ -4,6 +4,7 @@ import { useOrganization } from "@clerk/nextjs"
 import type { components } from "@shared/api"
 import { useEffect, useState } from "react"
 import { api } from "@/lib/api"
+import { mutate } from "@/lib/mutate"
 
 type PackageRead = components["schemas"]["PackageRead"]
 
@@ -44,19 +45,29 @@ export function PackagesPanel({ groupId }: Props) {
   const togglePackage = async (packageId: number) => {
     if (!groupId) return
     if (groupPackageIds.has(packageId)) {
-      await api.DELETE("/api/v1/groups/{group_id}/packages/{package_id}", {
-        params: { path: { group_id: groupId, package_id: packageId } },
-      })
+      const { error } = await mutate(
+        () =>
+          api.DELETE("/api/v1/groups/{group_id}/packages/{package_id}", {
+            params: { path: { group_id: groupId, package_id: packageId } },
+          }),
+        { errorMessage: "Failed to remove package. Please try again." },
+      )
+      if (error) return
       setGroupPackageIds((prev) => {
         const s = new Set(prev)
         s.delete(packageId)
         return s
       })
     } else {
-      await api.POST("/api/v1/groups/{group_id}/packages", {
-        params: { path: { group_id: groupId } },
-        body: { package_id: packageId },
-      })
+      const { error } = await mutate(
+        () =>
+          api.POST("/api/v1/groups/{group_id}/packages", {
+            params: { path: { group_id: groupId } },
+            body: { package_id: packageId },
+          }),
+        { errorMessage: "Failed to assign package. Please try again." },
+      )
+      if (error) return
       setGroupPackageIds((prev) => new Set([...prev, packageId]))
     }
   }

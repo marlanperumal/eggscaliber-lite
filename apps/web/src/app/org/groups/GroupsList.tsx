@@ -4,6 +4,7 @@ import { useOrganization } from "@clerk/nextjs"
 import type { components } from "@shared/api"
 import { useCallback, useEffect, useState } from "react"
 import { api } from "@/lib/api"
+import { mutate } from "@/lib/mutate"
 
 type GroupWithCounts = components["schemas"]["GroupWithCounts"]
 
@@ -47,20 +48,22 @@ export function GroupsList({ selectedGroupId, onSelect }: Props) {
 
   const handleCreate = async () => {
     if (!newName.trim()) return
-    const { data } = await api.POST("/api/v1/groups", {
-      body: { name: newName.trim() },
-    })
-    if (data) {
-      await fetchGroups()
-      setShowCreate(false)
-      setNewName("")
-    }
+    const { data, error } = await mutate(
+      () => api.POST("/api/v1/groups", { body: { name: newName.trim() } }),
+      { errorMessage: "Failed to create group. Please try again." },
+    )
+    if (error || !data) return
+    await fetchGroups()
+    setShowCreate(false)
+    setNewName("")
   }
 
   const handleDelete = async (groupId: number) => {
-    await api.DELETE("/api/v1/groups/{group_id}", {
-      params: { path: { group_id: groupId } },
-    })
+    const { error } = await mutate(
+      () => api.DELETE("/api/v1/groups/{group_id}", { params: { path: { group_id: groupId } } }),
+      { errorMessage: "Failed to delete group. Please try again." },
+    )
+    if (error) return
     if (selectedGroupId === groupId) onSelect(null)
     setDeletingId(null)
     await fetchGroups()

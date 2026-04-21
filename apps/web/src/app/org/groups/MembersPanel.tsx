@@ -4,6 +4,7 @@ import { useOrganization } from "@clerk/nextjs"
 import type { components } from "@shared/api"
 import { useCallback, useEffect, useState } from "react"
 import { api } from "@/lib/api"
+import { mutate } from "@/lib/mutate"
 
 type GroupMemberRead = components["schemas"]["GroupMemberRead"]
 type OrgMemberRead = components["schemas"]["OrgMemberRead"]
@@ -45,19 +46,29 @@ export function MembersPanel({ groupId, isDefault }: Props) {
 
   const handleAdd = async (userId: number) => {
     if (!groupId) return
-    await api.POST("/api/v1/groups/{group_id}/members", {
-      params: { path: { group_id: groupId } },
-      body: { user_id: userId },
-    })
+    const { error } = await mutate(
+      () =>
+        api.POST("/api/v1/groups/{group_id}/members", {
+          params: { path: { group_id: groupId } },
+          body: { user_id: userId },
+        }),
+      { errorMessage: "Failed to add member. Please try again." },
+    )
+    if (error) return
     await fetchMembers(groupId)
     setShowAdd(false)
   }
 
   const handleRemove = async (userId: number) => {
     if (!groupId) return
-    await api.DELETE("/api/v1/groups/{group_id}/members/{user_id}", {
-      params: { path: { group_id: groupId, user_id: userId } },
-    })
+    const { error } = await mutate(
+      () =>
+        api.DELETE("/api/v1/groups/{group_id}/members/{user_id}", {
+          params: { path: { group_id: groupId, user_id: userId } },
+        }),
+      { errorMessage: "Failed to remove member. Please try again." },
+    )
+    if (error) return
     setMembers((prev) => prev.filter((m) => m.user_id !== userId))
   }
 
