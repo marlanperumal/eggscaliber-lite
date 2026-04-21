@@ -87,3 +87,57 @@ async def test_admin_update_package_visibility(client, admin_fixtures, db):
 
     assert resp.status_code == 200
     assert resp.json()["visibility"] == "public"
+
+
+@pytest.mark.asyncio
+async def test_admin_list_packages_requires_superuser(client):
+    response = await client.get("/api/v1/admin/packages")
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_list_packages_returns_all(client, seeded_package, db):
+    from src.auth import CurrentUser, get_current_user
+    from src.main import app
+
+    def override_superuser() -> CurrentUser:
+        return CurrentUser(
+            clerk_id="super_user", email="super@test.com", org_id=None, is_superuser=True
+        )
+
+    app.dependency_overrides[get_current_user] = override_superuser
+    response = await client.get("/api/v1/admin/packages")
+    app.dependency_overrides.pop(get_current_user, None)
+
+    assert response.status_code == 200
+    ids = [p["id"] for p in response.json()]
+    assert seeded_package.id in ids
+
+
+@pytest.mark.asyncio
+async def test_admin_create_package(client, db):
+    from src.auth import CurrentUser, get_current_user
+    from src.main import app
+
+    def override_superuser() -> CurrentUser:
+        return CurrentUser(
+            clerk_id="super_user", email="super@test.com", org_id=None, is_superuser=True
+        )
+
+    app.dependency_overrides[get_current_user] = override_superuser
+    response = await client.post(
+        "/api/v1/admin/packages",
+        json={"name": "Test Package", "description": "A test"},
+    )
+    app.dependency_overrides.pop(get_current_user, None)
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["name"] == "Test Package"
+    assert data["slug"] == "test-package"
+
+
+@pytest.mark.asyncio
+async def test_admin_list_collections_requires_superuser(client):
+    response = await client.get("/api/v1/admin/collections")
+    assert response.status_code == 403

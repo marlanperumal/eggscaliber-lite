@@ -11,6 +11,12 @@ class PackageVisibility(StrEnum):
     private = "private"
 
 
+class PackageCreate(SQLModel):
+    name: str
+    slug: str | None = None
+    description: str | None = None
+
+
 class PackageBase(SQLModel):
     name: str
     slug: str

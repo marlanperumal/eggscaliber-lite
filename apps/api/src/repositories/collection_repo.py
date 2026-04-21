@@ -6,6 +6,11 @@ from src.models.dataset import Dataset
 from src.models.group import PackageCollection
 
 
+async def get_all(session: AsyncSession) -> list[Collection]:
+    result = await session.execute(select(Collection))
+    return list(result.scalars().all())
+
+
 async def get_all_for_packages(session: AsyncSession, package_ids: list[int]) -> list[Collection]:
     if not package_ids:
         return []

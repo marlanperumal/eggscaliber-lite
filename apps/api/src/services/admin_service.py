@@ -1,13 +1,15 @@
+import re
 from datetime import date
 from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.errors import PackageNotFoundError
+from src.models.collection import CollectionRead
 from src.models.group import OrgSubscriptionRead
-from src.models.package import PackageRead, PackageVisibility
+from src.models.package import PackageCreate, PackageRead, PackageVisibility
 from src.models.user import OrganisationRead
-from src.repositories import admin_repo
+from src.repositories import admin_repo, collection_repo, package_repo
 
 
 async def list_orgs(session: AsyncSession) -> list[OrganisationRead]:
@@ -81,3 +83,52 @@ async def update_package_visibility(
         visibility=pkg.visibility,
         created_at=pkg.created_at,
     )
+
+
+async def list_packages(session: AsyncSession) -> list[PackageRead]:
+    pkgs = await package_repo.get_all(session)
+    return [
+        PackageRead(
+            id=cast(int, p.id),
+            name=p.name,
+            slug=p.slug,
+            description=p.description,
+            visibility=p.visibility,
+            created_at=p.created_at,
+        )
+        for p in pkgs
+    ]
+
+
+def _slugify(name: str) -> str:
+    return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", name.lower())).strip("-")
+
+
+async def create_package(session: AsyncSession, body: PackageCreate) -> PackageRead:
+    slug = body.slug or _slugify(body.name)
+    pkg = await package_repo.create_package(
+        session, name=body.name, slug=slug, description=body.description
+    )
+    return PackageRead(
+        id=cast(int, pkg.id),
+        name=pkg.name,
+        slug=pkg.slug,
+        description=pkg.description,
+        visibility=pkg.visibility,
+        created_at=pkg.created_at,
+    )
+
+
+async def list_collections(session: AsyncSession) -> list[CollectionRead]:
+    cols = await collection_repo.get_all(session)
+    return [
+        CollectionRead(
+            id=cast(int, c.id),
+            name=c.name,
+            slug=c.slug,
+            description=c.description,
+            collection_type=c.collection_type,
+            created_at=c.created_at,
+        )
+        for c in cols
+    ]

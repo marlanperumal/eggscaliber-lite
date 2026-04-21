@@ -6,8 +6,9 @@ from sqlmodel import SQLModel
 
 from src.auth import CurrentUser, get_current_user
 from src.database import get_session
+from src.models.collection import CollectionRead
 from src.models.group import OrgSubscriptionRead
-from src.models.package import PackageRead, PackageVisibility
+from src.models.package import PackageCreate, PackageRead, PackageVisibility
 from src.models.user import OrganisationRead
 from src.services import admin_service
 
@@ -81,6 +82,25 @@ async def delete_subscription(
     await admin_service.delete_subscription(session, org_id, package_id)
 
 
+@router.get("/admin/packages", response_model=list[PackageRead])
+async def list_all_packages(
+    _: CurrentUser = Depends(_require_superuser),
+    session: AsyncSession = Depends(get_session),
+):
+    """List all packages (super-user only)."""
+    return await admin_service.list_packages(session)
+
+
+@router.post("/admin/packages", response_model=PackageRead, status_code=201)
+async def create_package(
+    body: PackageCreate,
+    _: CurrentUser = Depends(_require_superuser),
+    session: AsyncSession = Depends(get_session),
+):
+    """Create a new package (super-user only)."""
+    return await admin_service.create_package(session, body)
+
+
 class PackageUpdate(SQLModel):
     visibility: PackageVisibility | None = None
 
@@ -96,3 +116,12 @@ async def update_package(
     if body.visibility is not None:
         return await admin_service.update_package_visibility(session, package_id, body.visibility)
     raise HTTPException(422, "No updatable fields provided")
+
+
+@router.get("/admin/collections", response_model=list[CollectionRead])
+async def list_all_collections(
+    _: CurrentUser = Depends(_require_superuser),
+    session: AsyncSession = Depends(get_session),
+):
+    """List all collections (super-user only)."""
+    return await admin_service.list_collections(session)
