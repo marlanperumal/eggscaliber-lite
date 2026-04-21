@@ -27,7 +27,7 @@ async def test_admin_list_orgs_requires_superuser(client):
 
 
 @pytest.mark.asyncio
-async def test_admin_list_orgs_as_superuser(client, admin_fixtures, db):
+async def test_admin_list_orgs_as_superuser_returns_all_orgs(client, admin_fixtures, db):
     from src.auth import CurrentUser, get_current_user
     from src.main import app
 
@@ -46,7 +46,9 @@ async def test_admin_list_orgs_as_superuser(client, admin_fixtures, db):
 
 
 @pytest.mark.asyncio
-async def test_admin_subscribe_org_to_package(client, admin_fixtures, db):
+async def test_admin_subscribe_org_to_package_returns_201_with_package_id(
+    client, admin_fixtures, db
+):
     from src.auth import CurrentUser, get_current_user
     from src.main import app
 
@@ -70,7 +72,9 @@ async def test_admin_subscribe_org_to_package(client, admin_fixtures, db):
 
 
 @pytest.mark.asyncio
-async def test_admin_update_package_visibility(client, admin_fixtures, db):
+async def test_admin_update_package_visibility_returns_updated_visibility(
+    client, admin_fixtures, db
+):
     from src.auth import CurrentUser, get_current_user
     from src.main import app
 
@@ -99,7 +103,7 @@ async def test_admin_list_packages_requires_superuser(client):
 
 
 @pytest.mark.asyncio
-async def test_admin_list_packages_returns_all(client, seeded_package, db):
+async def test_admin_list_packages_as_superuser_returns_all_packages(client, seeded_package, db):
     from src.auth import CurrentUser, get_current_user
     from src.main import app
 
@@ -118,7 +122,7 @@ async def test_admin_list_packages_returns_all(client, seeded_package, db):
 
 
 @pytest.mark.asyncio
-async def test_admin_create_package(client, db):
+async def test_admin_create_package_auto_generates_slug(client, db):
     from src.auth import CurrentUser, get_current_user
     from src.main import app
 
@@ -147,7 +151,9 @@ async def test_admin_list_collections_requires_superuser(client):
 
 
 @pytest.mark.asyncio
-async def test_admin_list_collections_returns_all(client, seeded_collection, db):
+async def test_admin_list_collections_as_superuser_returns_all_collections(
+    client, seeded_collection, db
+):
     from src.auth import CurrentUser, get_current_user
     from src.main import app
 
