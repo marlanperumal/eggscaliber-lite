@@ -1,9 +1,24 @@
-from sqlalchemy import select
+from __future__ import annotations
+
+from datetime import date as date_type
+from typing import TYPE_CHECKING
+
+from sqlalchemy import select, union
 from sqlalchemy.ext.asyncio import AsyncSession
 
+if TYPE_CHECKING:
+    from src.auth import CurrentUser
+
 from src.models.collection import Collection
-from src.models.group import PackageCollection
-from src.models.package import Package
+from src.models.group import (
+    Group,
+    GroupMembership,
+    GroupPackage,
+    OrgSubscription,
+    PackageCollection,
+)
+from src.models.package import Package, PackageVisibility
+from src.models.user import Organisation, User
 
 
 async def get_all(session: AsyncSession) -> list[Package]:
@@ -33,3 +48,47 @@ async def get_collections_for_package(session: AsyncSession, package_id: int) ->
         .where(PackageCollection.package_id == package_id)
     )
     return list(result.scalars().all())
+
+
+async def get_accessible_ids(session: AsyncSession, user: CurrentUser) -> set[int]:
+    """Return the set of package IDs accessible to the given user.
+
+    A package is accessible if it is public, or if the user's org has an active
+    subscription to it AND the user belongs to a group that has been granted access.
+    """
+    public_q = select(Package.id).where(Package.visibility == PackageVisibility.public)
+
+    if user.org_id is None:
+        result = await session.execute(public_q)
+        return {id_ for id_ in result.scalars().all() if id_ is not None}
+
+    org_id_subq = (
+        select(Organisation.id).where(Organisation.clerk_org_id == user.org_id).scalar_subquery()
+    )
+    user_id_subq = select(User.id).where(User.clerk_id == user.clerk_id).scalar_subquery()
+    today = date_type.today()
+
+    private_q = (
+        select(Package.id)
+        .join(OrgSubscription, OrgSubscription.package_id == Package.id)
+        .join(GroupPackage, GroupPackage.package_id == Package.id)
+        .join(
+            Group,
+            (Group.id == GroupPackage.group_id) & (Group.org_id == OrgSubscription.org_id),
+        )
+        .join(
+            GroupMembership,
+            (GroupMembership.group_id == Group.id) & (GroupMembership.user_id == user_id_subq),
+        )
+        .where(
+            Package.visibility == PackageVisibility.private,
+            OrgSubscription.org_id == org_id_subq,
+            OrgSubscription.start_date <= today,
+            (OrgSubscription.end_date.is_(None)) | (OrgSubscription.end_date >= today),
+        )
+        .distinct()
+    )
+
+    combined = union(public_q, private_q)
+    result = await session.execute(combined)
+    return {id_ for id_ in result.scalars().all() if id_ is not None}

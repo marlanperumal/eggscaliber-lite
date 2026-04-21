@@ -49,6 +49,7 @@ class Settings(BaseSettings):
 
     auth_mode: str = "dev"
     dev_jwt_secret: str = "dev-secret-change-in-production"
+    dev_superuser: bool = False
     clerk_jwt_key: str = ""
     clerk_webhook_secret: str = ""
 
