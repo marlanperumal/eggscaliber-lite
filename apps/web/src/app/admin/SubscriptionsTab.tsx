@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { api } from "@/lib/api"
 
 type PackageRead = components["schemas"]["PackageRead"]
-type OrgSubscriptionRead = components["schemas"]["OrgSubscriptionRead"]
 
 interface Props {
   orgId: number | null

@@ -17,7 +17,7 @@ export function AdminPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.GET("/api/v1/admin/orgs").then(({ data, error, response }) => {
+    api.GET("/api/v1/admin/orgs").then(({ data, response }) => {
       if (response.status === 403) {
         router.push("/analytics")
         return

@@ -2,7 +2,6 @@ import re
 from datetime import date
 from typing import cast
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.errors import PackageCollectionNotFoundError, PackageNotFoundError
@@ -157,25 +156,14 @@ async def update_collection_scope(
     collection_id: int,
     scope: PackageCollectionScope,
 ) -> PackageCollectionDetail:
-    from src.models.group import PackageCollectionDataset
-
     pc = await admin_repo.update_collection_scope(
         session, package_id=package_id, collection_id=collection_id, scope=scope
     )
     if pc is None:
         raise PackageCollectionNotFoundError(package_id, collection_id)
     col = await collection_repo.get_by_id(session, collection_id)
-    ds_ids = list(
-        (
-            await session.execute(
-                select(PackageCollectionDataset.dataset_id).where(
-                    PackageCollectionDataset.package_id == package_id,
-                    PackageCollectionDataset.collection_id == collection_id,
-                )
-            )
-        )
-        .scalars()
-        .all()
+    ds_ids = await admin_repo.get_dataset_ids_for_package_collection(
+        session, package_id=package_id, collection_id=collection_id
     )
     return PackageCollectionDetail(
         package_id=pc.package_id,

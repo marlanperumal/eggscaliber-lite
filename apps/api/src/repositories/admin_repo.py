@@ -147,6 +147,22 @@ async def update_collection_scope(
     return pc
 
 
+async def get_dataset_ids_for_package_collection(
+    session: AsyncSession,
+    *,
+    package_id: int,
+    collection_id: int,
+) -> list[int]:
+    """Return dataset_ids for the selected-scope inclusion list of a package-collection pair."""
+    result = await session.execute(
+        select(PackageCollectionDataset.dataset_id).where(
+            PackageCollectionDataset.package_id == package_id,
+            PackageCollectionDataset.collection_id == collection_id,
+        )
+    )
+    return list(result.scalars().all())
+
+
 async def remove_collection_from_package(
     session: AsyncSession, *, package_id: int, collection_id: int
 ) -> None:
