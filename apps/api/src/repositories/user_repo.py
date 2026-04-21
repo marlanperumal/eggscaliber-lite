@@ -113,6 +113,18 @@ async def get_user_org_role(
     return result.scalar_one_or_none()
 
 
+async def get_org_members(
+    session: AsyncSession, org_id: int
+) -> list[tuple[int | None, str, str | None, str | None, str]]:
+    """Return (user_id, clerk_id, email, display_name, role) rows for all org members."""
+    result = await session.execute(
+        select(User.id, User.clerk_id, User.email, User.display_name, OrgMembership.role)
+        .join(OrgMembership, OrgMembership.user_id == User.id)
+        .where(OrgMembership.org_id == org_id)
+    )
+    return list(result.all())
+
+
 async def delete_membership(
     session: AsyncSession,
     *,

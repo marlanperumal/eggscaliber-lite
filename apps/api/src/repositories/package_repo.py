@@ -111,3 +111,36 @@ async def get_accessible_ids(session: AsyncSession, user: CurrentUser) -> set[in
     combined = union(public_q, private_q)
     result = await session.execute(combined)
     return {id_ for id_ in result.scalars().all() if id_ is not None}
+
+
+async def get_org_subscribed_packages(session: AsyncSession, org_id: int) -> list[Package]:
+    """Return all packages visible to an org: public packages plus active private subscriptions."""
+    today = date_type.today()
+
+    public_pkgs = list(
+        (
+            await session.execute(
+                select(Package).where(Package.visibility == PackageVisibility.public)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    private_pkgs = list(
+        (
+            await session.execute(
+                select(Package)
+                .join(OrgSubscription, OrgSubscription.package_id == Package.id)
+                .where(
+                    Package.visibility == PackageVisibility.private,
+                    OrgSubscription.org_id == org_id,
+                    OrgSubscription.start_date <= today,
+                    (OrgSubscription.end_date.is_(None)) | (OrgSubscription.end_date >= today),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    seen = {p.id for p in public_pkgs}
+    return public_pkgs + [p for p in private_pkgs if p.id not in seen]

@@ -56,3 +56,11 @@ class OrgMembershipRead(OrgMembershipBase):
 
 class WebhookAck(SQLModel):
     status: str
+
+
+class OrgMemberRead(SQLModel):
+    user_id: int
+    clerk_id: str
+    email: str
+    display_name: str | None
+    role: str

@@ -27,6 +27,9 @@ from src.routes import (
     uploads,
     webhooks,
 )
+from src.routes import (
+    org as org_router,
+)
 
 if settings.sentry_dsn:
     sentry_sdk.init(
@@ -55,6 +58,7 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
 
 
 app.include_router(admin_router.router, prefix="/api/v1")
+app.include_router(org_router.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(sentry.router, prefix="/api/v1")
 app.include_router(webhooks.router, prefix="/api/v1")
