@@ -1,8 +1,14 @@
 from datetime import UTC, date, datetime
+from enum import StrEnum
 
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlmodel import Field, SQLModel
+
+
+class PackageCollectionScope(StrEnum):
+    all = "all"
+    selected = "selected"
 
 
 class Group(SQLModel, table=True):
@@ -62,13 +68,13 @@ class PackageCollection(SQLModel, table=True):
 
     package_id: int = Field(foreign_key="package.id", primary_key=True)
     collection_id: int = Field(foreign_key="collection.id", primary_key=True)
-    scope: str = Field(default="all")  # "all" | "selected"
+    scope: PackageCollectionScope = Field(default=PackageCollectionScope.all)
 
 
 class PackageCollectionRead(SQLModel):
     package_id: int
     collection_id: int
-    scope: str
+    scope: PackageCollectionScope
 
 
 class PackageCollectionDataset(SQLModel, table=True):

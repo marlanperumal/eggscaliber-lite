@@ -12,6 +12,7 @@ from .group import (  # noqa: F401
     PackageCollection,
     PackageCollectionDataset,
     PackageCollectionRead,
+    PackageCollectionScope,
 )
 from .level import Level, LevelBase, LevelRead  # noqa: F401
 from .package import (  # noqa: F401
