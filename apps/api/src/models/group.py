@@ -42,6 +42,30 @@ class GroupPackage(SQLModel, table=True):
     package_id: int = Field(foreign_key="package.id", primary_key=True)
 
 
+class GroupMemberRead(SQLModel):
+    user_id: int
+    clerk_id: str
+    email: str
+    display_name: str | None
+    role: str
+
+
+class GroupPackageRead(SQLModel):
+    package_id: int
+    name: str
+    slug: str
+    visibility: str
+
+
+class GroupCreate(SQLModel):
+    name: str
+
+
+class GroupWithCounts(GroupRead):
+    member_count: int
+    package_count: int
+
+
 class OrgSubscription(SQLModel, table=True):
     __tablename__ = "org_subscriptions"
     __table_args__ = (UniqueConstraint("org_id", "package_id"),)

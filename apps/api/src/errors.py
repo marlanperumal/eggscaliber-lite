@@ -51,3 +51,24 @@ class AIServiceError(DomainError):
 class InvalidFileTypeError(DomainError):
     status_code = 422
     code = "invalid_file_type"
+
+
+class ForbiddenError(DomainError):
+    status_code = 403
+    code = "forbidden"
+
+
+class GroupNotFoundError(DomainError):
+    status_code = 404
+    code = "group_not_found"
+
+    def __init__(self, group_id: int) -> None:
+        super().__init__(f"Group {group_id} not found")
+
+
+class CannotDeleteDefaultGroupError(DomainError):
+    status_code = 422
+    code = "cannot_delete_default_group"
+
+    def __init__(self) -> None:
+        super().__init__("Cannot delete the Default group")

@@ -16,6 +16,7 @@ from src.routes import (
     analytics,
     collections,
     datasets,
+    groups,
     health,
     packages,
     scope,
@@ -60,6 +61,7 @@ app.include_router(datasets.router, prefix="/api/v1", dependencies=[Depends(get_
 app.include_router(analytics.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 app.include_router(ai.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 app.include_router(uploads.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
+app.include_router(groups.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 
 mcp = FastMCP.from_fastapi(
     app,

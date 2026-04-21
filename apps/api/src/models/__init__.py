@@ -4,9 +4,13 @@ from .field import Field, FieldBase, FieldRead, FieldType  # noqa: F401
 from .field_group import FieldGroup, FieldGroupBase, FieldGroupRead  # noqa: F401
 from .group import (  # noqa: F401
     Group,
+    GroupCreate,
+    GroupMemberRead,
     GroupMembership,
     GroupPackage,
+    GroupPackageRead,
     GroupRead,
+    GroupWithCounts,
     OrgSubscription,
     OrgSubscriptionRead,
     PackageCollection,
