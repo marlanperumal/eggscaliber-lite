@@ -183,6 +183,27 @@ async def test_admin_create_subscription_requires_superuser(client, admin_fixtur
     assert response.status_code == 403
 
 
+@pytest.mark.asyncio
+async def test_admin_update_package_requires_superuser(client, admin_fixtures):
+    """PATCH /admin/packages/{id} returns 403 for non-superuser (default client fixture user)."""
+    f = admin_fixtures
+    response = await client.patch(
+        f"/api/v1/admin/packages/{f['pkg'].id}",
+        json={"visibility": "public"},
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_delete_subscription_requires_superuser(
+    client, admin_fixtures, seed_subscription
+):
+    """DELETE /admin/orgs/{org_id}/subscriptions/{package_id} returns 403 for non-superuser."""
+    f = admin_fixtures
+    response = await client.delete(f"/api/v1/admin/orgs/{f['org'].id}/subscriptions/{f['pkg'].id}")
+    assert response.status_code == 403
+
+
 @pytest_asyncio.fixture
 async def seed_subscription(db, admin_fixtures):
     """An OrgSubscription row for the admin_fixtures org + package."""
