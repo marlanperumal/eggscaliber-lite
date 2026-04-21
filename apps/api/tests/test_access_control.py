@@ -237,6 +237,30 @@ async def test_analytics_rejects_inaccessible_dataset(client, db, bare_dataset, 
 
 
 @pytest.mark.asyncio
+async def test_collection_route_returns_404_when_inaccessible(
+    client, db, seeded_collection, seeded_package
+):
+    """GET /collections/{id} returns 404 when the user cannot access the package."""
+    from src.auth import CurrentUser, get_accessible_package_ids, get_current_user
+    from src.main import app
+
+    def override_user() -> CurrentUser:
+        return CurrentUser(clerk_id="no_org_user", email="noorg@test.com", org_id=None)
+
+    async def override_accessible() -> set[int] | None:
+        return set()  # no packages accessible
+
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_accessible_package_ids] = override_accessible
+
+    resp = await client.get(f"/api/v1/collections/{seeded_collection.id}")
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_accessible_package_ids, None)
+
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_get_package_ids_for_collection(db, seeded_collection, seeded_package):
     ids = await package_repo.get_package_ids_for_collection(db, cast(int, seeded_collection.id))
     assert cast(int, seeded_package.id) in ids

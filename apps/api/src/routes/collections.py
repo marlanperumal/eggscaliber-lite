@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth import CurrentUser, get_current_user
+from src.auth import CurrentUser, get_accessible_package_ids, get_current_user
 from src.database import get_session
 from src.models.collection import (
     CollectionCreate,
@@ -28,10 +28,11 @@ async def create_collection(
 async def get_collection(
     collection_id: int,
     _: CurrentUser = Depends(get_current_user),
+    accessible_ids: set[int] | None = Depends(get_accessible_package_ids),
     session: AsyncSession = Depends(get_session),
 ):
     """Get a collection with all its datasets."""
-    return await collection_service.get_with_datasets(session, collection_id)
+    return await collection_service.get_with_datasets(session, collection_id, accessible_ids)
 
 
 @router.get(
@@ -41,7 +42,8 @@ async def get_collection(
 async def get_collection_consistency(
     collection_id: int,
     _: CurrentUser = Depends(get_current_user),
+    accessible_ids: set[int] | None = Depends(get_accessible_package_ids),
     session: AsyncSession = Depends(get_session),
 ):
     """List field inconsistencies across datasets in a collection (e.g. mismatched types or labels)."""
-    return await collection_service.get_consistency(session, collection_id)
+    return await collection_service.get_consistency(session, collection_id, accessible_ids)

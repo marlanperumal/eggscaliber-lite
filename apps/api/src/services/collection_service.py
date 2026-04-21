@@ -36,11 +36,19 @@ async def create_collection(session: AsyncSession, body: CollectionCreate) -> Co
     return CollectionRead.model_validate(col.model_dump())
 
 
-async def get_with_datasets(session: AsyncSession, collection_id: int) -> CollectionWithDatasets:
-    """Raises CollectionNotFoundError if collection_id does not exist."""
+async def get_with_datasets(
+    session: AsyncSession,
+    collection_id: int,
+    accessible_ids: set[int] | None = None,
+) -> CollectionWithDatasets:
+    """Raises CollectionNotFoundError if collection_id does not exist or is inaccessible."""
     col = await collection_repo.get_by_id(session, collection_id)
     if col is None:
         raise CollectionNotFoundError(collection_id)
+    if accessible_ids is not None:
+        pkg_ids = await package_repo.get_package_ids_for_collection(session, collection_id)
+        if not pkg_ids & accessible_ids:
+            raise CollectionNotFoundError(collection_id)
     datasets = await collection_repo.get_datasets_for_collection(session, collection_id)
     return CollectionWithDatasets.model_validate(
         {
@@ -50,12 +58,20 @@ async def get_with_datasets(session: AsyncSession, collection_id: int) -> Collec
     )
 
 
-async def get_consistency(session: AsyncSession, collection_id: int) -> list[InconsistencyOut]:
-    """Raises CollectionNotFoundError if collection_id does not exist.
+async def get_consistency(
+    session: AsyncSession,
+    collection_id: int,
+    accessible_ids: set[int] | None = None,
+) -> list[InconsistencyOut]:
+    """Raises CollectionNotFoundError if collection_id does not exist or is inaccessible.
     Wraps check_field_consistency with the existence check."""
     col = await collection_repo.get_by_id(session, collection_id)
     if col is None:
         raise CollectionNotFoundError(collection_id)
+    if accessible_ids is not None:
+        pkg_ids = await package_repo.get_package_ids_for_collection(session, collection_id)
+        if not pkg_ids & accessible_ids:
+            raise CollectionNotFoundError(collection_id)
     return await check_field_consistency(session, collection_id)
 
 
