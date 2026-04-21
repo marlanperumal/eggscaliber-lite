@@ -30,6 +30,7 @@ export function Reconciliation({ state, setStep }: Props) {
   const [triggered, setTriggered] = useState(false)
   const [refDatasetId, setRefDatasetId] = useState<string>("")
   const [refDatasetName, setRefDatasetName] = useState<string>("")
+  const [noPriorDataset, setNoPriorDataset] = useState(false)
   const [activeTab, setActiveTab] = useState<ReconGroup>("exact")
   const [rows, setRows] = useState<ReconRow[]>([])
   const [counts, setCounts] = useState<Counts>({ exact: 0, probable: 0, new_only: 0, old_only: 0 })
@@ -62,6 +63,8 @@ export function Reconciliation({ state, setStep }: Props) {
         if (data?.dataset_id) {
           setRefDatasetId(String(data.dataset_id))
           setRefDatasetName(data.dataset_name ?? "")
+        } else {
+          setNoPriorDataset(true)
         }
       })
     if (triggered) fetchFieldTree()
@@ -184,44 +187,71 @@ export function Reconciliation({ state, setStep }: Props) {
     return (
       <div className="space-y-4">
         <h2 className="font-semibold text-base text-foreground">Step 3 — Reconciliation</h2>
-        <p className="text-muted-foreground text-xs">
-          Comparing against the most recent dataset in this collection.
-          {refDatasetName && (
-            <span className="ml-1 font-semibold text-foreground">{refDatasetName}</span>
-          )}
-        </p>
-        <div>
-          <label
-            className="mb-1 block font-semibold text-muted-foreground text-xs"
-            htmlFor="ref-dataset-id"
-          >
-            Reference dataset ID
-          </label>
-          <input
-            id="ref-dataset-id"
-            value={refDatasetId}
-            onChange={(e) => setRefDatasetId(e.target.value)}
-            placeholder="Reference dataset ID"
-            className="rounded border border-border bg-background px-3 py-2 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={triggerReconcile}
-          disabled={!refDatasetId || busy}
-          className="rounded-lg bg-accent px-6 py-2 font-semibold text-sm text-white disabled:opacity-40"
-        >
-          {busy ? "Running…" : "Run reconciliation →"}
-        </button>
-        <div className="flex justify-start pt-2">
-          <button
-            type="button"
-            onClick={() => setStep(2)}
-            className="rounded-lg border border-border px-5 py-2 font-semibold text-muted-foreground text-sm hover:bg-muted"
-          >
-            ← Back
-          </button>
-        </div>
+        {noPriorDataset ? (
+          <>
+            <p className="text-muted-foreground text-sm">
+              No prior datasets found in this collection. Reconciliation is not needed for the first
+              upload.
+            </p>
+            <div className="flex justify-between pt-2">
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="rounded-lg border border-border px-5 py-2 font-semibold text-muted-foreground text-sm hover:bg-muted"
+              >
+                ← Back
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(4)}
+                className="rounded-lg bg-primary px-6 py-2 font-semibold text-primary-foreground text-sm"
+              >
+                Skip reconciliation →
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-muted-foreground text-xs">
+              Comparing against the most recent dataset in this collection.
+              {refDatasetName && (
+                <span className="ml-1 font-semibold text-foreground">{refDatasetName}</span>
+              )}
+            </p>
+            <div>
+              <label
+                className="mb-1 block font-semibold text-muted-foreground text-xs"
+                htmlFor="ref-dataset-id"
+              >
+                Reference dataset ID
+              </label>
+              <input
+                id="ref-dataset-id"
+                value={refDatasetId}
+                onChange={(e) => setRefDatasetId(e.target.value)}
+                placeholder="Reference dataset ID"
+                className="rounded border border-border bg-background px-3 py-2 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={triggerReconcile}
+              disabled={!refDatasetId || busy}
+              className="rounded-lg bg-primary px-6 py-2 font-semibold text-primary-foreground text-sm disabled:opacity-40"
+            >
+              {busy ? "Running…" : "Run reconciliation →"}
+            </button>
+            <div className="flex justify-start pt-2">
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="rounded-lg border border-border px-5 py-2 font-semibold text-muted-foreground text-sm hover:bg-muted"
+              >
+                ← Back
+              </button>
+            </div>
+          </>
+        )}
       </div>
     )
   }
@@ -407,7 +437,7 @@ export function Reconciliation({ state, setStep }: Props) {
           type="button"
           onClick={() => setStep(4)}
           disabled={blockingPending > 0}
-          className="rounded-lg bg-accent px-6 py-2 font-semibold text-sm text-white disabled:opacity-40"
+          className="rounded-lg bg-primary px-6 py-2 font-semibold text-primary-foreground text-sm disabled:opacity-40"
         >
           Next →
         </button>

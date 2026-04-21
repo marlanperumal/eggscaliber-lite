@@ -43,7 +43,7 @@ function mockGetForTriggered(counts = EMPTY_COUNTS, rows: ReconRow[] = []) {
   mockGet.mockImplementation(async (path) => {
     const p = path as string
     if (p.includes("suggested-reference"))
-      return { data: { dataset_id: null, dataset_name: null } } as never
+      return { data: { dataset_id: 10, dataset_name: "Wave 1" } } as never
     if (p.includes("reconcile/counts")) return { data: counts } as never
     if (p.includes("field-tree"))
       return { data: { fields: [], unassigned_fields: [], groups: [] } } as never
@@ -67,12 +67,22 @@ it("shows suggested reference dataset name fetched on mount", async () => {
   await waitFor(() => expect(screen.getByText("Wave 2")).toBeInTheDocument())
 })
 
-it("disables Run button when reference dataset ID is empty", async () => {
+it("shows skip button when no prior dataset exists", async () => {
   mockGet.mockResolvedValue({ data: { dataset_id: null, dataset_name: null } } as never)
   render(<Reconciliation state={makeState()} setStep={vi.fn()} />)
   await waitFor(() =>
-    expect(screen.getByRole("button", { name: /run reconciliation/i })).toBeDisabled(),
+    expect(screen.getByRole("button", { name: /skip reconciliation/i })).toBeInTheDocument(),
   )
+  expect(screen.queryByRole("button", { name: /run reconciliation/i })).not.toBeInTheDocument()
+})
+
+it("disables Run button when reference dataset ID is manually cleared", async () => {
+  const user = userEvent.setup()
+  mockGet.mockResolvedValue({ data: { dataset_id: 42, dataset_name: "Wave 1" } } as never)
+  render(<Reconciliation state={makeState()} setStep={vi.fn()} />)
+  await waitFor(() => screen.getByRole("button", { name: /run reconciliation/i }))
+  await user.clear(screen.getByPlaceholderText("Reference dataset ID"))
+  expect(screen.getByRole("button", { name: /run reconciliation/i })).toBeDisabled()
 })
 
 it("shows reconciliation tabs after running", async () => {
@@ -80,7 +90,6 @@ it("shows reconciliation tabs after running", async () => {
   mockGetForTriggered()
   render(<Reconciliation state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => screen.getByRole("button", { name: /run reconciliation/i }))
-  await user.type(screen.getByPlaceholderText("Reference dataset ID"), "10")
   await user.click(screen.getByRole("button", { name: /run reconciliation/i }))
   await waitFor(() => expect(screen.getByRole("button", { name: /exact/i })).toBeInTheDocument())
   expect(screen.getByRole("button", { name: /probable/i })).toBeInTheDocument()
@@ -93,7 +102,6 @@ it("shows bulk action toolbar when a row is selected", async () => {
   mockGetForTriggered(EMPTY_COUNTS, [MOCK_ROW])
   render(<Reconciliation state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => screen.getByRole("button", { name: /run reconciliation/i }))
-  await user.type(screen.getByPlaceholderText("Reference dataset ID"), "10")
   await user.click(screen.getByRole("button", { name: /run reconciliation/i }))
   await waitFor(() => expect(screen.getByTestId("recon-row")).toBeInTheDocument())
   await user.click(screen.getByRole("checkbox", { name: /select row 1/i }))
@@ -105,7 +113,6 @@ it("shows blocking warning and disables Next when blocking_pending > 0", async (
   mockGetForTriggered({ ...EMPTY_COUNTS, blocking_pending: 2 })
   render(<Reconciliation state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => screen.getByRole("button", { name: /run reconciliation/i }))
-  await user.type(screen.getByPlaceholderText("Reference dataset ID"), "10")
   await user.click(screen.getByRole("button", { name: /run reconciliation/i }))
   await waitFor(() => expect(screen.getByText(/still need a decision/i)).toBeInTheDocument())
   expect(screen.getByRole("button", { name: /next/i })).toBeDisabled()
@@ -116,7 +123,6 @@ it("shows Confirm all and Reject all on probable tab when a row is selected", as
   mockGetForTriggered(EMPTY_COUNTS, [MOCK_ROW])
   render(<Reconciliation state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => screen.getByRole("button", { name: /run reconciliation/i }))
-  await user.type(screen.getByPlaceholderText("Reference dataset ID"), "10")
   await user.click(screen.getByRole("button", { name: /run reconciliation/i }))
   await waitFor(() => screen.getByRole("button", { name: /probable/i }))
   await user.click(screen.getByRole("button", { name: /probable/i }))
@@ -133,7 +139,6 @@ it("shows Exclude all on old_only tab when a row is selected, not Confirm all or
   mockGetForTriggered(EMPTY_COUNTS, [oldOnlyRow])
   render(<Reconciliation state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => screen.getByRole("button", { name: /run reconciliation/i }))
-  await user.type(screen.getByPlaceholderText("Reference dataset ID"), "10")
   await user.click(screen.getByRole("button", { name: /run reconciliation/i }))
   await waitFor(() => screen.getByRole("button", { name: /old only/i }))
   await user.click(screen.getByRole("button", { name: /old only/i }))

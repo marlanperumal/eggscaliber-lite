@@ -235,7 +235,7 @@ export function DatasetsPageContent({ initialPackages, initialDrafts, initialDat
           {!search && !selectedCollectionId && (
             <Link
               href="/datasets/upload"
-              className="mt-4 inline-block rounded-lg bg-accent px-4 py-2 font-semibold text-sm text-white hover:opacity-90"
+              className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground text-sm hover:opacity-90"
             >
               Upload your first dataset →
             </Link>
@@ -279,7 +279,7 @@ export function DatasetsPageContent({ initialPackages, initialDrafts, initialDat
                   <div className="flex justify-end gap-3">
                     <Link
                       href={`/datasets/${d.id}`}
-                      className="font-semibold text-accent text-xs hover:underline"
+                      className="font-semibold text-foreground text-xs hover:underline"
                     >
                       View
                     </Link>

@@ -28,9 +28,9 @@ function StepIndicator({
               isSkipped
                 ? "border-border text-muted-foreground line-through opacity-30"
                 : s === current
-                  ? "border-accent text-accent"
+                  ? "border-primary text-foreground"
                   : s < current
-                    ? "border-accent text-muted-foreground opacity-50"
+                    ? "border-primary text-muted-foreground opacity-50"
                     : "border-border text-muted-foreground",
             ].join(" ")}
           >
