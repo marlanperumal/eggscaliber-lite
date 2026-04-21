@@ -12,6 +12,9 @@ from src.database import lifespan as db_lifespan
 from src.errors import DomainError
 from src.models.error import ErrorResponse
 from src.routes import (
+    admin as admin_router,
+)
+from src.routes import (
     ai,
     analytics,
     collections,
@@ -51,6 +54,7 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
     )
 
 
+app.include_router(admin_router.router, prefix="/api/v1")
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(sentry.router, prefix="/api/v1")
 app.include_router(webhooks.router, prefix="/api/v1")
