@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth import get_accessible_package_ids
+from src.auth import CurrentUser, get_accessible_package_ids, get_current_user
 from src.database import get_session
 from src.models.analytics import (
     CrosstabRequest,
@@ -17,6 +17,7 @@ router = APIRouter(tags=["analytics"])
 @router.post("/analytics/crosstab", response_model=CrosstabResponse)
 async def run_crosstab(
     request: CrosstabRequest,
+    _: CurrentUser = Depends(get_current_user),
     accessible_ids: set[int] | None = Depends(get_accessible_package_ids),
     session: AsyncSession = Depends(get_session),
 ):
@@ -33,6 +34,7 @@ async def run_crosstab(
 @router.post("/analytics/trend", response_model=TrendResponse)
 async def run_trend(
     request: TrendRequest,
+    _: CurrentUser = Depends(get_current_user),
     accessible_ids: set[int] | None = Depends(get_accessible_package_ids),
     session: AsyncSession = Depends(get_session),
 ):
