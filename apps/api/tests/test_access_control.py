@@ -152,3 +152,16 @@ def test_superuser_flag_set_from_dataclass():
 def test_superuser_defaults_to_false():
     user = CurrentUser(clerk_id="normal", email="normal@test.com", org_id=None)
     assert user.is_superuser is False
+
+
+@pytest.mark.asyncio
+async def test_superuser_gets_none(db, access_fixtures):
+    f = access_fixtures
+    current_user = CurrentUser(
+        clerk_id=f["user"].clerk_id,
+        email=f["user"].email,
+        org_id=f["org"].clerk_org_id,
+        is_superuser=True,
+    )
+    result = await _get_accessible_package_ids(current_user, db)
+    assert result is None
