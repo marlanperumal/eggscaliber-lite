@@ -15,6 +15,36 @@ const { data, error } = await api.GET("/api/v1/datasets")
 
 Never use raw `fetch` for API calls — always go through the typed client.
 
+## Mutations
+
+Use `mutate()` from `@/lib/mutate` for **any state-changing API call** (POST, PATCH, PUT, DELETE). It fires `toast.error` automatically on failure and returns `{ data, error }` for the caller to act on.
+
+```typescript
+import { mutate } from "@/lib/mutate"
+
+// Basic DELETE — guard state update on error
+const { error } = await mutate(
+  () => api.DELETE("/api/v1/datasets/{dataset_id}", { params: { path: { dataset_id: id } } }),
+  { errorMessage: "Failed to delete dataset. Please try again." },
+)
+if (error) return
+setItems((prev) => prev.filter((d) => d.id !== id))
+
+// POST/PATCH that returns data — guard on both error and missing data
+const { data, error } = await mutate(
+  () => api.POST("/api/v1/groups", { body: { name: newName.trim() } }),
+  { errorMessage: "Failed to create group. Please try again." },
+)
+if (error || !data) return
+await fetchGroups()
+```
+
+**Guards:**
+- `if (error) return` — when you only need the side-effect, not the response body
+- `if (error || !data) return` — when the response body is required for state updates
+
+Never call `api.POST/PATCH/PUT/DELETE` directly in a component — always wrap in `mutate()` so errors surface as toasts. (Read-only `api.GET` calls do not need `mutate()`.)
+
 ### Never cast API response data with `as any`
 
 The typed client infers response types from `api.d.ts`. Casting response `data` with `as any` defeats this:
