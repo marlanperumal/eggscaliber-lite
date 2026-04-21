@@ -62,7 +62,7 @@ NL query → PydanticAI identifies relevant data sources → executes queries in
 
 ### 8 — Full AuthN & AuthZ
 
-- **Phase 1 — Identity Stack** ⏳ In Progress — Clerk wired end-to-end: sign-in/sign-up/account UI, Next.js middleware route protection, FastAPI JWT verification, webhook-synced `users`/`organisations`/`org_memberships` tables, org creation and invite flows via Clerk's built-in UI.
+- **Phase 1 — Identity Stack** ✅ Complete — Clerk wired end-to-end: sign-in/sign-up/account UI, Next.js middleware route protection, FastAPI JWT verification, webhook-synced `users`/`organisations`/`org_memberships` tables, org creation and invite flows via Clerk's built-in UI.
 - **Phase 2 — Access Control** ⏳ Pending — `groups` table (org-scoped), `group_memberships`, `group_packages`; analytics and package endpoints filter by group membership; super-user role.
 
 **Done when:** A user can register, join an org, be assigned to a group, and access only the packages that group is entitled to — end-to-end in production.
