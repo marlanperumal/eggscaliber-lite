@@ -2,6 +2,7 @@
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { api } from "@/lib/api"
+import { mutate } from "@/lib/mutate"
 
 export type Package = { id: number; name: string }
 export type Collection = { id: number; name: string; package_id?: number }
@@ -97,9 +98,11 @@ export function DatasetsPageContent({ initialPackages, initialDrafts, initialDat
 
   async function handleDelete(id: number) {
     setDeleteId(null)
-    await api.DELETE("/api/v1/datasets/{dataset_id}", {
-      params: { path: { dataset_id: id } },
-    })
+    const { error } = await mutate(
+      () => api.DELETE("/api/v1/datasets/{dataset_id}", { params: { path: { dataset_id: id } } }),
+      { errorMessage: "Failed to delete dataset. Please try again." },
+    )
+    if (error) return
     setItems((prev) => prev.filter((d) => d.id !== id))
   }
 
@@ -189,9 +192,14 @@ export function DatasetsPageContent({ initialPackages, initialDrafts, initialDat
                   <button
                     type="button"
                     onClick={async () => {
-                      await api.DELETE("/api/v1/uploads/{session_id}", {
-                        params: { path: { session_id: d.id } },
-                      })
+                      const { error } = await mutate(
+                        () =>
+                          api.DELETE("/api/v1/uploads/{session_id}", {
+                            params: { path: { session_id: d.id } },
+                          }),
+                        { errorMessage: "Failed to discard draft. Please try again." },
+                      )
+                      if (error) return
                       setDrafts((prev) => prev.filter((x) => x.id !== d.id))
                     }}
                     className="font-semibold text-destructive text-xs hover:underline"
