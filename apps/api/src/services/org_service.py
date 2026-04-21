@@ -14,7 +14,7 @@ async def list_members(session: AsyncSession, clerk_org_id: str) -> list[OrgMemb
     rows = await user_repo.get_org_members(session, cast(int, org.id))
     return [
         OrgMemberRead(
-            user_id=row[0],
+            user_id=cast(int, row[0]),
             clerk_id=row[1],
             email=row[2],
             display_name=row[3],

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date as date_type
 from typing import TYPE_CHECKING, cast
 
-from sqlalchemy import select, union
+from sqlalchemy import or_, select, union
 from sqlalchemy.ext.asyncio import AsyncSession
 
 if TYPE_CHECKING:
@@ -117,30 +117,21 @@ async def get_org_subscribed_packages(session: AsyncSession, org_id: int) -> lis
     """Return all packages visible to an org: public packages plus active private subscriptions."""
     today = date_type.today()
 
-    public_pkgs = list(
-        (
-            await session.execute(
-                select(Package).where(Package.visibility == PackageVisibility.public)
+    private_sub = (
+        select(OrgSubscription.package_id)
+        .where(
+            OrgSubscription.org_id == org_id,
+            OrgSubscription.start_date <= today,
+            (OrgSubscription.end_date.is_(None)) | (OrgSubscription.end_date >= today),
+        )
+        .scalar_subquery()
+    )
+    result = await session.execute(
+        select(Package).where(
+            or_(
+                Package.visibility == PackageVisibility.public,
+                Package.id.in_(private_sub),
             )
         )
-        .scalars()
-        .all()
     )
-    private_pkgs = list(
-        (
-            await session.execute(
-                select(Package)
-                .join(OrgSubscription, OrgSubscription.package_id == Package.id)
-                .where(
-                    Package.visibility == PackageVisibility.private,
-                    OrgSubscription.org_id == org_id,
-                    OrgSubscription.start_date <= today,
-                    (OrgSubscription.end_date.is_(None)) | (OrgSubscription.end_date >= today),
-                )
-            )
-        )
-        .scalars()
-        .all()
-    )
-    seen = {p.id for p in public_pkgs}
-    return public_pkgs + [p for p in private_pkgs if p.id not in seen]
+    return list(result.scalars().unique().all())
