@@ -161,41 +161,49 @@ export function SubscriptionsTab({ orgId }: Props) {
             </div>
 
             <div>
-              <Input
-                type="date"
-                value={state?.startDate ?? ""}
-                disabled={!isSubscribed}
-                aria-label={`Start date for ${pkg.name}`}
-                className="h-7 px-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
-                onChange={(e) => {
-                  setSubStates((prev) => ({
-                    ...prev,
-                    [pkg.id]: {
-                      ...(prev[pkg.id] ?? { subscribed: true, endDate: "" }),
-                      startDate: e.target.value,
-                    },
-                  }))
-                }}
-              />
+              {pkg.visibility === "public" ? (
+                <span className="text-muted-foreground text-xs">auto</span>
+              ) : (
+                <Input
+                  type="date"
+                  value={state?.startDate ?? ""}
+                  disabled={!isSubscribed}
+                  aria-label={`Start date for ${pkg.name}`}
+                  className="h-7 px-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                  onChange={(e) => {
+                    setSubStates((prev) => ({
+                      ...prev,
+                      [pkg.id]: {
+                        ...(prev[pkg.id] ?? { subscribed: true, endDate: "" }),
+                        startDate: e.target.value,
+                      },
+                    }))
+                  }}
+                />
+              )}
             </div>
 
             <div>
-              <Input
-                type="date"
-                value={state?.endDate ?? ""}
-                disabled={!isSubscribed}
-                aria-label={`End date for ${pkg.name}`}
-                className="h-7 px-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
-                onChange={(e) => {
-                  setSubStates((prev) => ({
-                    ...prev,
-                    [pkg.id]: {
-                      ...(prev[pkg.id] ?? { subscribed: true, startDate: "" }),
-                      endDate: e.target.value,
-                    },
-                  }))
-                }}
-              />
+              {pkg.visibility === "public" ? (
+                <span className="text-muted-foreground text-xs">auto</span>
+              ) : (
+                <Input
+                  type="date"
+                  value={state?.endDate ?? ""}
+                  disabled={!isSubscribed}
+                  aria-label={`End date for ${pkg.name}`}
+                  className="h-7 px-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                  onChange={(e) => {
+                    setSubStates((prev) => ({
+                      ...prev,
+                      [pkg.id]: {
+                        ...(prev[pkg.id] ?? { subscribed: true, startDate: "" }),
+                        endDate: e.target.value,
+                      },
+                    }))
+                  }}
+                />
+              )}
             </div>
           </div>
         )

@@ -69,7 +69,13 @@ export function PackagesTab() {
 
       <div className="flex flex-1 flex-col rounded-lg border border-border bg-card">
         {selectedPackageId ? (
-          <PackageCompositionPanel packageId={selectedPackageId} packages={packages} />
+          <PackageCompositionPanel
+            packageId={selectedPackageId}
+            packages={packages}
+            onVisibilityToggle={(updated) =>
+              setPackages((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
+            }
+          />
         ) : (
           <div className="flex h-full items-center justify-center">
             <p className="text-muted-foreground text-sm">Select a package</p>
@@ -83,9 +89,14 @@ export function PackagesTab() {
 interface CompositionPanelProps {
   packageId: number
   packages: PackageRead[]
+  onVisibilityToggle: (updated: PackageRead) => void
 }
 
-function PackageCompositionPanel({ packageId, packages }: CompositionPanelProps) {
+function PackageCompositionPanel({
+  packageId,
+  packages,
+  onVisibilityToggle,
+}: CompositionPanelProps) {
   const pkg = packages.find((p) => p.id === packageId)
 
   const [linked, setLinked] = useState<PackageCollectionDetail[]>([])
@@ -176,18 +187,30 @@ function PackageCompositionPanel({ packageId, packages }: CompositionPanelProps)
 
   const linkedIds = new Set(linked.map((c) => c.collection_id))
 
+  const toggleVisibility = async () => {
+    if (!pkg) return
+    const next = pkg.visibility === "private" ? "public" : "private"
+    const { data } = await api.PATCH("/api/v1/admin/packages/{package_id}", {
+      params: { path: { package_id: pkg.id } },
+      body: { visibility: next },
+    })
+    if (data) onVisibilityToggle(data)
+  }
+
   return (
     <div data-testid="package-composition-panel">
       <div className="flex items-center gap-3 border-border border-b px-4 py-3">
         <div className="min-w-0">
           <span className="font-semibold text-foreground text-sm">{pkg?.name}</span>
           {pkg && (
-            <Badge
-              variant={pkg.visibility === "private" ? "secondary" : "outline"}
-              className="ml-2 text-[10px]"
-            >
-              {pkg.visibility}
-            </Badge>
+            <button type="button" onClick={toggleVisibility} title="Click to toggle visibility">
+              <Badge
+                variant={pkg.visibility === "private" ? "secondary" : "outline"}
+                className="ml-2 cursor-pointer text-[10px] hover:opacity-70"
+              >
+                {pkg.visibility}
+              </Badge>
+            </button>
           )}
         </div>
       </div>
