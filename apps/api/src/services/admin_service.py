@@ -87,17 +87,7 @@ async def update_package_visibility(
 
 async def list_packages(session: AsyncSession) -> list[PackageRead]:
     pkgs = await package_repo.get_all(session)
-    return [
-        PackageRead(
-            id=cast(int, p.id),
-            name=p.name,
-            slug=p.slug,
-            description=p.description,
-            visibility=p.visibility,
-            created_at=p.created_at,
-        )
-        for p in pkgs
-    ]
+    return [PackageRead.model_validate(p.model_dump()) for p in pkgs]
 
 
 def _slugify(name: str) -> str:
@@ -109,26 +99,9 @@ async def create_package(session: AsyncSession, body: PackageCreate) -> PackageR
     pkg = await package_repo.create_package(
         session, name=body.name, slug=slug, description=body.description
     )
-    return PackageRead(
-        id=cast(int, pkg.id),
-        name=pkg.name,
-        slug=pkg.slug,
-        description=pkg.description,
-        visibility=pkg.visibility,
-        created_at=pkg.created_at,
-    )
+    return PackageRead.model_validate(pkg.model_dump())
 
 
 async def list_collections(session: AsyncSession) -> list[CollectionRead]:
     cols = await collection_repo.get_all(session)
-    return [
-        CollectionRead(
-            id=cast(int, c.id),
-            name=c.name,
-            slug=c.slug,
-            description=c.description,
-            collection_type=c.collection_type,
-            created_at=c.created_at,
-        )
-        for c in cols
-    ]
+    return [CollectionRead.model_validate(c.model_dump()) for c in cols]
