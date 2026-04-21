@@ -1,12 +1,15 @@
 "use client"
 
+import type { components } from "@shared/api"
 import { useState } from "react"
 import { GroupsList } from "./GroupsList"
 import { MembersPanel } from "./MembersPanel"
 import { PackagesPanel } from "./PackagesPanel"
 
+type GroupWithCounts = components["schemas"]["GroupWithCounts"]
+
 export function GroupsPage() {
-  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null)
+  const [selectedGroup, setSelectedGroup] = useState<GroupWithCounts | null>(null)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 p-6">
@@ -17,9 +20,12 @@ export function GroupsPage() {
         </p>
       </div>
       <div className="grid flex-1 grid-cols-3 gap-4">
-        <GroupsList selectedGroupId={selectedGroupId} onSelect={setSelectedGroupId} />
-        <MembersPanel groupId={selectedGroupId} />
-        <PackagesPanel groupId={selectedGroupId} />
+        <GroupsList selectedGroupId={selectedGroup?.id ?? null} onSelect={setSelectedGroup} />
+        <MembersPanel
+          groupId={selectedGroup?.id ?? null}
+          isDefault={selectedGroup?.is_default ?? false}
+        />
+        <PackagesPanel groupId={selectedGroup?.id ?? null} />
       </div>
     </div>
   )
