@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useState } from "react"
 import { api } from "@/lib/api"
+import { mutate } from "@/lib/mutate"
 import type { WizardState, WizardStep } from "../wizard-types"
 import { FieldEditorPanel } from "./FieldEditorPanel"
 import { FieldList } from "./FieldList"
@@ -40,36 +41,52 @@ export function MetadataEditor({ state, setStep }: Props) {
 
   async function handleMoveField(fieldId: number, groupId: number | null) {
     if (!state.sessionId) return
-    await api.PATCH("/api/v1/uploads/{session_id}/fields/{field_id}/move", {
-      params: { path: { session_id: state.sessionId, field_id: fieldId } },
-      body: { upload_fieldgroup_id: groupId },
-    })
+    await mutate(
+      () =>
+        api.PATCH("/api/v1/uploads/{session_id}/fields/{field_id}/move", {
+          params: { path: { session_id: state.sessionId!, field_id: fieldId } },
+          body: { upload_fieldgroup_id: groupId },
+        }),
+      { errorMessage: "Failed to move field. Please try again." },
+    )
     await loadTree()
   }
 
   async function handleCreateGroup(name: string, parentId: number | null) {
     if (!state.sessionId) return
-    await api.POST("/api/v1/uploads/{session_id}/fieldgroups", {
-      params: { path: { session_id: state.sessionId } },
-      body: { name, parent_id: parentId, sort_order: 0 },
-    })
+    await mutate(
+      () =>
+        api.POST("/api/v1/uploads/{session_id}/fieldgroups", {
+          params: { path: { session_id: state.sessionId! } },
+          body: { name, parent_id: parentId, sort_order: 0 },
+        }),
+      { errorMessage: "Failed to create group. Please try again." },
+    )
     await loadTree()
   }
 
   async function handleDeleteGroup(id: number) {
     if (!state.sessionId) return
-    await api.DELETE("/api/v1/uploads/{session_id}/fieldgroups/{group_id}", {
-      params: { path: { session_id: state.sessionId, group_id: id } },
-    })
+    await mutate(
+      () =>
+        api.DELETE("/api/v1/uploads/{session_id}/fieldgroups/{group_id}", {
+          params: { path: { session_id: state.sessionId!, group_id: id } },
+        }),
+      { errorMessage: "Failed to delete group. Please try again." },
+    )
     await loadTree()
   }
 
   async function handleMoveGroup(groupId: number, parentId: number | null) {
     if (!state.sessionId) return
-    await api.PATCH("/api/v1/uploads/{session_id}/fieldgroups/{group_id}", {
-      params: { path: { session_id: state.sessionId, group_id: groupId } },
-      body: { parent_id: parentId },
-    })
+    await mutate(
+      () =>
+        api.PATCH("/api/v1/uploads/{session_id}/fieldgroups/{group_id}", {
+          params: { path: { session_id: state.sessionId!, group_id: groupId } },
+          body: { parent_id: parentId },
+        }),
+      { errorMessage: "Failed to move group. Please try again." },
+    )
     await loadTree()
   }
 
@@ -112,10 +129,14 @@ export function MetadataEditor({ state, setStep }: Props) {
                 onCreateGroup={handleCreateGroup}
                 onRenameGroup={async (id: number, name: string) => {
                   if (!state.sessionId) return
-                  await api.PATCH("/api/v1/uploads/{session_id}/fieldgroups/{group_id}", {
-                    params: { path: { session_id: state.sessionId, group_id: id } },
-                    body: { name },
-                  })
+                  await mutate(
+                    () =>
+                      api.PATCH("/api/v1/uploads/{session_id}/fieldgroups/{group_id}", {
+                        params: { path: { session_id: state.sessionId!, group_id: id } },
+                        body: { name },
+                      }),
+                    { errorMessage: "Failed to rename group. Please try again." },
+                  )
                   await loadTree()
                 }}
                 onDeleteGroup={handleDeleteGroup}
@@ -144,11 +165,15 @@ export function MetadataEditor({ state, setStep }: Props) {
             onCancel={() => setSelectedFieldId(null)}
             onDelete={async () => {
               if (!state.sessionId || !selectedFieldId) return
-              await api.DELETE("/api/v1/uploads/{upload_session_id}/fields/{field_id}", {
-                params: {
-                  path: { upload_session_id: state.sessionId, field_id: selectedFieldId },
-                },
-              })
+              await mutate(
+                () =>
+                  api.DELETE("/api/v1/uploads/{upload_session_id}/fields/{field_id}", {
+                    params: {
+                      path: { upload_session_id: state.sessionId!, field_id: selectedFieldId },
+                    },
+                  }),
+                { errorMessage: "Failed to delete field. Please try again." },
+              )
               setSelectedFieldId(null)
               await loadTree()
             }}

@@ -2,6 +2,7 @@
 import type { components } from "@shared/api"
 import { useEffect, useState } from "react"
 import { api } from "@/lib/api"
+import { mutate } from "@/lib/mutate"
 import type { WizardState, WizardStep } from "../wizard-types"
 
 const FIELD_TYPES = ["numeric", "ordinal", "categorical", "multi_response", "identifier", "weight"]
@@ -33,10 +34,15 @@ export function FieldDetection({ state, setStep }: Props) {
 
   async function handleOverride(fieldId: number, overrideType: string | null) {
     if (!state.sessionId) return
-    const { data } = await api.PATCH("/api/v1/uploads/{session_id}/fields/{field_id}", {
-      params: { path: { session_id: state.sessionId, field_id: fieldId } },
-      body: { override_type: overrideType as FieldType | null },
-    })
+    const { data, error } = await mutate(
+      () =>
+        api.PATCH("/api/v1/uploads/{session_id}/fields/{field_id}", {
+          params: { path: { session_id: state.sessionId!, field_id: fieldId } },
+          body: { override_type: overrideType as FieldType | null },
+        }),
+      { errorMessage: "Failed to update field type. Please try again." },
+    )
+    if (error) return
     if (data) {
       setFields((prev) =>
         prev.map((f) => (f.id === fieldId ? { ...f, override_type: data.override_type } : f)),

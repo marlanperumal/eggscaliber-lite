@@ -2,6 +2,7 @@
 import type { components } from "@shared/api"
 import { useEffect, useState } from "react"
 import { api } from "@/lib/api"
+import { mutate } from "@/lib/mutate"
 import type { FieldNode, GroupNode, Level } from "./FieldTree"
 
 type FieldType = components["schemas"]["FieldType"]
@@ -106,9 +107,14 @@ export function FieldEditorPanel({
       setLevels((prev) => prev.filter((l) => l.id !== levelId))
       return
     }
-    await api.DELETE("/api/v1/uploads/{upload_session_id}/fields/{field_id}/levels/{level_id}", {
-      params: { path: { upload_session_id: sessionId, field_id: field.id, level_id: levelId } },
-    })
+    const { error } = await mutate(
+      () =>
+        api.DELETE("/api/v1/uploads/{upload_session_id}/fields/{field_id}/levels/{level_id}", {
+          params: { path: { upload_session_id: sessionId, field_id: field.id, level_id: levelId } },
+        }),
+      { errorMessage: "Failed to delete level. Please try again." },
+    )
+    if (error) return
     setLevels((prev) => prev.filter((l) => l.id !== levelId))
   }
 
@@ -131,36 +137,50 @@ export function FieldEditorPanel({
     if (!field) return
     setBusy(true)
     try {
-      const { data: savedField } = await api.PATCH(
-        "/api/v1/uploads/{session_id}/fields/{field_id}",
-        {
-          params: { path: { session_id: sessionId, field_id: field.id } },
-          body: {
-            display_name: displayName || null,
-            override_type: (overrideType || null) as FieldType | null,
-            sort_order: sortOrder,
-          },
-        },
+      const { data: savedField, error: saveError } = await mutate(
+        () =>
+          api.PATCH("/api/v1/uploads/{session_id}/fields/{field_id}", {
+            params: { path: { session_id: sessionId, field_id: field.id } },
+            body: {
+              display_name: displayName || null,
+              override_type: (overrideType || null) as FieldType | null,
+              sort_order: sortOrder,
+            },
+          }),
+        { errorMessage: "Failed to save field. Please try again." },
       )
+      if (saveError) return
+
       const newGroupId = groupId ? Number(groupId) : null
       if (newGroupId !== field.upload_fieldgroup_id) {
-        await api.PATCH("/api/v1/uploads/{session_id}/fields/{field_id}/move", {
-          params: { path: { session_id: sessionId, field_id: field.id } },
-          body: { upload_fieldgroup_id: newGroupId },
-        })
+        const { error: moveError } = await mutate(
+          () =>
+            api.PATCH("/api/v1/uploads/{session_id}/fields/{field_id}/move", {
+              params: { path: { session_id: sessionId, field_id: field.id } },
+              body: { upload_fieldgroup_id: newGroupId },
+            }),
+          { errorMessage: "Failed to move field. Please try again." },
+        )
+        if (moveError) return
       }
+
       for (const lvl of levels) {
         if (!lvl.raw_value.trim()) continue
-        await api.PUT("/api/v1/uploads/{upload_session_id}/fields/{field_id}/levels", {
-          params: { path: { upload_session_id: sessionId, field_id: field.id } },
-          body: {
-            raw_value: lvl.raw_value,
-            display_label: lvl.display_label,
-            sort_order: lvl.sort_order,
-            is_inherited: lvl.is_inherited,
-          },
-        })
+        await mutate(
+          () =>
+            api.PUT("/api/v1/uploads/{upload_session_id}/fields/{field_id}/levels", {
+              params: { path: { upload_session_id: sessionId, field_id: field.id } },
+              body: {
+                raw_value: lvl.raw_value,
+                display_label: lvl.display_label,
+                sort_order: lvl.sort_order,
+                is_inherited: lvl.is_inherited,
+              },
+            }),
+          { errorMessage: "Failed to save level. Please try again." },
+        )
       }
+
       if (savedField) {
         onSaved({
           ...field,
