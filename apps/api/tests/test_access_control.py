@@ -326,3 +326,30 @@ async def test_dataset_route_returns_404_when_inaccessible(client, db, bare_data
     app.dependency_overrides.pop(get_accessible_package_ids, None)
 
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_dataset_delete_returns_404_when_inaccessible(client, db, bare_dataset):
+    """DELETE /datasets/{id} returns 404 for a dataset outside the accessible set."""
+    from src.auth import CurrentUser, get_accessible_package_ids, get_current_user
+    from src.main import app
+
+    def override_user() -> CurrentUser:
+        return CurrentUser(
+            clerk_id="restricted_user",
+            email="restricted@example.com",
+            org_id="org_restricted",
+            is_superuser=False,
+        )
+
+    async def override_accessible() -> set[int] | None:
+        return set()  # no packages accessible
+
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_accessible_package_ids] = override_accessible
+
+    resp = await client.delete(f"/api/v1/datasets/{bare_dataset.id}")
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_accessible_package_ids, None)
+
+    assert resp.status_code == 404

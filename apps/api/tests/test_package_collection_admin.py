@@ -128,6 +128,18 @@ async def test_remove_collection_from_package(
     assert pc_collection.id not in ids
 
 
+async def test_add_collection_requires_superuser(client: AsyncClient, pc_package, pc_collection):
+    """Non-superuser cannot add a collection to a package (403)."""
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        clerk_id="regular", email="regular@example.com", org_id=None, is_superuser=False
+    )
+    response = await client.post(
+        f"/api/v1/admin/packages/{pc_package.id}/collections",
+        json={"collection_id": pc_collection.id, "scope": "all"},
+    )
+    assert response.status_code == 403
+
+
 async def test_add_and_remove_dataset_inclusion(
     client: AsyncClient,
     pc_package,

@@ -172,6 +172,122 @@ async def test_list_group_packages_returns_assigned_packages(client, db, group_f
 
 
 @pytest.mark.asyncio
+async def test_list_group_members_from_other_org_returns_empty(client, db, group_fixtures):
+    """GET /groups/{group_id}/members returns [] when the clerk_org_id is unknown (no matching org)."""
+    from src.auth import CurrentUser, get_current_user
+    from src.main import app
+
+    f = group_fixtures
+
+    different_org_user = CurrentUser(
+        clerk_id="user_other_org",
+        email="other@example.com",
+        org_id="org_different_clerk_id_unknown",
+        is_superuser=False,
+    )
+    app.dependency_overrides[get_current_user] = lambda: different_org_user
+    response = await client.get(f"/api/v1/groups/{f['group'].id}/members")
+    app.dependency_overrides.pop(get_current_user, None)
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_list_group_members_from_other_org_forbidden(client, db, group_fixtures):
+    """GET /groups/{group_id}/members returns 403 when group belongs to a different org."""
+    from src.auth import CurrentUser, get_current_user
+    from src.main import app
+
+    f = group_fixtures
+
+    other_org = Organisation(clerk_org_id="org_other_members_test", name="Other Org Members")
+    db.add(other_org)
+    await db.flush()
+    await db.refresh(other_org)
+    other_user = User(clerk_id="user_other_members", email="othermembers@example.com")
+    db.add(other_user)
+    await db.flush()
+    await db.refresh(other_user)
+    membership = OrgMembership(
+        user_id=cast(int, other_user.id), org_id=cast(int, other_org.id), role="admin"
+    )
+    db.add(membership)
+    await db.flush()
+
+    def override_user() -> CurrentUser:
+        return CurrentUser(
+            clerk_id=other_user.clerk_id,
+            email=other_user.email,
+            org_id=other_org.clerk_org_id,
+        )
+
+    app.dependency_overrides[get_current_user] = override_user
+    response = await client.get(f"/api/v1/groups/{f['group'].id}/members")
+    app.dependency_overrides.pop(get_current_user, None)
+
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_list_group_packages_from_other_org_returns_empty(client, db, group_fixtures):
+    """GET /groups/{group_id}/packages returns [] when the clerk_org_id is unknown."""
+    from src.auth import CurrentUser, get_current_user
+    from src.main import app
+
+    f = group_fixtures
+
+    different_org_user = CurrentUser(
+        clerk_id="user_other_org2",
+        email="other2@example.com",
+        org_id="org_different_clerk_id_unknown2",
+        is_superuser=False,
+    )
+    app.dependency_overrides[get_current_user] = lambda: different_org_user
+    response = await client.get(f"/api/v1/groups/{f['group'].id}/packages")
+    app.dependency_overrides.pop(get_current_user, None)
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_list_group_packages_from_other_org_forbidden(client, db, group_fixtures):
+    """GET /groups/{group_id}/packages returns 403 when group belongs to a different org."""
+    from src.auth import CurrentUser, get_current_user
+    from src.main import app
+
+    f = group_fixtures
+
+    other_org = Organisation(clerk_org_id="org_other_packages_test", name="Other Org Packages")
+    db.add(other_org)
+    await db.flush()
+    await db.refresh(other_org)
+    other_user = User(clerk_id="user_other_packages", email="otherpkgs@example.com")
+    db.add(other_user)
+    await db.flush()
+    await db.refresh(other_user)
+    membership = OrgMembership(
+        user_id=cast(int, other_user.id), org_id=cast(int, other_org.id), role="admin"
+    )
+    db.add(membership)
+    await db.flush()
+
+    def override_user() -> CurrentUser:
+        return CurrentUser(
+            clerk_id=other_user.clerk_id,
+            email=other_user.email,
+            org_id=other_org.clerk_org_id,
+        )
+
+    app.dependency_overrides[get_current_user] = override_user
+    response = await client.get(f"/api/v1/groups/{f['group'].id}/packages")
+    app.dependency_overrides.pop(get_current_user, None)
+
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
 async def test_cannot_manage_other_org_group(client, db, group_fixtures):
     from src.auth import CurrentUser, get_current_user
     from src.main import app

@@ -1,5 +1,8 @@
+import datetime
+
 import pytest
 import pytest_asyncio
+from src.models.group import OrgSubscription
 from src.models.package import Package, PackageVisibility
 from src.models.user import Organisation
 
@@ -160,3 +163,63 @@ async def test_admin_list_collections_returns_all(client, seeded_collection, db)
     assert response.status_code == 200
     ids = [c["id"] for c in response.json()]
     assert seeded_collection.id in ids
+
+
+@pytest.mark.asyncio
+async def test_admin_create_package_requires_superuser(client):
+    """POST /admin/packages returns 403 for non-superuser (default client fixture user)."""
+    response = await client.post("/api/v1/admin/packages", json={"name": "Test"})
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_create_subscription_requires_superuser(client, admin_fixtures):
+    """POST /admin/orgs/{org_id}/subscriptions returns 403 for non-superuser."""
+    f = admin_fixtures
+    response = await client.post(
+        f"/api/v1/admin/orgs/{f['org'].id}/subscriptions",
+        json={"package_id": f["pkg"].id, "start_date": "2024-01-01"},
+    )
+    assert response.status_code == 403
+
+
+@pytest_asyncio.fixture
+async def seed_subscription(db, admin_fixtures):
+    """An OrgSubscription row for the admin_fixtures org + package."""
+    f = admin_fixtures
+    sub = OrgSubscription(
+        org_id=f["org"].id,
+        package_id=f["pkg"].id,
+        start_date=datetime.date(2024, 1, 1),
+    )
+    db.add(sub)
+    await db.flush()
+    await db.refresh(sub)
+    return sub
+
+
+@pytest.mark.asyncio
+async def test_admin_delete_subscription(client, admin_fixtures, seed_subscription, db):
+    """DELETE /admin/orgs/{org_id}/subscriptions/{package_id} removes the subscription."""
+    from src.auth import CurrentUser, get_current_user
+    from src.main import app
+
+    f = admin_fixtures
+
+    def override_superuser() -> CurrentUser:
+        return CurrentUser(
+            clerk_id="super_user", email="super@test.com", org_id=None, is_superuser=True
+        )
+
+    app.dependency_overrides[get_current_user] = override_superuser
+    response = await client.delete(f"/api/v1/admin/orgs/{f['org'].id}/subscriptions/{f['pkg'].id}")
+    app.dependency_overrides.pop(get_current_user, None)
+
+    assert response.status_code == 204
+
+    app.dependency_overrides[get_current_user] = override_superuser
+    list_resp = await client.get(f"/api/v1/admin/orgs/{f['org'].id}/subscriptions")
+    app.dependency_overrides.pop(get_current_user, None)
+
+    ids = [s["package_id"] for s in list_resp.json()]
+    assert f["pkg"].id not in ids
