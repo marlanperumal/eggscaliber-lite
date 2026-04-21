@@ -315,3 +315,45 @@ async def test_cannot_manage_other_org_group(client, db, group_fixtures):
     app.dependency_overrides.pop(get_current_user, None)
 
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_create_group_without_org_returns_403(client):
+    """POST /groups returns 403 when the caller has no active organisation (org_id=None)."""
+    response = await client.post("/api/v1/groups", json={"name": "Test"})
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_delete_group_without_org_returns_403(client):
+    """DELETE /groups/{id} returns 403 when the caller has no active organisation."""
+    response = await client.delete("/api/v1/groups/999")
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_add_member_without_org_returns_403(client):
+    """POST /groups/{id}/members returns 403 when the caller has no active organisation."""
+    response = await client.post("/api/v1/groups/999/members", json={"user_id": 1})
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_remove_member_without_org_returns_403(client):
+    """DELETE /groups/{id}/members/{user_id} returns 403 when the caller has no active organisation."""
+    response = await client.delete("/api/v1/groups/999/members/1")
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_assign_package_without_org_returns_403(client):
+    """POST /groups/{id}/packages returns 403 when the caller has no active organisation."""
+    response = await client.post("/api/v1/groups/999/packages", json={"package_id": 1})
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_unassign_package_without_org_returns_403(client):
+    """DELETE /groups/{id}/packages/{package_id} returns 403 when the caller has no active organisation."""
+    response = await client.delete("/api/v1/groups/999/packages/1")
+    assert response.status_code == 403
