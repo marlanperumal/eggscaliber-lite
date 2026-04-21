@@ -12,7 +12,7 @@ export function AIChatPage() {
 
   const { messages, sendMessage, status, error } = useChat({
     transport: new DefaultChatTransport({
-      api: `${process.env.NEXT_PUBLIC_API_URL}/api/v1/ai/chat`,
+      api: `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/v1/ai/chat`,
     }),
   })
 

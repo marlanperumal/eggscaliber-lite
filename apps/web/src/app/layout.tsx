@@ -2,11 +2,11 @@ import { ClerkProvider } from "@clerk/nextjs"
 import { PostHogPageView, PostHogProvider } from "@posthog/next"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import { ThemeProvider } from "next-themes"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
 import { TopNav } from "@/components/ui/top-nav"
 import { themeConfig } from "@/config/theme.config"
 import { generateThemeCSS } from "@/lib/theme"
+import { ThemeProvider } from "@/lib/theme-provider"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -33,8 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <html lang="en" suppressHydrationWarning>
         <head>
-          {/* Theme CSS injected here so tokens resolve before first paint */}
-          {/* biome-ignore lint/security/noDangerouslySetInnerHtml: CSS-only content, no user input */}
+          {/* biome-ignore lint/security/noDangerouslySetInnerHtml: CSS-only, no user input */}
           <style dangerouslySetInnerHTML={{ __html: generateThemeCSS(themeConfig) }} />
         </head>
         <body className={`${inter.className} flex min-h-screen flex-col`}>

@@ -4,6 +4,7 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 
 from pydantic_ai import Agent, RunContext
+from pydantic_ai._agent_graph import ModelRequestNode
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, TextPart, UserPromptPart
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -218,9 +219,9 @@ def _to_model_messages(messages: list[ChatMessage]) -> list[ModelMessage]:
     result: list[ModelMessage] = []
     for msg in messages:
         if msg.role == "user":
-            result.append(ModelRequest(parts=[UserPromptPart(content=msg.content)]))
+            result.append(ModelRequest(parts=[UserPromptPart(content=msg.get_text())]))
         elif msg.role == "assistant":
-            result.append(ModelResponse(parts=[TextPart(content=msg.content)]))
+            result.append(ModelResponse(parts=[TextPart(content=msg.get_text())]))
     return result
 
 
@@ -239,7 +240,7 @@ async def stream_response(
 
     deps = AIServiceDeps(session=session, accessible_ids=accessible_ids)
     message_history = _to_model_messages(messages[:-1])
-    user_prompt = messages[-1].content
+    user_prompt = messages[-1].get_text()
     text_id = str(uuid.uuid4())
 
     try:
@@ -247,11 +248,17 @@ async def stream_response(
         yield encode_start()
         yield encode_start_step()
         yield encode_text_start(text_id)
-        async with agent.run_stream(
-            user_prompt, message_history=message_history, deps=deps
-        ) as result:
-            async for chunk in result.stream_text(delta=True):
-                yield encode_text_delta(text_id, chunk)
+
+        # Use iter() so tool calls are fully executed before the final text is streamed.
+        # run_stream() stops at the first text output (treating it as final), which causes
+        # intermediate "Let me check..." text to be returned instead of the tool results.
+        async with agent.iter(user_prompt, message_history=message_history, deps=deps) as agent_run:
+            async for node in agent_run:
+                if isinstance(node, ModelRequestNode):
+                    async with node.stream(agent_run.ctx) as agent_stream:
+                        async for chunk in agent_stream.stream_text(delta=True, debounce_by=None):
+                            yield encode_text_delta(text_id, chunk)
+
         yield encode_text_end(text_id)
 
         for i, part in enumerate(deps.result_parts):

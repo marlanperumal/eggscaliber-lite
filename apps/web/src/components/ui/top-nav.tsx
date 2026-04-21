@@ -6,6 +6,7 @@ import { Moon, Sun } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTheme } from "next-themes"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -24,8 +25,11 @@ export function TopNav() {
   const pathname = usePathname()
   const { setTheme } = useTheme()
   const aiFlag = useFeatureFlag("ai-interface")
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   const navLinks = ALL_NAV_LINKS.filter(({ flag }) => {
+    if (!mounted) return flag === null
     if (flag === "ai-interface") return aiFlag?.enabled === true
     return true
   })
