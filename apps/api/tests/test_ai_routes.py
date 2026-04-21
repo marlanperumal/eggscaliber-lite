@@ -21,6 +21,8 @@ async def test_chat_returns_event_stream_with_vercel_header(client):
     assert response.status_code == 200
     assert "text/event-stream" in response.headers["content-type"]
     assert response.headers.get("x-vercel-ai-ui-message-stream") == "v1"
+    assert 'data: {"type":"start"}' in response.text
+    assert '"finishReason":"stop"' in response.text
 
 
 @pytest.mark.asyncio
