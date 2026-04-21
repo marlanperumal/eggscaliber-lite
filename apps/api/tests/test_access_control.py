@@ -244,5 +244,15 @@ async def test_get_package_ids_for_collection(db, seeded_collection, seeded_pack
 
 @pytest.mark.asyncio
 async def test_get_package_ids_for_dataset(db, bare_dataset):
+    from sqlmodel import select
+    from src.models.group import PackageCollection
+
+    result = await db.execute(
+        select(PackageCollection.package_id).where(
+            PackageCollection.collection_id == bare_dataset.collection_id
+        )
+    )
+    expected_pkg_id = cast(int, result.scalar_one())
+
     ids = await package_repo.get_package_ids_for_dataset(db, cast(int, bare_dataset.id))
-    assert len(ids) == 1
+    assert expected_pkg_id in ids
