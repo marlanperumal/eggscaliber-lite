@@ -2,11 +2,16 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, expect, it, vi } from "vitest"
 import { api } from "@/lib/api"
+import { mutate } from "@/lib/mutate"
 import type { WizardState, WizardStep } from "../wizard-types"
 import { FileHierarchy } from "./FileHierarchy"
 
 vi.mock("@/lib/api", () => ({
   api: { GET: vi.fn(), POST: vi.fn() },
+}))
+
+vi.mock("@/lib/mutate", () => ({
+  mutate: vi.fn((fn, opts) => fn().then((r) => ({ data: r.data, error: r.error }))),
 }))
 
 const mockGet = vi.mocked(api.GET)
@@ -131,6 +136,11 @@ it("shows an error message when upload POST fails", async () => {
   fireEvent.change(screen.getByLabelText("Collection date *"), { target: { value: "2024-01" } })
   await waitFor(() => expect(screen.getByRole("button", { name: /next/i })).not.toBeDisabled())
   await userEvent.click(screen.getByRole("button", { name: /next/i }))
-  await waitFor(() => expect(screen.getByText(/bad file/i)).toBeInTheDocument())
+  await waitFor(() =>
+    expect(mutate).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ errorMessage: "Upload failed. Please try again." }),
+    ),
+  )
   expect(setStep).not.toHaveBeenCalledWith(2)
 })

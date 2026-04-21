@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useRef, useState } from "react"
 import { api } from "@/lib/api"
+import { mutate } from "@/lib/mutate"
 import type { WizardState, WizardStep } from "../wizard-types"
 
 interface PackageOption {
@@ -93,10 +94,17 @@ export function FileHierarchy({ setStep, setSessionId, setNeedsReconcile }: Prop
     if (!newPkgName.trim()) return
     setBusy(true)
     try {
-      const { data: pkg } = await api.POST("/api/v1/packages", {
-        body: { name: newPkgName.trim(), slug: slugify(newPkgName.trim()) },
-      })
-      if (!pkg) throw new Error("Failed to create package")
+      const { data: pkg, error: pkgError } = await mutate(
+        () =>
+          api.POST("/api/v1/packages", {
+            body: { name: newPkgName.trim(), slug: slugify(newPkgName.trim()) },
+          }),
+        { errorMessage: "Failed to create package. Please try again." },
+      )
+      if (pkgError || !pkg) {
+        setBusy(false)
+        return
+      }
       setPackages((prev) => [...prev, { id: pkg.id, name: pkg.name }])
       setSelectedPackageId(String(pkg.id))
       setShowNewPkg(false)
@@ -110,15 +118,22 @@ export function FileHierarchy({ setStep, setSessionId, setNeedsReconcile }: Prop
     if (!newColName.trim() || !selectedPackageId) return
     setBusy(true)
     try {
-      const { data: col } = await api.POST("/api/v1/collections", {
-        body: {
-          name: newColName.trim(),
-          slug: slugify(newColName.trim()),
-          package_id: Number(selectedPackageId),
-          collection_type: "generic",
-        },
-      })
-      if (!col) throw new Error("Failed to create collection")
+      const { data: col, error: colError } = await mutate(
+        () =>
+          api.POST("/api/v1/collections", {
+            body: {
+              name: newColName.trim(),
+              slug: slugify(newColName.trim()),
+              package_id: Number(selectedPackageId),
+              collection_type: "generic",
+            },
+          }),
+        { errorMessage: "Failed to create collection. Please try again." },
+      )
+      if (colError || !col) {
+        setBusy(false)
+        return
+      }
       setCollections((prev) => [...prev, { id: col.id, name: col.name }])
       setSelectedCollectionId(String(col.id))
       setShowNewCol(false)
@@ -172,13 +187,17 @@ export function FileHierarchy({ setStep, setSessionId, setNeedsReconcile }: Prop
     form.append("collection_id", selectedCollectionId)
     form.append("collected_at", `${collectedAt}-01`)
     try {
-      const { data, error } = await api.POST("/api/v1/uploads", { body: form as never })
-      if (error || !data) throw new Error(JSON.stringify(error))
+      const { data, error } = await mutate(
+        () => api.POST("/api/v1/uploads", { body: form as never }),
+        { errorMessage: "Upload failed. Please try again." },
+      )
+      if (error || !data) {
+        setBusy(false)
+        return
+      }
       setSessionId(data.id)
       setNeedsReconcile(true)
       setStep(2)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed")
     } finally {
       setBusy(false)
     }

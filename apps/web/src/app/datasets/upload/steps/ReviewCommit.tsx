@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { api } from "@/lib/api"
+import { mutate } from "@/lib/mutate"
 import type { WizardState, WizardStep } from "../wizard-types"
 
 interface ReconSummary {
@@ -37,7 +38,6 @@ export function ReviewCommit({ state, setStep }: Props) {
   const [summary, setSummary] = useState<SessionSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!state.sessionId) return
@@ -121,12 +121,14 @@ export function ReviewCommit({ state, setStep }: Props) {
   async function handleCommit() {
     if (!state.sessionId) return
     setBusy(true)
-    setError(null)
-    const { error: commitError } = await api.POST("/api/v1/uploads/{session_id}/commit", {
-      params: { path: { session_id: state.sessionId } },
-    })
+    const { error: commitError } = await mutate(
+      () =>
+        api.POST("/api/v1/uploads/{session_id}/commit", {
+          params: { path: { session_id: state.sessionId } },
+        }),
+      { errorMessage: "Commit failed. Please try again." },
+    )
     if (commitError) {
-      setError("Commit failed. Please try again.")
       setBusy(false)
       return
     }
@@ -366,8 +368,6 @@ export function ReviewCommit({ state, setStep }: Props) {
           {busy ? "Committing…" : "Commit dataset →"}
         </button>
       </div>
-
-      {error && <p className="text-destructive text-xs">{error}</p>}
 
       <div className="flex justify-start">
         <button

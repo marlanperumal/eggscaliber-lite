@@ -2,11 +2,16 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, expect, it, vi } from "vitest"
 import { api } from "@/lib/api"
+import { mutate } from "@/lib/mutate"
 import type { WizardState } from "../wizard-types"
 import { ReviewCommit } from "./ReviewCommit"
 
 vi.mock("@/lib/api", () => ({
   api: { GET: vi.fn(), POST: vi.fn() },
+}))
+
+vi.mock("@/lib/mutate", () => ({
+  mutate: vi.fn((fn, opts) => fn().then((r) => ({ data: r.data, error: r.error }))),
 }))
 
 const mockPush = vi.fn()
@@ -111,7 +116,12 @@ it("shows error message when commit API returns an error", async () => {
   render(<ReviewCommit state={makeState()} setStep={vi.fn()} />)
   await waitFor(() => screen.getByRole("button", { name: /commit dataset/i }))
   await userEvent.click(screen.getByRole("button", { name: /commit dataset/i }))
-  await waitFor(() => expect(screen.getByText(/commit failed/i)).toBeInTheDocument())
+  await waitFor(() =>
+    expect(mutate).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ errorMessage: "Commit failed. Please try again." }),
+    ),
+  )
   expect(mockPush).not.toHaveBeenCalled()
 })
 
