@@ -36,22 +36,6 @@ describe("resolveColLabel", () => {
     expect(resolveColLabel("female", colFields, labels)).toBe("Female")
   })
 
-  it("returns the raw key when the level code is not in any colField's label map", () => {
-    const colFields = [{ field_key: "gender", display_name: "Gender" }]
-    const labels = { gender: { male: "Male" } }
-    expect(resolveColLabel("unknown_code", colFields, labels)).toBe("unknown_code")
-  })
-
-  it("returns the raw key when colFields is undefined", () => {
-    const labels = { gender: { male: "Male" } }
-    expect(resolveColLabel("male", undefined, labels)).toBe("male")
-  })
-
-  it("returns the raw key when colFields is empty", () => {
-    const labels = { gender: { male: "Male" } }
-    expect(resolveColLabel("male", [], labels)).toBe("male")
-  })
-
   it("resolves from the first matching colField when multiple colFields are present", () => {
     const colFields = [
       { field_key: "gender", display_name: "Gender" },
@@ -63,5 +47,28 @@ describe("resolveColLabel", () => {
     }
     expect(resolveColLabel("north", colFields, labels)).toBe("North")
     expect(resolveColLabel("male", colFields, labels)).toBe("Male")
+  })
+
+  it.each([
+    [
+      "colFields is undefined",
+      "male",
+      undefined as Parameters<typeof resolveColLabel>[1],
+      { gender: { male: "Male" } },
+    ],
+    [
+      "colFields is empty",
+      "male",
+      [] as Parameters<typeof resolveColLabel>[1],
+      { gender: { male: "Male" } },
+    ],
+    [
+      "level code is not in any colField label map",
+      "unknown_code",
+      [{ field_key: "gender", display_name: "Gender" }] as Parameters<typeof resolveColLabel>[1],
+      { gender: { male: "Male" } },
+    ],
+  ])("returns the raw key when %s", (_desc, key, colFields, labels) => {
+    expect(resolveColLabel(key, colFields, labels)).toBe(key)
   })
 })
