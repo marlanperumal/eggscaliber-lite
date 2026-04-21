@@ -173,6 +173,20 @@ Use `npx shadcn add <name>` to install. Do not hand-roll these.
 
 New components needed in future iterations: `Dialog`, `Popover`, `Toast`.
 
+### Modal overlay
+
+No `bg-overlay` design token exists yet. Until it is added to `generateThemeCSS()`, use `bg-black/40` as the backdrop:
+
+```tsx
+<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+  <div className="bg-card rounded-xl p-6 ...">
+    ...
+  </div>
+</div>
+```
+
+Add a `/* TODO: replace with bg-overlay once token exists */` comment at the site so it is easy to find when the token is added. Modal panels themselves use `rounded-xl` (12px) — see the Border Radius table above.
+
 ## Theme Config
 
 The design system is driven by `apps/web/src/config/theme.config.ts`.

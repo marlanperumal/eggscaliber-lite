@@ -210,6 +210,39 @@ just test-web    # vitest only
 just test        # all tests (pytest + vitest)
 ```
 
+### Cross-org isolation tests
+
+Endpoints scoped to an org (e.g. `/groups/{group_id}/members`) have two distinct failure modes that must each have a test:
+
+| Scenario | Expected behaviour |
+|---|---|
+| `clerk_org_id` not found in DB (unknown org) | 200 + empty list — service returns `[]` before touching the group |
+| Group exists but belongs to a different org | 403 — service fetches the group, detects the org mismatch, raises `ForbiddenError` |
+
+Template:
+
+```python
+async def test_<resource>_unknown_org_returns_empty(client, db):
+    """Request from a user whose clerk_org_id is not in the DB — returns empty, not 403."""
+    response = await client.get(
+        f"/api/v1/groups/{group_id}/<resource>",
+        headers={"Authorization": "Bearer dev-token-unknown-org"},
+    )
+    assert response.status_code == 200
+    assert response.json() == []
+
+async def test_<resource>_wrong_org_returns_403(client, db):
+    """Group exists but belongs to a different org — request is forbidden."""
+    other_group_id = ...  # group seeded under a different org
+    response = await client.get(
+        f"/api/v1/groups/{other_group_id}/<resource>",
+        headers={"Authorization": "Bearer dev-token-my-org"},
+    )
+    assert response.status_code == 403
+```
+
+The "unknown org → empty" behaviour arises because the service looks up the org by `clerk_org_id` first; when it finds nothing, it returns `[]` immediately — there is no group to be forbidden from. Both tests are required because the two code paths are distinct.
+
 ---
 
 ## E2E Tests (Playwright)

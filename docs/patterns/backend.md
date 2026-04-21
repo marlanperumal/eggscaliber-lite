@@ -185,6 +185,88 @@ async def create_session(
 async def create_session(session: AsyncSession, **kwargs) -> UploadSession: ...
 ```
 
+## Access Control Dependency
+
+Use `get_accessible_package_ids` as a FastAPI dependency on any route that returns package-scoped data. It returns `None` (unrestricted) in dev mode and for superusers, or a `set[int]` of allowed package IDs for authenticated org members.
+
+```python
+@router.get("/packages", response_model=list[PackageRead])
+async def list_packages(
+    session: AsyncSession = Depends(get_session),
+    current_user: CurrentUser = Depends(get_current_user),
+    accessible_ids: set[int] | None = Depends(get_accessible_package_ids),
+):
+    """List packages accessible to the current user."""
+    return await package_service.list_packages(session, accessible_ids)
+```
+
+In the service layer, pass `accessible_ids` through to the repo query:
+
+```python
+# service — passes filter down
+async def list_packages(session: AsyncSession, accessible_ids: set[int] | None) -> list[PackageRead]:
+    pkgs = await package_repo.get_all(session, accessible_ids=accessible_ids)
+    return [PackageRead.model_validate(p.model_dump()) for p in pkgs]
+
+# repo — applies filter only when not None
+async def get_all(session: AsyncSession, *, accessible_ids: set[int] | None = None) -> list[Package]:
+    q = select(Package)
+    if accessible_ids is not None:
+        q = q.where(Package.id.in_(accessible_ids))
+    result = await session.execute(q)
+    return list(result.scalars().unique().all())
+```
+
+`None` means "no filter" — never treat it as "empty set". When `accessible_ids` is an empty `set[int]`, the result is correctly empty.
+
+## Circular Imports in Repositories
+
+Repos sometimes need to type-annotate with models defined in modules that import from the same repo — a circular dependency at runtime but safe at type-check time. Use `TYPE_CHECKING` + `from __future__ import annotations` to break the cycle:
+
+```python
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from api.models.package import Package  # only imported for type annotations
+```
+
+The `from __future__ import annotations` makes all annotations lazy (strings at runtime), so the import inside `TYPE_CHECKING` is never executed by the interpreter. This pattern is correct for all repos — use it any time a type annotation would introduce a circular import.
+
+## Typed Tuple Aliases for Multi-Column Projections
+
+Repository functions that return raw multi-column SQL projections (not ORM objects) must declare a module-level type alias so callers have a named type to work with. Use the `type` keyword (Python 3.12):
+
+```python
+type GroupMemberRow = tuple[int | None, str, str | None, str | None, str]
+
+async def get_members_for_group(
+    session: AsyncSession,
+    group_id: int,
+    org_id: int,
+) -> list[GroupMemberRow]:
+    result = await session.execute(
+        select(User.id, User.clerk_id, User.email, User.display_name, OrgMembership.role)
+        ...
+    )
+    return list(result.all())
+```
+
+The service layer then maps the tuples to typed output schemas — it must not return raw tuples:
+
+```python
+# service — maps tuple to schema; uses cast() for int | None fields
+async def list_group_members(session: AsyncSession, group_id: int, ...) -> list[GroupMemberRead]:
+    rows = await group_repo.get_members_for_group(session, group_id, org.id)
+    return [
+        GroupMemberRead(user_id=cast(int, r[0]), clerk_id=r[1], email=r[2], ...)
+        for r in rows
+    ]
+```
+
+Use `cast(int, value)` (from `typing`) when a column is typed `int | None` in SQL but the service guarantees it is non-null in context (e.g., a non-nullable FK projected through a LEFT JOIN).
+
 ### Model naming must not collide across modules
 
 When two modules define models with the same class name (e.g. `FieldTreeOut` in both `models/analytics.py` and `models/upload.py`), `openapi-typescript` generates mangled names like `src__models__analytics__FieldTreeOut` that break type aliases across the codebase. Prefix domain-specific models to keep names globally unique:
