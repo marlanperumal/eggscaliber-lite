@@ -6,7 +6,6 @@ import { useEffect, useState } from "react"
 import { api } from "@/lib/api"
 
 type PackageRead = components["schemas"]["PackageRead"]
-type GroupPackageRead = components["schemas"]["GroupPackageRead"]
 
 interface Props {
   groupId: number | null
@@ -37,7 +36,7 @@ export function PackagesPanel({ groupId }: Props) {
         params: { path: { group_id: groupId } },
       })
       .then(({ data }) => {
-        if (data) setGroupPackageIds(new Set((data as GroupPackageRead[]).map((p) => p.package_id)))
+        if (data) setGroupPackageIds(new Set(data.map((p) => p.package_id)))
       })
       .finally(() => setIsLoading(false))
   }, [groupId])

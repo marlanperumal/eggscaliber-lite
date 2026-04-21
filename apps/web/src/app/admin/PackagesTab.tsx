@@ -148,7 +148,7 @@ function PackageCompositionPanel({ packageId, packages }: CompositionPanelProps)
     )
     if (data) {
       setLinked((prev) => prev.map((c) => (c.collection_id === colId ? data : c)))
-      if (scope === "selected") fetchColDatasets(colId)
+      if (scope === "selected") await fetchColDatasets(colId)
     }
   }
 

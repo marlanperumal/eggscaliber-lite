@@ -70,6 +70,7 @@ export function GroupsList({ selectedGroupId, onSelect }: Props) {
     <div data-testid="groups-list" className="flex h-full flex-col border-border border-r bg-card">
       <div className="flex items-center justify-between gap-2 border-border border-b p-4">
         <input
+          aria-label="Search groups"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value)
@@ -169,9 +170,18 @@ export function GroupsList({ selectedGroupId, onSelect }: Props) {
 
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="flex w-72 flex-col gap-4 rounded-lg border border-border bg-card p-6">
-            <h3 className="font-medium text-foreground text-sm">New Group</h3>
+          {/* TODO: replace with design token overlay when added to theme */}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-group-title"
+            className="flex w-72 flex-col gap-4 rounded-xl border border-border bg-card p-6"
+          >
+            <h3 id="create-group-title" className="font-medium text-foreground text-sm">
+              New Group
+            </h3>
             <input
+              aria-label="Group name"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Group name"
@@ -201,7 +211,16 @@ export function GroupsList({ selectedGroupId, onSelect }: Props) {
 
       {deletingId !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="flex w-72 flex-col gap-4 rounded-lg border border-border bg-card p-6">
+          {/* TODO: replace with design token overlay when added to theme */}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-group-title"
+            className="flex w-72 flex-col gap-4 rounded-xl border border-border bg-card p-6"
+          >
+            <h3 id="delete-group-title" className="sr-only">
+              Delete Group
+            </h3>
             <p className="text-foreground text-sm">Delete this group? This cannot be undone.</p>
             <div className="flex justify-end gap-2">
               <button
