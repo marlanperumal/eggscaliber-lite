@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { api } from "@/lib/api"
+import { mutate } from "@/lib/mutate"
 
 type PackageRead = components["schemas"]["PackageRead"]
 type PackageCollectionDetail = components["schemas"]["PackageCollectionDetail"]
@@ -136,48 +137,68 @@ function PackageCompositionPanel({
 
   const toggleCollection = async (colId: number, included: boolean) => {
     if (included) {
-      await api.DELETE("/api/v1/admin/packages/{package_id}/collections/{collection_id}", {
-        params: { path: { package_id: packageId, collection_id: colId } },
-      })
+      const { error } = await mutate(
+        () =>
+          api.DELETE("/api/v1/admin/packages/{package_id}/collections/{collection_id}", {
+            params: { path: { package_id: packageId, collection_id: colId } },
+          }),
+        { errorMessage: "Failed to remove collection. Please try again." },
+      )
+      if (error) return
       setLinked((prev) => prev.filter((c) => c.collection_id !== colId))
     } else {
-      const { data } = await api.POST("/api/v1/admin/packages/{package_id}/collections", {
-        params: { path: { package_id: packageId } },
-        body: { collection_id: colId, scope: "all" },
-      })
-      if (data) setLinked((prev) => [...prev, data])
+      const { data, error } = await mutate(
+        () =>
+          api.POST("/api/v1/admin/packages/{package_id}/collections", {
+            params: { path: { package_id: packageId } },
+            body: { collection_id: colId, scope: "all" },
+          }),
+        { errorMessage: "Failed to add collection. Please try again." },
+      )
+      if (error || !data) return
+      setLinked((prev) => [...prev, data])
     }
   }
 
   const updateScope = async (colId: number, scope: "all" | "selected") => {
-    const { data } = await api.PATCH(
-      "/api/v1/admin/packages/{package_id}/collections/{collection_id}",
-      {
-        params: { path: { package_id: packageId, collection_id: colId } },
-        body: { scope },
-      },
+    const { data, error } = await mutate(
+      () =>
+        api.PATCH("/api/v1/admin/packages/{package_id}/collections/{collection_id}", {
+          params: { path: { package_id: packageId, collection_id: colId } },
+          body: { scope },
+        }),
+      { errorMessage: "Failed to update scope. Please try again." },
     )
-    if (data) {
-      setLinked((prev) => prev.map((c) => (c.collection_id === colId ? data : c)))
-      if (scope === "selected") await fetchColDatasets(colId)
-    }
+    if (error || !data) return
+    setLinked((prev) => prev.map((c) => (c.collection_id === colId ? data : c)))
+    if (scope === "selected") await fetchColDatasets(colId)
   }
 
   const toggleDataset = async (colId: number, datasetId: number, included: boolean) => {
     if (included) {
-      await api.DELETE(
-        "/api/v1/admin/packages/{package_id}/collections/{collection_id}/datasets/{dataset_id}",
-        {
-          params: {
-            path: { package_id: packageId, collection_id: colId, dataset_id: datasetId },
-          },
-        },
+      const { error } = await mutate(
+        () =>
+          api.DELETE(
+            "/api/v1/admin/packages/{package_id}/collections/{collection_id}/datasets/{dataset_id}",
+            {
+              params: {
+                path: { package_id: packageId, collection_id: colId, dataset_id: datasetId },
+              },
+            },
+          ),
+        { errorMessage: "Failed to remove dataset. Please try again." },
       )
+      if (error) return
     } else {
-      await api.POST("/api/v1/admin/packages/{package_id}/collections/{collection_id}/datasets", {
-        params: { path: { package_id: packageId, collection_id: colId } },
-        body: { dataset_id: datasetId },
-      })
+      const { error } = await mutate(
+        () =>
+          api.POST("/api/v1/admin/packages/{package_id}/collections/{collection_id}/datasets", {
+            params: { path: { package_id: packageId, collection_id: colId } },
+            body: { dataset_id: datasetId },
+          }),
+        { errorMessage: "Failed to add dataset. Please try again." },
+      )
+      if (error) return
     }
     const { data } = await api.GET("/api/v1/admin/packages/{package_id}/collections", {
       params: { path: { package_id: packageId } },
@@ -190,11 +211,16 @@ function PackageCompositionPanel({
   const toggleVisibility = async () => {
     if (!pkg) return
     const next = pkg.visibility === "private" ? "public" : "private"
-    const { data } = await api.PATCH("/api/v1/admin/packages/{package_id}", {
-      params: { path: { package_id: pkg.id } },
-      body: { visibility: next },
-    })
-    if (data) onVisibilityToggle(data)
+    const { data, error } = await mutate(
+      () =>
+        api.PATCH("/api/v1/admin/packages/{package_id}", {
+          params: { path: { package_id: pkg.id } },
+          body: { visibility: next },
+        }),
+      { errorMessage: "Failed to update visibility. Please try again." },
+    )
+    if (error || !data) return
+    onVisibilityToggle(data)
   }
 
   return (

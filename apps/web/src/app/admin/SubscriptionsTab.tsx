@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { api } from "@/lib/api"
+import { mutate } from "@/lib/mutate"
 
 type PackageRead = components["schemas"]["PackageRead"]
 
@@ -59,9 +60,14 @@ export function SubscriptionsTab({ orgId }: Props) {
     if (orgId === null) return
     const current = subStates[pkg.id]
     if (current?.subscribed) {
-      await api.DELETE("/api/v1/admin/orgs/{org_id}/subscriptions/{package_id}", {
-        params: { path: { org_id: orgId, package_id: pkg.id } },
-      })
+      const { error } = await mutate(
+        () =>
+          api.DELETE("/api/v1/admin/orgs/{org_id}/subscriptions/{package_id}", {
+            params: { path: { org_id: orgId, package_id: pkg.id } },
+          }),
+        { errorMessage: "Failed to remove subscription. Please try again." },
+      )
+      if (error) return
       setSubStates((prev) => {
         const next = { ...prev }
         delete next[pkg.id]
@@ -69,21 +75,24 @@ export function SubscriptionsTab({ orgId }: Props) {
       })
     } else {
       const today = new Date().toISOString().slice(0, 10)
-      const { data } = await api.POST("/api/v1/admin/orgs/{org_id}/subscriptions", {
-        params: { path: { org_id: orgId } },
-        body: { package_id: pkg.id, start_date: today, end_date: null },
-      })
-      if (data) {
-        setSubStates((prev) => ({
-          ...prev,
-          [pkg.id]: {
-            subscribed: true,
-            startDate: data.start_date,
-            endDate: data.end_date ?? "",
-            subId: data.id,
-          },
-        }))
-      }
+      const { data, error } = await mutate(
+        () =>
+          api.POST("/api/v1/admin/orgs/{org_id}/subscriptions", {
+            params: { path: { org_id: orgId } },
+            body: { package_id: pkg.id, start_date: today, end_date: null },
+          }),
+        { errorMessage: "Failed to add subscription. Please try again." },
+      )
+      if (error || !data) return
+      setSubStates((prev) => ({
+        ...prev,
+        [pkg.id]: {
+          subscribed: true,
+          startDate: data.start_date,
+          endDate: data.end_date ?? "",
+          subId: data.id,
+        },
+      }))
     }
   }
 
