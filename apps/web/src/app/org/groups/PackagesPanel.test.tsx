@@ -95,4 +95,30 @@ describe("PackagesPanel", () => {
       expect(screen.getAllByRole("button", { name: /^grant$/i })[0]).toBeInTheDocument(),
     )
   })
+
+  it("shows read-only grant status text instead of buttons when user is not an org admin", async () => {
+    vi.mocked(useOrganization).mockReturnValue({
+      membership: { role: "org:member" },
+    } as ReturnType<typeof useOrganization>)
+    const mockOrgPackages = [
+      { id: 1, name: "Public Pkg", slug: "public-pkg", visibility: "public" },
+      { id: 2, name: "Private Pkg", slug: "private-pkg", visibility: "private" },
+    ]
+    mockGet.mockImplementation((url: string) => {
+      if (url === "/api/v1/org/subscriptions")
+        return Promise.resolve({ data: mockOrgPackages } as never)
+      // package 2 is granted
+      return Promise.resolve({ data: [{ package_id: 2 }] } as never)
+    })
+
+    render(<PackagesPanel groupId={5} />)
+    await waitFor(() => screen.getAllByTestId("package-row"))
+
+    // No clickable Grant/Granted buttons — interactive buttons are admin-only
+    expect(screen.queryByRole("button", { name: /^grant$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /^granted$/i })).not.toBeInTheDocument()
+    // Read-only text shows the access state instead
+    expect(screen.getByText("Granted")).toBeInTheDocument()
+    expect(screen.getByText("No access")).toBeInTheDocument()
+  })
 })
