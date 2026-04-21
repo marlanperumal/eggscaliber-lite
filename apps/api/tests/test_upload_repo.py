@@ -18,7 +18,6 @@ async def _seed_session(db):
     col = Collection(
         name="C",
         slug="c-upload-repo-test",
-        package_id=pkg.id,
         collection_type=CollectionType.survey,
     )
     db.add(col)

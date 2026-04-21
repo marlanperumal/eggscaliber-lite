@@ -13,9 +13,7 @@ async def _seed_measure_fixture(db):
     db.add(pkg)
     await db.flush()
     await db.refresh(pkg)
-    col = Collection(
-        name="CM", slug="cm-measure", package_id=pkg.id, collection_type=CollectionType.survey
-    )
+    col = Collection(name="CM", slug="cm-measure", collection_type=CollectionType.survey)
     db.add(col)
     await db.flush()
     await db.refresh(col)
@@ -71,7 +69,6 @@ async def _seed_trend_fixture(db):
     col = Collection(
         name="Brand Tracker",
         slug="bt",
-        package_id=pkg.id,
         collection_type=CollectionType.survey,
     )
     db.add(col)
@@ -148,7 +145,7 @@ async def _seed_crosstab_fixture(db):
     db.add(pkg)
     await db.flush()
     await db.refresh(pkg)
-    col = Collection(name="C", slug="c", package_id=pkg.id, collection_type=CollectionType.survey)
+    col = Collection(name="C", slug="c", collection_type=CollectionType.survey)
     db.add(col)
     await db.flush()
     await db.refresh(col)
@@ -650,7 +647,6 @@ async def _seed_trend_weighted_fixture(db):
     col = Collection(
         name="Weighted Tracker",
         slug="wt-tracker",
-        package_id=pkg.id,
         collection_type=CollectionType.survey,
     )
     db.add(col)

@@ -1,4 +1,5 @@
 import asyncio
+from typing import cast
 
 import pytest
 import pytest_asyncio
@@ -12,6 +13,7 @@ from src.database import get_session
 from src.main import app
 from src.models.collection import Collection, CollectionType
 from src.models.dataset import Dataset
+from src.models.group import PackageCollection
 from src.models.package import Package
 
 
@@ -64,7 +66,7 @@ async def client(db: AsyncSession):
 
 @pytest_asyncio.fixture
 async def bare_dataset(db: AsyncSession):
-    """Minimal Package → Collection → Dataset chain. Tests can add fields/responses on top."""
+    """Minimal Package → Collection → Dataset chain via package_collections join."""
     pkg = Package(name="Test Package", slug="test-pkg-fixture")
     db.add(pkg)
     await db.flush()
@@ -73,12 +75,15 @@ async def bare_dataset(db: AsyncSession):
     col = Collection(
         name="Test Collection",
         slug="test-col-fixture",
-        package_id=pkg.id,
         collection_type=CollectionType.survey,
     )
     db.add(col)
     await db.flush()
     await db.refresh(col)
+
+    pc = PackageCollection(package_id=cast(int, pkg.id), collection_id=cast(int, col.id))
+    db.add(pc)
+    await db.flush()
 
     ds = Dataset(name="Test Dataset", slug="test-ds-fixture", collection_id=col.id, sort_order=0)
     db.add(ds)
@@ -103,10 +108,13 @@ async def seeded_collection(db: AsyncSession, seeded_package):
     col = Collection(
         name="Seeded Collection",
         slug="seeded-col-fixture",
-        package_id=seeded_package.id,
         collection_type=CollectionType.survey,
     )
     db.add(col)
     await db.flush()
     await db.refresh(col)
+
+    pc = PackageCollection(package_id=cast(int, seeded_package.id), collection_id=cast(int, col.id))
+    db.add(pc)
+    await db.flush()
     return col

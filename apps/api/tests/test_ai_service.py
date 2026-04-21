@@ -3,6 +3,7 @@ from src.models.collection import Collection, CollectionType
 from src.models.dataset import Dataset
 from src.models.field import Field, FieldType
 from src.models.field_group import FieldGroup
+from src.models.group import PackageCollection
 from src.models.level import Level
 from src.models.package import Package
 from src.models.response import Response
@@ -114,12 +115,13 @@ async def ai_dataset(db):
     col = Collection(
         name="AI Test Col",
         slug="ai-test-col",
-        package_id=pkg.id,
         collection_type=CollectionType.survey,
     )
     db.add(col)
     await db.flush()
     await db.refresh(col)
+    db.add(PackageCollection(package_id=pkg.id, collection_id=col.id))
+    await db.flush()
 
     ds = Dataset(
         name="AI Test DS",

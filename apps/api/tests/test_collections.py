@@ -2,6 +2,7 @@ from datetime import date
 
 from src.models.collection import Collection, CollectionType
 from src.models.dataset import Dataset
+from src.models.group import PackageCollection
 from src.models.package import Package
 
 
@@ -14,12 +15,13 @@ async def _seed_collection(db):
     col = Collection(
         name="Brand Tracker",
         slug="brand-tracker-col-test",
-        package_id=pkg.id,
         collection_type=CollectionType.survey,
     )
     db.add(col)
     await db.flush()
     await db.refresh(col)
+    db.add(PackageCollection(package_id=pkg.id, collection_id=col.id))
+    await db.flush()
 
     for i, wave_name in enumerate(["Wave 1", "Wave 2"], start=1):
         ds = Dataset(
@@ -52,7 +54,6 @@ async def test_create_collection(client, db):
     assert response.status_code == 201
     data = response.json()
     assert data["name"] == "New Collection"
-    assert data["package_id"] == pkg.id
     assert data["id"] is not None
 
 

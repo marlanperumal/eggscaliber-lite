@@ -6,7 +6,7 @@ from src.errors import PackageNotFoundError
 from src.models.package import CollectionSummary, PackageRead, PackageWithCollections
 from src.models.scope import ScopeCollection, ScopeDataset, ScopePackage
 from src.orm import pk
-from src.repositories import collection_repo, dataset_repo, package_repo
+from src.repositories import dataset_repo, package_repo
 
 
 def _slugify(name: str) -> str:
@@ -28,25 +28,38 @@ async def create_package(
 
 async def get_scope(session: AsyncSession) -> list[ScopePackage]:
     """Return all packages with their collections and datasets in 3 queries."""
+    from sqlalchemy import select as sa_select
+
+    from src.models.collection import Collection
+    from src.models.group import PackageCollection
+
     packages = await package_repo.get_all(session)
     if not packages:
         return []
 
-    collections = await collection_repo.get_all_for_packages(
-        session, [p.id for p in packages if p.id is not None]
+    pkg_ids = [p.id for p in packages if p.id is not None]
+
+    rows = list(
+        (
+            await session.execute(
+                sa_select(PackageCollection.package_id, Collection)
+                .join(Collection, Collection.id == PackageCollection.collection_id)
+                .where(PackageCollection.package_id.in_(pkg_ids))
+            )
+        ).all()
     )
 
-    datasets = await dataset_repo.get_all_for_collections(
-        session, [c.id for c in collections if c.id is not None]
-    )
+    col_ids = [r.Collection.id for r in rows if r.Collection.id is not None]
+    datasets = await dataset_repo.get_all_for_collections(session, col_ids)
 
     datasets_by_col: dict[int | None, list[ScopeDataset]] = {}
     for d in datasets:
         datasets_by_col.setdefault(d.collection_id, []).append(ScopeDataset(id=pk(d), name=d.name))
 
     collections_by_pkg: dict[int | None, list[ScopeCollection]] = {}
-    for c in collections:
-        collections_by_pkg.setdefault(c.package_id, []).append(
+    for row in rows:
+        c = row.Collection
+        collections_by_pkg.setdefault(row.package_id, []).append(
             ScopeCollection(id=pk(c), name=c.name, datasets=datasets_by_col.get(c.id, []))
         )
 

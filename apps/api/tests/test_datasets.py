@@ -1,6 +1,7 @@
 from src.models.collection import Collection, CollectionType
 from src.models.dataset import Dataset
 from src.models.field import Field, FieldType
+from src.models.group import PackageCollection
 from src.models.level import Level
 from src.models.package import Package
 from src.models.response import Response
@@ -12,9 +13,7 @@ async def _seed_dataset(db):
     await db.flush()
     await db.refresh(pkg)
 
-    col = Collection(
-        name="C", slug="c-ds-test", package_id=pkg.id, collection_type=CollectionType.survey
-    )
+    col = Collection(name="C", slug="c-ds-test", collection_type=CollectionType.survey)
     db.add(col)
     await db.flush()
     await db.refresh(col)
@@ -156,12 +155,13 @@ async def test_list_datasets_includes_collection_and_package(client, db):
     col = Collection(
         name="Brand Tracker",
         slug="brand-enriched",
-        package_id=pkg.id,
         collection_type=CollectionType.survey,
     )
     db.add(col)
     await db.flush()
     await db.refresh(col)
+    db.add(PackageCollection(package_id=pkg.id, collection_id=col.id))
+    await db.flush()
     ds = Dataset(name="Q4 2025", slug="q4-2025-enrich", collection_id=col.id, sort_order=0)
     db.add(ds)
     await db.flush()

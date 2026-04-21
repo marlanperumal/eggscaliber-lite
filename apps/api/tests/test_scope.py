@@ -1,5 +1,6 @@
 from src.models.collection import Collection, CollectionType
 from src.models.dataset import Dataset
+from src.models.group import PackageCollection
 from src.models.package import Package
 
 
@@ -18,12 +19,13 @@ async def test_scope_returns_full_hierarchy(client, db):
     col = Collection(
         name="Brand Tracker",
         slug="brand-tracker",
-        package_id=pkg.id,
         collection_type=CollectionType.survey,
     )
     db.add(col)
     await db.flush()
     await db.refresh(col)
+    db.add(PackageCollection(package_id=pkg.id, collection_id=col.id))
+    await db.flush()
 
     ds1 = Dataset(name="Wave 1", slug="wave-1", collection_id=col.id, sort_order=0)
     ds2 = Dataset(name="Wave 2", slug="wave-2", collection_id=col.id, sort_order=1)
@@ -61,12 +63,12 @@ async def test_scope_does_not_expose_internal_fields(client, db):
     col = Collection(
         name="Tracker",
         slug="tracker",
-        package_id=pkg.id,
         collection_type=CollectionType.survey,
     )
     db.add(col)
     await db.flush()
     await db.refresh(col)
+    db.add(PackageCollection(package_id=pkg.id, collection_id=col.id))
     db.add(Dataset(name="Wave 1", slug="wave-1", collection_id=col.id, sort_order=0))
     await db.flush()
 

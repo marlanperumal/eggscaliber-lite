@@ -3,16 +3,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.collection import Collection, CollectionType
 from src.models.dataset import Dataset
+from src.models.group import PackageCollection
 
 
 async def get_all_for_packages(session: AsyncSession, package_ids: list[int]) -> list[Collection]:
     if not package_ids:
         return []
-    return list(
-        (await session.execute(select(Collection).where(Collection.package_id.in_(package_ids))))
-        .scalars()
-        .all()
+    result = await session.execute(
+        select(Collection)
+        .join(PackageCollection, PackageCollection.collection_id == Collection.id)
+        .where(PackageCollection.package_id.in_(package_ids))
     )
+    return list(result.scalars().all())
 
 
 async def get_by_id(session: AsyncSession, collection_id: int) -> Collection | None:
@@ -34,13 +36,15 @@ async def create_collection(
     obj = Collection(
         name=name,
         slug=slug,
-        package_id=package_id,
         description=description,
         collection_type=collection_type,
     )
     session.add(obj)
     await session.flush()
     await session.refresh(obj)
+    pc = PackageCollection(package_id=package_id, collection_id=obj.id)
+    session.add(pc)
+    await session.flush()
     return obj
 
 

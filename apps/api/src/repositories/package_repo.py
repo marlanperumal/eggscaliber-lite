@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.collection import Collection
+from src.models.group import PackageCollection
 from src.models.package import Package
 
 
@@ -26,8 +27,9 @@ async def create_package(
 
 
 async def get_collections_for_package(session: AsyncSession, package_id: int) -> list[Collection]:
-    return list(
-        (await session.execute(select(Collection).where(Collection.package_id == package_id)))
-        .scalars()
-        .all()
+    result = await session.execute(
+        select(Collection)
+        .join(PackageCollection, PackageCollection.collection_id == Collection.id)
+        .where(PackageCollection.package_id == package_id)
     )
+    return list(result.scalars().all())

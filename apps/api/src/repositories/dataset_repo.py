@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.collection import Collection
 from src.models.dataset import Dataset
 from src.models.field import Field
+from src.models.group import PackageCollection
 from src.models.level import Level
 from src.models.package import Package
 from src.models.response import Response
@@ -115,7 +116,8 @@ async def list_enriched(
             func.coalesce(response_count_sq.c.response_count, 0).label("response_count"),
         )
         .join(Collection, Dataset.collection_id == Collection.id)
-        .join(Package, Collection.package_id == Package.id)
+        .join(PackageCollection, PackageCollection.collection_id == Collection.id)
+        .join(Package, Package.id == PackageCollection.package_id)
         .outerjoin(field_count_sq, Dataset.id == field_count_sq.c.dataset_id)
         .outerjoin(response_count_sq, Dataset.id == response_count_sq.c.dataset_id)
     )

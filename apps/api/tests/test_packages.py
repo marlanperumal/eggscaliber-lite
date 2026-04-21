@@ -1,4 +1,5 @@
 from src.models.collection import Collection, CollectionType
+from src.models.group import PackageCollection
 from src.models.package import Package
 
 
@@ -52,10 +53,12 @@ async def test_get_package_with_collections(client, db):
     col = Collection(
         name="Brand Tracker",
         slug="brand-tracker",
-        package_id=pkg.id,
         collection_type=CollectionType.survey,
     )
     db.add(col)
+    await db.flush()
+    await db.refresh(col)
+    db.add(PackageCollection(package_id=pkg.id, collection_id=col.id))
     await db.flush()
 
     response = await client.get(f"/api/v1/packages/{pkg.id}")

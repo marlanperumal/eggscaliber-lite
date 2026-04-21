@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.collection import Collection
 from src.models.field import FieldType
+from src.models.group import PackageCollection
 from src.models.package import Package
 from src.models.upload import (
     UploadField,
@@ -23,8 +24,19 @@ async def get_collection_meta(
     result = await session.get(Collection, collection_id)
     if result is None:
         return None
-    pkg = await session.get(Package, result.package_id)
-    package_name = pkg.name if pkg else None
+    pc = (
+        (
+            await session.execute(
+                select(PackageCollection).where(PackageCollection.collection_id == collection_id)
+            )
+        )
+        .scalars()
+        .first()
+    )
+    package_name: str | None = None
+    if pc is not None:
+        pkg = await session.get(Package, pc.package_id)
+        package_name = pkg.name if pkg else None
     return {
         "collection_name": result.name,
         "package_name": package_name,

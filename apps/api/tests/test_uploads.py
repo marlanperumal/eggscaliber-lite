@@ -3,6 +3,7 @@ import io
 
 from src.models.collection import Collection, CollectionType
 from src.models.dataset import Dataset
+from src.models.group import PackageCollection
 from src.models.package import Package
 from src.models.upload import UploadSessionStatus
 
@@ -140,7 +141,6 @@ async def _seed_collection_with_datasets(db):
     col = Collection(
         name="Col SR",
         slug="col-sr-test",
-        package_id=pkg.id,
         collection_type=CollectionType.survey,
     )
     db.add(col)
@@ -223,12 +223,13 @@ async def test_get_upload_session_includes_collection_metadata(client, db):
     col = Collection(
         name="Meta Collection",
         slug="meta-col-test",
-        package_id=pkg.id,
         collection_type=CollectionType.survey,
     )
     db.add(col)
     await db.flush()
     await db.refresh(col)
+    db.add(PackageCollection(package_id=pkg.id, collection_id=col.id))
+    await db.flush()
 
     csv_bytes = _make_csv(["id"], [["1"]])
     resp = await client.post(
@@ -331,7 +332,6 @@ async def test_resolve_row_with_upload_field_id(client, db):
     col = Collection(
         name="C",
         slug="c-upload-field-test",
-        package_id=pkg.id,
         collection_type=CollectionType.survey,
     )
     db.add(col)
@@ -491,7 +491,6 @@ async def test_suggested_reference_returns_none_for_empty_collection(client, db)
     col = Collection(
         name="Empty Col",
         slug="empty-col",
-        package_id=pkg.id,
         collection_type=CollectionType.generic,
     )
     db.add(col)

@@ -2,6 +2,7 @@ import csv
 import io
 
 from src.models.collection import Collection, CollectionType
+from src.models.group import PackageCollection
 from src.models.package import Package
 
 
@@ -18,12 +19,12 @@ async def _seed_collection(db):
     db.add(pkg)
     await db.flush()
     await db.refresh(pkg)
-    col = Collection(
-        name="C", slug="c-commit-test", package_id=pkg.id, collection_type=CollectionType.survey
-    )
+    col = Collection(name="C", slug="c-commit-test", collection_type=CollectionType.survey)
     db.add(col)
     await db.flush()
     await db.refresh(col)
+    db.add(PackageCollection(package_id=pkg.id, collection_id=col.id))
+    await db.flush()
     return col
 
 

@@ -21,9 +21,7 @@ async def _seed_ref_dataset(db):
     db.add(pkg)
     await db.flush()
     await db.refresh(pkg)
-    col = Collection(
-        name="C", slug="c-recon-api-test", package_id=pkg.id, collection_type=CollectionType.survey
-    )
+    col = Collection(name="C", slug="c-recon-api-test", collection_type=CollectionType.survey)
     db.add(col)
     await db.flush()
     await db.refresh(col)
