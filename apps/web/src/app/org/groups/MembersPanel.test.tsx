@@ -105,4 +105,30 @@ describe("MembersPanel", () => {
     })
     await waitFor(() => expect(screen.queryByTestId("member-row")).not.toBeInTheDocument())
   })
+
+  it("hides + Add button when user is not an org admin", async () => {
+    vi.mocked(useOrganization).mockReturnValue({
+      membership: { role: "org:member" },
+    } as ReturnType<typeof useOrganization>)
+    mockGet.mockResolvedValue({ data: [] } as never)
+    render(<MembersPanel groupId={5} isDefault={false} />)
+    await waitFor(() => expect(screen.queryByText(/loading/i)).not.toBeInTheDocument())
+    expect(screen.queryByRole("button", { name: /\+ add/i })).not.toBeInTheDocument()
+  })
+
+  it("hides Remove buttons when user is not an org admin", async () => {
+    vi.mocked(useOrganization).mockReturnValue({
+      membership: { role: "org:member" },
+    } as ReturnType<typeof useOrganization>)
+    mockGet.mockImplementation((url: string) => {
+      if (url === "/api/v1/groups/{group_id}/members")
+        return Promise.resolve({
+          data: [{ user_id: 10, email: "alice@example.com", role: "admin" }],
+        } as never)
+      return Promise.resolve({ data: [] } as never)
+    })
+    render(<MembersPanel groupId={5} isDefault={false} />)
+    await waitFor(() => expect(screen.getByTestId("member-row")).toBeInTheDocument())
+    expect(screen.queryByRole("button", { name: /remove/i })).not.toBeInTheDocument()
+  })
 })
