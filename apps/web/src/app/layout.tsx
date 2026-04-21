@@ -3,6 +3,7 @@ import { PostHogPageView, PostHogProvider } from "@posthog/next"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
+import { Toaster } from "@/components/ui/sonner"
 import { TopNav } from "@/components/ui/top-nav"
 import { themeConfig } from "@/config/theme.config"
 import { generateThemeCSS } from "@/lib/theme"
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <main className="flex-1 overflow-hidden">{children}</main>
               </PostHogProvider>
             </NuqsAdapter>
+            <Toaster />
           </ThemeProvider>
         </body>
       </html>
