@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth import CurrentUser, get_current_user
+from src.auth import CurrentUser, get_accessible_package_ids, get_current_user
 from src.database import get_session
 from src.models.analytics import FieldTreeOut
 from src.models.dataset import DatasetListPage, DatasetWithFields, FieldOut
@@ -22,11 +22,16 @@ async def list_datasets(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=200),
     _: CurrentUser = Depends(get_current_user),
+    accessible_ids: set[int] | None = Depends(get_accessible_package_ids),
     session: AsyncSession = Depends(get_session),
 ):
     """List datasets, optionally filtered by collection_id."""
     total, items = await dataset_repo.list_enriched(
-        session, collection_id=collection_id, page=page, page_size=page_size
+        session,
+        collection_id=collection_id,
+        page=page,
+        page_size=page_size,
+        accessible_package_ids=accessible_ids,
     )
     return {"total": total, "page": page, "page_size": page_size, "items": items}
 
@@ -35,20 +40,22 @@ async def list_datasets(
 async def get_dataset(
     dataset_id: int,
     _: CurrentUser = Depends(get_current_user),
+    accessible_ids: set[int] | None = Depends(get_accessible_package_ids),
     session: AsyncSession = Depends(get_session),
 ):
     """Get a dataset with all its fields and metadata."""
-    return await dataset_service.get_with_fields(session, dataset_id)
+    return await dataset_service.get_with_fields(session, dataset_id, accessible_ids=accessible_ids)
 
 
 @router.delete("/datasets/{dataset_id}", status_code=204, response_model=None)
 async def delete_dataset(
     dataset_id: int,
     _: CurrentUser = Depends(get_current_user),
+    accessible_ids: set[int] | None = Depends(get_accessible_package_ids),
     session: AsyncSession = Depends(get_session),
 ):
     """Delete a dataset and all associated fields, levels, and responses."""
-    await dataset_service.delete_dataset(session, dataset_id)
+    await dataset_service.delete_dataset(session, dataset_id, accessible_ids=accessible_ids)
 
 
 @router.get("/datasets/{dataset_id}/responses", response_model=ResponsePage)
@@ -57,19 +64,24 @@ async def get_dataset_responses(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=100, ge=1, le=500),
     _: CurrentUser = Depends(get_current_user),
+    accessible_ids: set[int] | None = Depends(get_accessible_package_ids),
     session: AsyncSession = Depends(get_session),
 ):
     """Get paginated raw survey responses for a dataset."""
-    return await dataset_service.get_responses(session, dataset_id, page, page_size)
+    return await dataset_service.get_responses(
+        session, dataset_id, page, page_size, accessible_ids=accessible_ids
+    )
 
 
 @router.get("/datasets/{dataset_id}/field-tree", response_model=FieldTreeOut)
 async def get_field_tree(
     dataset_id: int,
     _: CurrentUser = Depends(get_current_user),
+    accessible_ids: set[int] | None = Depends(get_accessible_package_ids),
     session: AsyncSession = Depends(get_session),
 ):
     """Get the hierarchical field tree for a dataset (groups and fields for use in query builder)."""
+    await dataset_service.get_with_fields(session, dataset_id, accessible_ids=accessible_ids)
     return await analytics_service.get_field_tree(session, dataset_id)
 
 
@@ -77,9 +89,11 @@ async def get_field_tree(
 async def get_weight_fields(
     dataset_id: int,
     _: CurrentUser = Depends(get_current_user),
+    accessible_ids: set[int] | None = Depends(get_accessible_package_ids),
     session: AsyncSession = Depends(get_session),
 ):
     """Get the numeric fields available as weighting variables for a dataset."""
+    await dataset_service.get_with_fields(session, dataset_id, accessible_ids=accessible_ids)
     return await analytics_service.get_weight_fields(session, dataset_id)
 
 
@@ -89,10 +103,13 @@ async def get_weight_fields(
 async def download_dataset_csv(
     dataset_id: int,
     _: CurrentUser = Depends(get_current_user),
+    accessible_ids: set[int] | None = Depends(get_accessible_package_ids),
     session: AsyncSession = Depends(get_session),
 ):
     """Stream all responses for a dataset as a CSV file."""
-    field_keys, rows = await dataset_service.get_csv_data(session, dataset_id)
+    field_keys, rows = await dataset_service.get_csv_data(
+        session, dataset_id, accessible_ids=accessible_ids
+    )
 
     def generate():
         buf = io.StringIO()

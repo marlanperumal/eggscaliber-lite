@@ -90,6 +90,7 @@ async def list_enriched(
     collection_id: int | None = None,
     page: int = 1,
     page_size: int = 50,
+    accessible_package_ids: set[int] | None = None,
 ) -> tuple[int, list[dict]]:
     """Return datasets enriched with collection/package names and counts."""
     # Exception: returns list[dict] rather than ORM objects because this query
@@ -121,6 +122,14 @@ async def list_enriched(
         .outerjoin(field_count_sq, Dataset.id == field_count_sq.c.dataset_id)
         .outerjoin(response_count_sq, Dataset.id == response_count_sq.c.dataset_id)
     )
+    if accessible_package_ids is not None:
+        accessible_collection_ids_subq = (
+            select(PackageCollection.collection_id)
+            .where(PackageCollection.package_id.in_(accessible_package_ids))
+            .scalar_subquery()
+        )
+        stmt = stmt.where(Dataset.collection_id.in_(accessible_collection_ids_subq))
+
     if collection_id is not None:
         stmt = stmt.where(Dataset.collection_id == collection_id)
 
