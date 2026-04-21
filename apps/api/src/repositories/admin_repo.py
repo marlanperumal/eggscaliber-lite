@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from datetime import date
+from typing import TYPE_CHECKING
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +14,11 @@ from src.models.group import (
 )
 from src.models.package import Package, PackageVisibility
 from src.models.user import Organisation
+
+if TYPE_CHECKING:
+    from src.models.collection import Collection
+
+type PackageCollectionRow = tuple[PackageCollection, Collection | None, list[int]]
 
 
 async def list_orgs(session: AsyncSession) -> list[Organisation]:
@@ -69,7 +77,9 @@ async def update_package_visibility(
     return pkg
 
 
-async def get_package_collections(session: AsyncSession, package_id: int) -> list[tuple]:
+async def get_package_collections(
+    session: AsyncSession, package_id: int
+) -> list[PackageCollectionRow]:
     from src.models.collection import Collection
 
     pcs = list(
@@ -107,6 +117,9 @@ async def add_collection_to_package(
     collection_id: int,
     scope: PackageCollectionScope,
 ) -> PackageCollection:
+    existing = await session.get(PackageCollection, (package_id, collection_id))
+    if existing is not None:
+        return existing  # idempotent
     pc = PackageCollection(
         package_id=package_id,
         collection_id=collection_id,
@@ -153,6 +166,9 @@ async def add_dataset_inclusion(
     collection_id: int,
     dataset_id: int,
 ) -> None:
+    existing = await session.get(PackageCollectionDataset, (package_id, collection_id, dataset_id))
+    if existing is not None:
+        return  # idempotent
     pcd = PackageCollectionDataset(
         package_id=package_id,
         collection_id=collection_id,

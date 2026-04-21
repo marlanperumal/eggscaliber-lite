@@ -5,7 +5,7 @@ from typing import cast
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.errors import PackageNotFoundError
+from src.errors import PackageCollectionNotFoundError, PackageNotFoundError
 from src.models.collection import CollectionRead
 from src.models.group import OrgSubscriptionRead, PackageCollectionDetail, PackageCollectionScope
 from src.models.package import PackageCreate, PackageRead, PackageVisibility
@@ -163,7 +163,7 @@ async def update_collection_scope(
         session, package_id=package_id, collection_id=collection_id, scope=scope
     )
     if pc is None:
-        raise PackageNotFoundError(package_id)
+        raise PackageCollectionNotFoundError(package_id, collection_id)
     col = await collection_repo.get_by_id(session, collection_id)
     ds_ids = list(
         (

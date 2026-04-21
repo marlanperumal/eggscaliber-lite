@@ -72,3 +72,15 @@ class CannotDeleteDefaultGroupError(DomainError):
 
     def __init__(self) -> None:
         super().__init__("Cannot delete the Default group")
+
+
+class PackageCollectionNotFoundError(DomainError):
+    status_code = 404
+    code = "package_collection_not_found"
+
+    def __init__(self, package_id: int, collection_id: int) -> None:
+        self.package_id = package_id
+        self.collection_id = collection_id
+        super().__init__(
+            f"PackageCollection (package_id={package_id}, collection_id={collection_id}) not found"
+        )
