@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react"
+import type React from "react"
 import { describe, expect, it, vi } from "vitest"
 
 vi.mock("@posthog/next", () => ({
@@ -16,6 +17,15 @@ vi.mock("next-themes", () => ({
 vi.mock("@clerk/nextjs", () => ({
   OrganizationSwitcher: () => null,
   UserButton: () => null,
+  SignInButton: ({ children }: { children: React.ReactNode }) => children,
+  Show: ({
+    children,
+    fallback,
+  }: {
+    when: string
+    children: React.ReactNode
+    fallback?: React.ReactNode
+  }) => fallback ?? null,
 }))
 
 import { useFeatureFlag } from "@posthog/next"

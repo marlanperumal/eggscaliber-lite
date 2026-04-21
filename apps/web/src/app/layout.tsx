@@ -18,7 +18,19 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider afterSignOutUrl="/">
+    <ClerkProvider
+      afterSignOutUrl="/"
+      appearance={{
+        variables: {
+          colorBackground: "hsl(var(--popover))",
+          colorText: "hsl(var(--popover-foreground))",
+          colorInputBackground: "hsl(var(--input))",
+          colorInputText: "hsl(var(--foreground))",
+          colorNeutral: "hsl(var(--foreground))",
+          colorPrimary: "hsl(var(--primary))",
+        },
+      }}
+    >
       <html lang="en" suppressHydrationWarning>
         <head>
           {/* Theme CSS injected here so tokens resolve before first paint */}

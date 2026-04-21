@@ -1,6 +1,6 @@
 "use client"
 
-import { OrganizationSwitcher, UserButton } from "@clerk/nextjs"
+import { OrganizationSwitcher, Show, SignInButton, UserButton } from "@clerk/nextjs"
 import { useFeatureFlag } from "@posthog/next"
 import { Moon, Sun } from "lucide-react"
 import Link from "next/link"
@@ -73,8 +73,23 @@ export function TopNav() {
             <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <OrganizationSwitcher />
-        <UserButton userProfileUrl="/account" />
+        <Show
+          when="signed-in"
+          fallback={
+            <SignInButton mode="redirect">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-nav-foreground hover:bg-nav-foreground/15 hover:text-nav-foreground"
+              >
+                Sign in
+              </Button>
+            </SignInButton>
+          }
+        >
+          <OrganizationSwitcher hidePersonal />
+          <UserButton userProfileUrl="/account" />
+        </Show>
       </div>
     </nav>
   )
