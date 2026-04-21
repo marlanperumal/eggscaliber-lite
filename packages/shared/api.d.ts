@@ -4,6 +4,90 @@
  */
 
 export interface paths {
+    "/api/v1/admin/orgs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Orgs
+         * @description List all organisations (super-user only).
+         */
+        get: operations["list_orgs_api_v1_admin_orgs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/orgs/{org_id}/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Subscriptions
+         * @description List package subscriptions for an org (super-user only).
+         */
+        get: operations["list_subscriptions_api_v1_admin_orgs__org_id__subscriptions_get"];
+        put?: never;
+        /**
+         * Create Subscription
+         * @description Subscribe an org to a private package (super-user only).
+         */
+        post: operations["create_subscription_api_v1_admin_orgs__org_id__subscriptions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/orgs/{org_id}/subscriptions/{package_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Subscription
+         * @description Remove an org's subscription to a package (super-user only).
+         */
+        delete: operations["delete_subscription_api_v1_admin_orgs__org_id__subscriptions__package_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/packages/{package_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Package
+         * @description Update a package's visibility or metadata (super-user only).
+         */
+        patch: operations["update_package_api_v1_admin_packages__package_id__patch"];
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -32,6 +116,26 @@ export interface paths {
         get: operations["trigger_error_api_v1_sentry_debug_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/webhooks/clerk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Clerk Webhook
+         * @description Receive and process Clerk webhook events.
+         */
+        post: operations["clerk_webhook_api_v1_webhooks_clerk_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -645,10 +749,144 @@ export interface paths {
         patch: operations["move_field_api_v1_uploads__session_id__fields__field_id__move_patch"];
         trace?: never;
     };
+    "/api/v1/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Groups
+         * @description List all groups for the current user's organisation.
+         */
+        get: operations["list_groups_api_v1_groups_get"];
+        put?: never;
+        /**
+         * Create Group
+         * @description Create a new group in the current user's organisation.
+         */
+        post: operations["create_group_api_v1_groups_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Group
+         * @description Delete a group. The Default group cannot be deleted.
+         */
+        delete: operations["delete_group_api_v1_groups__group_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Member
+         * @description Add a user to a group.
+         */
+        post: operations["add_member_api_v1_groups__group_id__members_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}/members/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Member
+         * @description Remove a user from a group.
+         */
+        delete: operations["remove_member_api_v1_groups__group_id__members__user_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assign Package
+         * @description Assign a package to a group.
+         */
+        post: operations["assign_package_api_v1_groups__group_id__packages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}/packages/{package_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Unassign Package
+         * @description Remove a package from a group.
+         */
+        delete: operations["unassign_package_api_v1_groups__group_id__packages__package_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AddMemberBody */
+        AddMemberBody: {
+            /** User Id */
+            user_id: number;
+        };
+        /** AssignPackageBody */
+        AssignPackageBody: {
+            /** Package Id */
+            package_id: number;
+        };
         /** Body_create_upload_api_v1_uploads_post */
         Body_create_upload_api_v1_uploads_post: {
             /** File */
@@ -709,8 +947,6 @@ export interface components {
             description?: string | null;
             /** @default generic */
             collection_type: components["schemas"]["CollectionType"];
-            /** Package Id */
-            package_id: number;
             /** Id */
             id: number;
             /**
@@ -744,8 +980,6 @@ export interface components {
             description?: string | null;
             /** @default generic */
             collection_type: components["schemas"]["CollectionType"];
-            /** Package Id */
-            package_id: number;
             /** Id */
             id: number;
             /**
@@ -1074,6 +1308,37 @@ export interface components {
                 number
             ] | null;
         };
+        /** GroupCreate */
+        GroupCreate: {
+            /** Name */
+            name: string;
+        };
+        /** GroupRead */
+        GroupRead: {
+            /** Id */
+            id: number;
+            /** Org Id */
+            org_id: number;
+            /** Name */
+            name: string;
+            /** Is Default */
+            is_default: boolean;
+        };
+        /** GroupWithCounts */
+        GroupWithCounts: {
+            /** Id */
+            id: number;
+            /** Org Id */
+            org_id: number;
+            /** Name */
+            name: string;
+            /** Is Default */
+            is_default: boolean;
+            /** Member Count */
+            member_count: number;
+            /** Package Count */
+            package_count: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1145,6 +1410,41 @@ export interface components {
             /** Display Name */
             display_name: string;
         };
+        /** OrgSubscriptionRead */
+        OrgSubscriptionRead: {
+            /** Id */
+            id: number;
+            /** Org Id */
+            org_id: number;
+            /** Package Id */
+            package_id: number;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** End Date */
+            end_date: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** OrganisationRead */
+        OrganisationRead: {
+            /** Clerk Org Id */
+            clerk_org_id: string;
+            /** Name */
+            name: string;
+            /** Id */
+            id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** PackageCreate */
         PackageCreate: {
             /** Name */
@@ -1162,6 +1462,8 @@ export interface components {
             slug: string;
             /** Description */
             description?: string | null;
+            /** @default public */
+            visibility: components["schemas"]["PackageVisibility"];
             /** Id */
             id: number;
             /**
@@ -1170,6 +1472,19 @@ export interface components {
              */
             created_at: string;
         };
+        /** PackageUpdate */
+        PackageUpdate: {
+            visibility?: components["schemas"]["PackageVisibility"] | null;
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+        };
+        /**
+         * PackageVisibility
+         * @enum {string}
+         */
+        PackageVisibility: "public" | "private";
         /** PackageWithCollections */
         PackageWithCollections: {
             /** Name */
@@ -1178,6 +1493,8 @@ export interface components {
             slug: string;
             /** Description */
             description?: string | null;
+            /** @default public */
+            visibility: components["schemas"]["PackageVisibility"];
             /** Id */
             id: number;
             /**
@@ -1356,6 +1673,18 @@ export interface components {
              * @default []
              */
             collections: components["schemas"]["ScopeCollection"][];
+        };
+        /** SubscriptionCreate */
+        SubscriptionCreate: {
+            /** Package Id */
+            package_id: number;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** End Date */
+            end_date?: string | null;
         };
         /** SuggestedReferenceOut */
         SuggestedReferenceOut: {
@@ -1594,6 +1923,11 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** WebhookAck */
+        WebhookAck: {
+            /** Status */
+            status: string;
+        };
         /**
          * WorkerType
          * @enum {string}
@@ -1608,6 +1942,157 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_orgs_api_v1_admin_orgs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganisationRead"][];
+                };
+            };
+        };
+    };
+    list_subscriptions_api_v1_admin_orgs__org_id__subscriptions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgSubscriptionRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_subscription_api_v1_admin_orgs__org_id__subscriptions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgSubscriptionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_subscription_api_v1_admin_orgs__org_id__subscriptions__package_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: number;
+                package_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_package_api_v1_admin_packages__package_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackageUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     health_api_v1_health_get: {
         parameters: {
             query?: never;
@@ -1646,6 +2131,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    clerk_webhook_api_v1_webhooks_clerk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookAck"];
                 };
             };
         };
@@ -2148,13 +2653,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Vercel AI SDK data stream */
+            /** @description Vercel AI SDK UI message stream */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": unknown;
+                    "text/event-stream": unknown;
                 };
             };
             /** @description Validation Error */
@@ -2839,6 +3344,214 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["FieldMoveOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_groups_api_v1_groups_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupWithCounts"][];
+                };
+            };
+        };
+    };
+    create_group_api_v1_groups_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_group_api_v1_groups__group_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_member_api_v1_groups__group_id__members_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddMemberBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_member_api_v1_groups__group_id__members__user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: number;
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_package_api_v1_groups__group_id__packages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignPackageBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unassign_package_api_v1_groups__group_id__packages__package_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: number;
+                package_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

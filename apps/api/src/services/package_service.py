@@ -2,7 +2,7 @@ import re
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.errors import PackageNotFoundError
+from src.errors import ForbiddenError, PackageNotFoundError
 from src.models.package import CollectionSummary, PackageRead, PackageWithCollections
 from src.models.scope import ScopeCollection, ScopeDataset, ScopePackage
 from src.orm import pk
@@ -69,11 +69,19 @@ async def get_scope(session: AsyncSession) -> list[ScopePackage]:
     ]
 
 
-async def get_with_collections(session: AsyncSession, package_id: int) -> PackageWithCollections:
-    """Raises PackageNotFoundError if package_id does not exist."""
+async def get_with_collections(
+    session: AsyncSession,
+    package_id: int,
+    accessible_ids: set[int] | None = None,
+) -> PackageWithCollections:
+    """Raises PackageNotFoundError if package_id does not exist.
+    Raises ForbiddenError if accessible_ids is provided and the package is not in the set.
+    """
     pkg = await package_repo.get_by_id(session, package_id)
     if pkg is None:
         raise PackageNotFoundError(package_id)
+    if accessible_ids is not None and pkg.id not in accessible_ids:
+        raise ForbiddenError("Package not accessible")
     collections = await package_repo.get_collections_for_package(session, package_id)
     return PackageWithCollections.model_validate(
         {

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.auth import CurrentUser, get_current_user
 from src.database import get_session
 from src.models.analytics import FieldTreeOut
 from src.models.dataset import DatasetListPage, DatasetWithFields, FieldOut
@@ -20,6 +21,7 @@ async def list_datasets(
     collection_id: int | None = None,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=200),
+    _: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
     """List datasets, optionally filtered by collection_id."""
@@ -30,13 +32,21 @@ async def list_datasets(
 
 
 @router.get("/datasets/{dataset_id}", response_model=DatasetWithFields)
-async def get_dataset(dataset_id: int, session: AsyncSession = Depends(get_session)):
+async def get_dataset(
+    dataset_id: int,
+    _: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
     """Get a dataset with all its fields and metadata."""
     return await dataset_service.get_with_fields(session, dataset_id)
 
 
 @router.delete("/datasets/{dataset_id}", status_code=204, response_model=None)
-async def delete_dataset(dataset_id: int, session: AsyncSession = Depends(get_session)):
+async def delete_dataset(
+    dataset_id: int,
+    _: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
     """Delete a dataset and all associated fields, levels, and responses."""
     await dataset_service.delete_dataset(session, dataset_id)
 
@@ -46,6 +56,7 @@ async def get_dataset_responses(
     dataset_id: int,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=100, ge=1, le=500),
+    _: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
     """Get paginated raw survey responses for a dataset."""
@@ -53,13 +64,21 @@ async def get_dataset_responses(
 
 
 @router.get("/datasets/{dataset_id}/field-tree", response_model=FieldTreeOut)
-async def get_field_tree(dataset_id: int, session: AsyncSession = Depends(get_session)):
+async def get_field_tree(
+    dataset_id: int,
+    _: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
     """Get the hierarchical field tree for a dataset (groups and fields for use in query builder)."""
     return await analytics_service.get_field_tree(session, dataset_id)
 
 
 @router.get("/datasets/{dataset_id}/weight-fields", response_model=list[FieldOut])
-async def get_weight_fields(dataset_id: int, session: AsyncSession = Depends(get_session)):
+async def get_weight_fields(
+    dataset_id: int,
+    _: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
     """Get the numeric fields available as weighting variables for a dataset."""
     return await analytics_service.get_weight_fields(session, dataset_id)
 
@@ -69,6 +88,7 @@ async def get_weight_fields(dataset_id: int, session: AsyncSession = Depends(get
 # not JSON. response_model= would conflict with StreamingResponse and is not applicable here.
 async def download_dataset_csv(
     dataset_id: int,
+    _: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
     """Stream all responses for a dataset as a CSV file."""

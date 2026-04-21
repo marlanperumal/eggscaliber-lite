@@ -61,8 +61,10 @@ def encode_error(message: str) -> str:
 # ── Tool implementation functions (called by agent tools and tested directly) ──
 
 
-async def _list_packages_impl(session: AsyncSession) -> str:
+async def _list_packages_impl(session: AsyncSession, accessible_ids: set[int] | None = None) -> str:
     packages = await package_service.get_scope(session)
+    if accessible_ids is not None:
+        packages = [p for p in packages if p.id in accessible_ids]
     if not packages:
         return "No data packages are available."
     lines: list[str] = []
@@ -96,9 +98,10 @@ async def _run_crosstab_impl(
     session: AsyncSession,
     request: CrosstabRequest,
     result_parts: list[dict],
+    accessible_ids: set[int] | None = None,
 ) -> str:
     try:
-        result = await analytics_service.run_crosstab(session, request)
+        result = await analytics_service.run_crosstab(session, request, accessible_ids)
     except DatasetNotFoundError:
         return f"Error: dataset {request.dataset_id} not found."
     except Exception as e:
@@ -119,9 +122,10 @@ async def _run_trend_impl(
     session: AsyncSession,
     request: TrendRequest,
     result_parts: list[dict],
+    accessible_ids: set[int] | None = None,
 ) -> str:
     try:
-        result = await analytics_service.run_trend(session, request)
+        result = await analytics_service.run_trend(session, request, accessible_ids)
     except CollectionNotFoundError:
         return f"Error: collection {request.collection_id} not found."
     except Exception as e:
@@ -144,6 +148,7 @@ async def _run_trend_impl(
 @dataclass
 class AIServiceDeps:
     session: AsyncSession
+    accessible_ids: set[int] | None = None
     result_parts: list[dict] = field(default_factory=list)
 
 
@@ -172,7 +177,7 @@ def _build_agent() -> "Agent[AIServiceDeps, str]":
     @agent.tool
     async def list_packages(ctx: RunContext[AIServiceDeps]) -> str:
         """List all available data packages, collections, and datasets with their IDs."""
-        return await _list_packages_impl(ctx.deps.session)
+        return await _list_packages_impl(ctx.deps.session, ctx.deps.accessible_ids)
 
     @agent.tool
     async def get_field_tree(ctx: RunContext[AIServiceDeps], dataset_id: int) -> str:
@@ -182,12 +187,16 @@ def _build_agent() -> "Agent[AIServiceDeps, str]":
     @agent.tool
     async def run_crosstab(ctx: RunContext[AIServiceDeps], request: CrosstabRequest) -> str:
         """Run a cross-tabulation query on a dataset."""
-        return await _run_crosstab_impl(ctx.deps.session, request, ctx.deps.result_parts)
+        return await _run_crosstab_impl(
+            ctx.deps.session, request, ctx.deps.result_parts, ctx.deps.accessible_ids
+        )
 
     @agent.tool
     async def run_trend(ctx: RunContext[AIServiceDeps], request: TrendRequest) -> str:
         """Run a trend query across datasets in a collection."""
-        return await _run_trend_impl(ctx.deps.session, request, ctx.deps.result_parts)
+        return await _run_trend_impl(
+            ctx.deps.session, request, ctx.deps.result_parts, ctx.deps.accessible_ids
+        )
 
     return agent
 
@@ -219,14 +228,16 @@ def _to_model_messages(messages: list[ChatMessage]) -> list[ModelMessage]:
 
 
 async def stream_response(
-    session: AsyncSession, messages: list[ChatMessage]
+    session: AsyncSession,
+    messages: list[ChatMessage],
+    accessible_ids: set[int] | None = None,
 ) -> AsyncGenerator[str, None]:
     if not messages:
         yield encode_error("No messages provided.")
         yield encode_finish()
         return
 
-    deps = AIServiceDeps(session=session)
+    deps = AIServiceDeps(session=session, accessible_ids=accessible_ids)
     message_history = _to_model_messages(messages[:-1])
     user_prompt = messages[-1].content
     text_id = str(uuid.uuid4())

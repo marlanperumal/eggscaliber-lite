@@ -165,3 +165,71 @@ async def test_superuser_gets_none(db, access_fixtures):
     )
     result = await _get_accessible_package_ids(current_user, db)
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_packages_route_filters_by_accessible_ids(client, db, access_fixtures):
+    from src.auth import CurrentUser, get_accessible_package_ids, get_current_user
+    from src.main import app
+
+    f = access_fixtures
+
+    def override_user() -> CurrentUser:
+        return CurrentUser(
+            clerk_id=f["user"].clerk_id,
+            email=f["user"].email,
+            org_id=f["org"].clerk_org_id,
+        )
+
+    async def override_accessible() -> set[int] | None:
+        return {cast(int, f["pub_pkg"].id), cast(int, f["priv_pkg"].id)}
+
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_accessible_package_ids] = override_accessible
+
+    resp = await client.get("/api/v1/packages")
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_accessible_package_ids, None)
+
+    assert resp.status_code == 200
+    pkg_ids = {p["id"] for p in resp.json()}
+    assert cast(int, f["pub_pkg"].id) in pkg_ids
+    assert cast(int, f["priv_pkg"].id) in pkg_ids
+    assert cast(int, f["other_priv"].id) not in pkg_ids
+
+
+@pytest.mark.asyncio
+async def test_analytics_rejects_inaccessible_dataset(client, db, bare_dataset, access_fixtures):
+    from src.auth import CurrentUser, get_accessible_package_ids, get_current_user
+    from src.main import app
+
+    f = access_fixtures
+
+    def override_user() -> CurrentUser:
+        return CurrentUser(
+            clerk_id=f["user"].clerk_id,
+            email=f["user"].email,
+            org_id=f["org"].clerk_org_id,
+        )
+
+    async def override_accessible() -> set[int] | None:
+        return set()  # no packages accessible
+
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_accessible_package_ids] = override_accessible
+
+    resp = await client.post(
+        "/api/v1/analytics/crosstab",
+        json={
+            "dataset_id": bare_dataset.id,
+            "rows": [],
+            "columns": [],
+            "row_mode": "stacked",
+            "col_mode": "stacked",
+            "measure": {"type": "count"},
+        },
+    )
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_accessible_package_ids, None)
+
+    assert resp.status_code == 403

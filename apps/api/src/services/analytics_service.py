@@ -2,7 +2,7 @@ from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.errors import CollectionNotFoundError, DatasetNotFoundError
+from src.errors import CollectionNotFoundError, DatasetNotFoundError, ForbiddenError
 from src.models.analytics import (
     CrosstabMeta,
     CrosstabRequest,
@@ -28,7 +28,38 @@ from src.services import crosstab_service, trend_service
 from src.workers.factory import WorkerFactory
 
 
-async def run_crosstab(session: AsyncSession, request: CrosstabRequest) -> CrosstabResponse:
+async def _assert_dataset_accessible(
+    session: AsyncSession,
+    dataset_id: int,
+    accessible_ids: set[int] | None,
+) -> None:
+    """Raise ForbiddenError if the dataset's package is not in accessible_ids."""
+    if accessible_ids is None:
+        return
+    from sqlalchemy import select
+
+    from src.models.dataset import Dataset
+    from src.models.group import PackageCollection
+
+    ds = await session.get(Dataset, dataset_id)
+    if ds is None:
+        return
+    result = await session.execute(
+        select(PackageCollection.package_id).where(
+            PackageCollection.collection_id == ds.collection_id
+        )
+    )
+    pkg_ids = set(result.scalars().all())
+    if not pkg_ids.intersection(accessible_ids):
+        raise ForbiddenError("Dataset not accessible")
+
+
+async def run_crosstab(
+    session: AsyncSession,
+    request: CrosstabRequest,
+    accessible_ids: set[int] | None = None,
+) -> CrosstabResponse:
+    await _assert_dataset_accessible(session, request.dataset_id, accessible_ids)
     dataset = await analytics_repo.get_dataset(session, request.dataset_id)
     if dataset is None:
         raise DatasetNotFoundError(request.dataset_id)
@@ -91,7 +122,32 @@ async def run_crosstab(session: AsyncSession, request: CrosstabRequest) -> Cross
     return CrosstabResponse(meta=meta, rows=[ResultRow(**r) for r in result_rows])
 
 
-async def run_trend(session: AsyncSession, request: TrendRequest) -> TrendResponse:
+async def _assert_collection_accessible(
+    session: AsyncSession,
+    collection_id: int,
+    accessible_ids: set[int] | None,
+) -> None:
+    """Raise ForbiddenError if the collection's package is not in accessible_ids."""
+    if accessible_ids is None:
+        return
+    from sqlalchemy import select
+
+    from src.models.group import PackageCollection
+
+    result = await session.execute(
+        select(PackageCollection.package_id).where(PackageCollection.collection_id == collection_id)
+    )
+    pkg_ids = set(result.scalars().all())
+    if not pkg_ids.intersection(accessible_ids):
+        raise ForbiddenError("Collection not accessible")
+
+
+async def run_trend(
+    session: AsyncSession,
+    request: TrendRequest,
+    accessible_ids: set[int] | None = None,
+) -> TrendResponse:
+    await _assert_collection_accessible(session, request.collection_id, accessible_ids)
     col = await collection_repo.get_by_id(session, request.collection_id)
     if col is None:
         raise CollectionNotFoundError(request.collection_id)
