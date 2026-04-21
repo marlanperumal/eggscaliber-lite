@@ -1,6 +1,11 @@
-from typing import cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
 
 from sqlalchemy import delete, select
+
+if TYPE_CHECKING:
+    from src.models.package import Package
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.group import Group, GroupMembership, GroupPackage
@@ -112,7 +117,9 @@ async def count_packages(session: AsyncSession, group_id: int) -> int:
     return result.scalar_one()
 
 
-async def get_members_for_group(session: AsyncSession, group_id: int, org_id: int) -> list[tuple]:
+async def get_members_for_group(
+    session: AsyncSession, group_id: int, org_id: int
+) -> list[tuple[int | None, str, str | None, str | None, str]]:
     """Return (user_id, clerk_id, email, display_name, role) rows for all members of a group."""
     from src.models.user import OrgMembership, User
 
@@ -125,10 +132,10 @@ async def get_members_for_group(session: AsyncSession, group_id: int, org_id: in
         )
         .where(GroupMembership.group_id == group_id)
     )
-    return list(result.all())
+    return cast(list[tuple[int | None, str, str | None, str | None, str]], list(result.all()))
 
 
-async def get_packages_for_group(session: AsyncSession, group_id: int) -> list:
+async def get_packages_for_group(session: AsyncSession, group_id: int) -> list[Package]:
     """Return Package ORM objects for all packages assigned to a group."""
     from src.models.package import Package
 
