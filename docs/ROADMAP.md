@@ -11,7 +11,7 @@ Five sub-projects, each with its own spec → plan → implementation cycle.
 | 5 | Drag & Drop | ✅ Complete | — | — |
 | 6 | Data Ingestion & Metadata Editor | ✅ Complete | [spec](superpowers/specs/2026-04-16-data-ingestion-metadata-editor-design.md) | [plan](superpowers/plans/2026-04-17-data-ingestion-metadata-editor.md) |
 | 7 | AI Interface | ✅ Complete | [spec](superpowers/specs/2026-04-19-ai-interface-design.md) | [plan](superpowers/plans/2026-04-19-ai-interface.md) |
-| 8 | Full AuthN & AuthZ | ⏳ In Progress | [spec](superpowers/specs/2026-04-20-authn-authz-design.md) | [plan](superpowers/plans/2026-04-20-authn-authz-phase1.md) |
+| 8 | Full AuthN & AuthZ | ✅ Complete | [spec](superpowers/specs/2026-04-20-authn-authz-design.md) | [plan](superpowers/plans/2026-04-20-authn-authz-phase1.md) |
 | 9 | MCP Interface | ⏳ Pending | — | — |
 
 ---
@@ -63,7 +63,7 @@ NL query → PydanticAI identifies relevant data sources → executes queries in
 ### 8 — Full AuthN & AuthZ
 
 - **Phase 1 — Identity Stack** ✅ Complete — Clerk wired end-to-end: sign-in/sign-up/account UI, Next.js middleware route protection, FastAPI JWT verification, webhook-synced `users`/`organisations`/`org_memberships` tables, org creation and invite flows via Clerk's built-in UI.
-- **Phase 2 — Access Control** ⏳ Pending — `groups` table (org-scoped), `group_memberships`, `group_packages`; analytics and package endpoints filter by group membership; super-user role.
+- **Phase 2 — Access Control** ✅ Complete — `groups` table, `group_memberships`, `group_packages`, `org_subscriptions`, `package_collections`; analytics and package endpoints filter by group membership; super-user subscription management UI (`/admin`); org groups management UI (`/org/groups`).
 
 **Done when:** A user can register, join an org, be assigned to a group, and access only the packages that group is entitled to — end-to-end in production.
 
