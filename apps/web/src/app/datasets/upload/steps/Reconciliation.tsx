@@ -2,6 +2,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { useEffect, useRef, useState } from "react"
 import { api } from "@/lib/api"
+import { mutate } from "@/lib/mutate"
 import type { WizardState, WizardStep } from "../wizard-types"
 import type { FieldNode, GroupNode } from "./FieldTree"
 import {
@@ -100,15 +101,23 @@ export function Reconciliation({ state, setStep }: Props) {
   async function triggerReconcile() {
     if (!state.sessionId || !refDatasetId) return
     setBusy(true)
-    await api.POST("/api/v1/uploads/{session_id}/reconcile", {
-      params: { path: { session_id: state.sessionId } },
-      body: { reference_dataset_id: Number(refDatasetId) },
-    })
-    setTriggered(true)
-    await fetchCounts()
-    await fetchFieldTree()
-    fetchPage(null)
-    setBusy(false)
+    try {
+      const { error } = await mutate(
+        () =>
+          api.POST("/api/v1/uploads/{session_id}/reconcile", {
+            params: { path: { session_id: state.sessionId! } },
+            body: { reference_dataset_id: Number(refDatasetId) },
+          }),
+        { errorMessage: "Failed to start reconciliation. Please try again." },
+      )
+      if (error) return
+      setTriggered(true)
+      await fetchCounts()
+      await fetchFieldTree()
+      fetchPage(null)
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function fetchPage(cursor: number | null) {
@@ -154,10 +163,15 @@ export function Reconciliation({ state, setStep }: Props) {
       exclude: "excluded",
     }
     const status = statusMap[action] as ReconStatus
-    await api.PATCH("/api/v1/uploads/{session_id}/reconcile/{row_id}", {
-      params: { path: { session_id: state.sessionId, row_id: rowId } },
-      body: { status },
-    })
+    const { error } = await mutate(
+      () =>
+        api.PATCH("/api/v1/uploads/{session_id}/reconcile/{row_id}", {
+          params: { path: { session_id: state.sessionId!, row_id: rowId } },
+          body: { status },
+        }),
+      { errorMessage: "Failed to update row. Please try again." },
+    )
+    if (error) return
     setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, status } : r)))
     await fetchCounts()
   }
@@ -165,14 +179,22 @@ export function Reconciliation({ state, setStep }: Props) {
   async function handleBulkAction(action: ReconStatus) {
     if (!state.sessionId || selected.size === 0) return
     setBusy(true)
-    await api.POST("/api/v1/uploads/{session_id}/reconcile/bulk", {
-      params: { path: { session_id: state.sessionId } },
-      body: { ids: Array.from(selected), action },
-    })
-    setRows((prev) => prev.map((r) => (selected.has(r.id) ? { ...r, status: action } : r)))
-    setSelected(new Set())
-    await fetchCounts()
-    setBusy(false)
+    try {
+      const { error } = await mutate(
+        () =>
+          api.POST("/api/v1/uploads/{session_id}/reconcile/bulk", {
+            params: { path: { session_id: state.sessionId! } },
+            body: { ids: Array.from(selected), action },
+          }),
+        { errorMessage: "Failed to apply bulk action. Please try again." },
+      )
+      if (error) return
+      setRows((prev) => prev.map((r) => (selected.has(r.id) ? { ...r, status: action } : r)))
+      setSelected(new Set())
+      await fetchCounts()
+    } finally {
+      setBusy(false)
+    }
   }
 
   function handleCheck(id: number, checked: boolean) {

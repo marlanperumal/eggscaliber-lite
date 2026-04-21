@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { api } from "@/lib/api"
+import { mutate } from "@/lib/mutate"
 import { cn } from "@/lib/utils"
 import { FieldPicker } from "./FieldPicker"
 import type { FieldNode, GroupNode } from "./FieldTree"
@@ -120,10 +121,15 @@ export function ReconciliationRow({
                   groups={groups}
                   onPick={async (fieldId) => {
                     if (!sessionId) return
-                    await api.PATCH("/api/v1/uploads/{session_id}/reconcile/{row_id}", {
-                      params: { path: { session_id: sessionId, row_id: row.id } },
-                      body: { ref_field_id: fieldId, status: "confirmed" },
-                    })
+                    const { error } = await mutate(
+                      () =>
+                        api.PATCH("/api/v1/uploads/{session_id}/reconcile/{row_id}", {
+                          params: { path: { session_id: sessionId, row_id: row.id } },
+                          body: { ref_field_id: fieldId, status: "confirmed" },
+                        }),
+                      { errorMessage: "Failed to map field. Please try again." },
+                    )
+                    if (error) return
                     onResolved()
                   }}
                   onClose={() => setPickerOpen(false)}
@@ -155,10 +161,15 @@ export function ReconciliationRow({
                   groups={groups}
                   onPick={async (fieldId) => {
                     if (!sessionId) return
-                    await api.PATCH("/api/v1/uploads/{session_id}/reconcile/{row_id}", {
-                      params: { path: { session_id: sessionId, row_id: row.id } },
-                      body: { upload_field_id: fieldId, status: "confirmed" },
-                    })
+                    const { error } = await mutate(
+                      () =>
+                        api.PATCH("/api/v1/uploads/{session_id}/reconcile/{row_id}", {
+                          params: { path: { session_id: sessionId, row_id: row.id } },
+                          body: { upload_field_id: fieldId, status: "confirmed" },
+                        }),
+                      { errorMessage: "Failed to map field. Please try again." },
+                    )
+                    if (error) return
                     onResolved()
                   }}
                   onClose={() => setPickerOpen(false)}
