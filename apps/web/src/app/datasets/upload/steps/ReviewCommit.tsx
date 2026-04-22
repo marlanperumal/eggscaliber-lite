@@ -119,12 +119,13 @@ export function ReviewCommit({ state, setStep }: Props) {
   }, [state.sessionId, state.needsReconcile])
 
   async function handleCommit() {
-    if (!state.sessionId) return
+    const { sessionId } = state
+    if (!sessionId) return
     setBusy(true)
     const { error: commitError } = await mutate(
       () =>
         api.POST("/api/v1/uploads/{session_id}/commit", {
-          params: { path: { session_id: state.sessionId } },
+          params: { path: { session_id: sessionId } },
         }),
       { errorMessage: "Commit failed. Please try again." },
     )
