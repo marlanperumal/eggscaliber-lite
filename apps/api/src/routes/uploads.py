@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.auth import get_current_user
 from src.database import get_session
 from src.errors import DomainError
 from src.models.field import FieldType
@@ -33,7 +34,7 @@ from src.models.upload import (
 from src.repositories import reconciliation_repo
 from src.services import upload_service
 
-router = APIRouter(tags=["uploads"])
+router = APIRouter(tags=["uploads"], dependencies=[Depends(get_current_user)])
 
 
 @router.post("/uploads", status_code=201, response_model=UploadCreatedResponse)
