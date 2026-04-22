@@ -84,3 +84,8 @@ class PackageCollectionNotFoundError(DomainError):
         super().__init__(
             f"PackageCollection (package_id={package_id}, collection_id={collection_id}) not found"
         )
+
+
+class TokenNotFoundError(DomainError):
+    status_code = 404
+    code = "token_not_found"
