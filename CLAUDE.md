@@ -59,6 +59,7 @@ just format         # ruff format + biome format
 just format-check   # check formatting without writing (CI)
 just typecheck      # ty + tsc
 just audit          # pip-audit + pnpm audit
+just build-storybook # build Storybook static output (verify no component errors)
 ```
 
 ## Architecture
@@ -88,6 +89,16 @@ Two MCP servers are available in Claude Code sessions for local dev:
 **`eggscaliber`** — API-level tools (streamable HTTP, requires `just dev` or `just api`). Exposed tags: `packages`, `scope`, `collections`, `datasets`, `analytics`. Use for high-level data queries and analytics. See `docs/patterns/backend.md` for wiring details and the docstring requirement for MCP-exposed routes.
 
 **`postgres`** — Direct read-only DB access (stdio, requires `just db-up`). Use for schema inspection, raw SQL, EXPLAIN plans, and index analysis. Spawned automatically by Claude Code via `uvx postgres-mcp` — no extra server needed.
+
+## Pre-push Checklist
+
+Before pushing to master, run all of the following and confirm they pass:
+
+```bash
+just lint && just format-check && just typecheck && just build-storybook && just test
+```
+
+These mirror the CI pipeline. Every check must be green before pushing.
 
 ## Key Conventions
 

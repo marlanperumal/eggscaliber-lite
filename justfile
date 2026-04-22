@@ -73,6 +73,10 @@ build:
 storybook:
     cd apps/web && pnpm storybook
 
+# Build Storybook (verify no component errors, mirrors CI)
+build-storybook:
+    pnpm --filter web run build-storybook
+
 # Marimo notebook server
 notebook:
     uv run marimo edit notebooks/
