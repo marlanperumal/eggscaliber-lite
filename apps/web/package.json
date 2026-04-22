@@ -43,7 +43,7 @@
     "posthog-js": "^1.369.2",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "react-resizable-panels": "^4.9.0",
+    "react-resizable-panels": "^4.10.0",
     "recharts": "^3.8.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0"
