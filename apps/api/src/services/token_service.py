@@ -3,12 +3,10 @@ import secrets
 from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
 
 from src.errors import ForbiddenError, TokenNotFoundError
 from src.models.token import ApiTokenCreated, ApiTokenRead
-from src.models.user import User
-from src.repositories import token_repo
+from src.repositories import token_repo, user_repo
 
 
 def _generate_raw_token() -> str:
@@ -24,8 +22,7 @@ def _prefix(raw: str) -> str:
 
 
 async def _resolve_user_id(session: AsyncSession, clerk_id: str) -> int:
-    result = await session.execute(select(User).where(User.clerk_id == clerk_id))
-    user = result.scalars().first()
+    user = await user_repo.get_user_by_clerk_id(session, clerk_id)
     if user is None:
         raise ForbiddenError("User not found")
     return cast(int, user.id)

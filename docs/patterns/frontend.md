@@ -256,7 +256,9 @@ Prefer React Server Components and URL state for server-rendered data. Use `useS
 
 ### URL state — nuqs
 
-Use **nuqs** (`useQueryStates`) for any client state that should survive a page refresh or be shareable via URL. The `NuqsAdapter` is already in the root layout.
+Use **nuqs** (`useQueryStates`) for any client state that should survive a page
+refresh or be shareable via URL. The `NuqsAdapter` from `nuqs/adapters/next/app`
+wraps the root layout (`apps/web/src/app/layout.tsx`).
 
 ```ts
 import { useQueryStates, parseAsStringLiteral, parseAsInteger } from 'nuqs'
@@ -270,4 +272,48 @@ const [params, setParams] = useQueryStates(
 )
 ```
 
-Keep domain types separate from URL params — wrap `useQueryStates` in a feature hook (e.g. `useAnalyticsState`) that converts between the two. Use short URL keys (`ds`, `col`, `bd`) for readability. Use `parseAsJson<T>()` for complex nested types that can't be flattened.
+Keep domain types separate from URL params — wrap `useQueryStates` in a feature
+hook (e.g. `useAnalyticsState`) that converts between the two. Use short URL
+keys (`ds`, `col`, `bd`) for readability. Use `parseAsJson<T>((v) => v as T)`
+for complex nested types that can't be flattened (the validator argument is
+required in nuqs v2).
+
+#### Storybook — use `NuqsTestingAdapter`
+
+The `next/app` adapter calls `useRouter()` internally and throws
+`invariant expected app router to be mounted` in Storybook because the App
+Router is not mounted. Decorate any story that uses a nuqs-backed hook with
+`NuqsTestingAdapter` from `nuqs/adapters/testing` — it is a self-contained
+in-memory URL store.
+
+```tsx
+import { NuqsTestingAdapter } from "nuqs/adapters/testing"
+
+const meta = {
+  decorators: [
+    (Story) => (
+      <NuqsTestingAdapter>
+        <Story />
+      </NuqsTestingAdapter>
+    ),
+  ],
+} satisfies Meta<typeof AnalyticsPage>
+```
+
+#### Unit tests — mock `useQueryStates` only
+
+Mock `useQueryStates` and let the real parsers run (they are pure functions):
+
+```ts
+vi.mock("nuqs", async (importActual) => {
+  const actual = await importActual<typeof import("nuqs")>()
+  return { ...actual, useQueryStates: vi.fn() }
+})
+
+beforeEach(() => {
+  vi.mocked(useQueryStates).mockReturnValue([defaultParams, mockSetP])
+})
+```
+
+The full parser reference, adapter options, and project `QueryConfig` convention
+live in the `nuqs` skill (`.claude/skills/nuqs/SKILL.md`).
