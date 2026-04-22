@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { mutate } from "@/lib/mutate"
 import { GenerateTokenForm } from "./GenerateTokenForm"
-import { TokenListRow } from "./TokenListRow"
+import { TokenList } from "./TokenList"
 import { TokenRevealCallout } from "./TokenRevealCallout"
 
 type ApiTokenRead = components["schemas"]["ApiTokenRead"]
@@ -89,38 +89,7 @@ export function ApiTokensSection() {
         />
       )}
 
-      {tokens.length === 0 && !showForm && !pendingToken ? (
-        <p className="text-muted-foreground text-sm">
-          No active tokens. Generate one to connect Claude Desktop or Claude Code.
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {tokens.map((token) => (
-            <TokenListRow
-              key={token.id}
-              id={token.id}
-              name={token.name}
-              prefix={token.prefix}
-              createdAt={token.created_at}
-              lastUsedAt={token.last_used_at}
-              onRevoke={handleRevoke}
-            />
-          ))}
-        </div>
-      )}
-
-      <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-4">
-        <p className="font-medium text-foreground text-xs">Connect with Claude Code</p>
-        <pre className="overflow-x-auto rounded bg-muted p-2 font-mono text-foreground text-xs">
-          {`{
-  "eggscaliber": {
-    "type": "http",
-    "url": "https://eggscaliber-lite-api.onrender.com/mcp/external",
-    "headers": { "Authorization": "Bearer <your-token>" }
-  }
-}`}
-        </pre>
-      </div>
+      {!showForm && !pendingToken && <TokenList tokens={tokens} onRevoke={handleRevoke} />}
     </section>
   )
 }
