@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
+import { expect, userEvent, within } from "@storybook/test"
 import { TokenListRow } from "./TokenListRow"
 
 const meta: Meta<typeof TokenListRow> = {
@@ -23,4 +24,10 @@ export const WithLastUsed: Story = {
 }
 export const WithConfigOpen: Story = {
   args: { lastUsedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const toggle = canvas.getByRole("button", { name: /config/i })
+    await userEvent.click(toggle)
+    await expect(toggle).toHaveAttribute("aria-expanded", "true")
+  },
 }
