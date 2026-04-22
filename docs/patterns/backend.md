@@ -542,15 +542,64 @@ Routes without docstrings will use the raw operation ID as the tool description,
 
 ### Lifespan composition
 
-The MCP http_app has its own lifespan (session manager). It is composed with the database lifespan in `main.py` using `combine_lifespans`:
+Both MCP http_apps have their own lifespans (session managers). They are composed with the database lifespan in `main.py` using `combine_lifespans`:
 
 ```python
 mcp_app = mcp.http_app(path="/")
-app.router.lifespan_context = combine_lifespans(db_lifespan, mcp_app.lifespan)
+app.router.lifespan_context = combine_lifespans(
+    db_lifespan, mcp_app.lifespan, external_mcp_app.lifespan
+)
 app.mount("/mcp", mcp_app)
+app.mount("/mcp/external", external_mcp_app)
 ```
 
 Do not move this setup into `database.py` — the MCP server depends on `app` being fully configured with all routers before `from_fastapi(app)` is called.
+
+### External MCP (PAT-authenticated)
+
+A second MCP surface lives at `/mcp/external` for end-users connecting from Claude Desktop / Claude Code. It is **independent** of the internal `/mcp` — different module, different auth, different tool set:
+
+| | Internal `/mcp` | External `/mcp/external` |
+|---|---|---|
+| Audience | Claude Code dev sessions | End users via Claude Desktop/Code |
+| Auth | Dev bypass / Clerk JWT | Personal Access Token (`eggsec_...`) |
+| Tools | Auto-generated from OpenAPI tags | Hand-crafted in `mcp_external/tools/` |
+| Module | `src.main` wiring only | `src/mcp_external/` |
+
+**Module layout:**
+
+```
+apps/api/src/mcp_external/
+├── server.py        # FastMCP instance + PATAuthMiddleware + mount
+├── auth.py          # PATAuthMiddleware, resolve_token_hash()
+└── tools/
+    ├── browse.py    # list_packages, list_collections, list_datasets, describe_dataset
+    └── analyse.py   # describe_field_tree, run_crosstab, run_trend
+```
+
+**PAT format:** `eggsec_` + 64 hex chars (`secrets.token_hex(32)`). The raw token is shown once at creation; only the SHA-256 hash is persisted in `api_tokens`. The `eggsec_` prefix enables automated secret scanning.
+
+**Auth middleware pattern** — Starlette `BaseHTTPMiddleware` added to the external app. Each request: parse `Authorization: Bearer eggsec_...`, hash, look up `api_tokens WHERE token_hash = ? AND revoked_at IS NULL`, resolve the user, attach a `CurrentUser` to `request.state.current_user`, fire-and-forget `last_used_at` update.
+
+**Tools call services directly — no new service layer.** Each tool opens its own `AsyncSession` via `SessionLocal()` (not the `get_session` FastAPI dependency, which doesn't apply inside FastMCP), calls `_get_accessible_package_ids` with the `CurrentUser`, and passes `accessible_ids` to the same service functions used by REST routes. This is deliberate — PAT access control piggybacks on the existing group-entitlement layer with zero duplication.
+
+**Reading the current user inside a tool:**
+
+```python
+from fastmcp.server.dependencies import get_http_request
+
+def _user() -> CurrentUser:
+    return get_http_request().state.current_user
+```
+
+**Adding a new external MCP tool:**
+
+1. Add it to `browse.py` or `analyse.py` (or a new file registered from `server.py`)
+2. Write a clear docstring — FastMCP uses it as the tool description
+3. Always resolve `accessible_ids` and pass to the service; never bypass the access filter
+4. Add a happy-path test in `tests/test_mcp_tools.py` and (if it accepts a package/collection/dataset id) an access-denial test in `tests/test_mcp_tools_access.py`
+
+**Errors surface as MCP-level tool errors**, not HTTP status codes. The middleware returns `401 JSONResponse` only for auth failures; tool-body exceptions propagate as MCP errors and Claude Desktop/Code surfaces them to the user.
 
 ---
 

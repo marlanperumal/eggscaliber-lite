@@ -12,7 +12,7 @@ Five sub-projects, each with its own spec → plan → implementation cycle.
 | 6 | Data Ingestion & Metadata Editor | ✅ Complete | [spec](superpowers/specs/2026-04-16-data-ingestion-metadata-editor-design.md) | [plan](superpowers/plans/2026-04-17-data-ingestion-metadata-editor.md) |
 | 7 | AI Interface | ✅ Complete | [spec](superpowers/specs/2026-04-19-ai-interface-design.md) | [plan](superpowers/plans/2026-04-19-ai-interface.md) |
 | 8 | Full AuthN & AuthZ | ✅ Complete | [spec](superpowers/specs/2026-04-20-authn-authz-design.md) | [plan](superpowers/plans/2026-04-20-authn-authz-phase1.md) |
-| 9 | MCP Interface | ⏳ Pending | — | — |
+| 9 | MCP Interface | ✅ Complete | [spec](superpowers/specs/2026-04-22-mcp-interface-design.md) | [plan](superpowers/plans/2026-04-22-mcp-interface-gap-fill.md) |
 
 ---
 
@@ -69,12 +69,13 @@ NL query → PydanticAI identifies relevant data sources → executes queries in
 
 ---
 
-### 9 — MCP Interface ⏳
-Expose application functionality as an MCP server so users can interact with Eggscaliber as an alternative to the web frontend — querying datasets, running analytics, and navigating the data hierarchy from any MCP-compatible client (Claude Desktop, Claude Code, etc.).
+### 9 — MCP Interface ✅
+External MCP server at `/mcp/external` authenticated via Personal Access Tokens (PATs), exposing 7 hand-crafted tools (browse + analyse) that reuse the existing service layer and inherit the user's group-based package entitlements. PAT management UI on `/account` with per-token Claude Code and Claude Desktop config snippets.
 
-- **Auth-aware MCP tools** — tools respect the same AuthN/AuthZ layer as the REST API (sub-project 8 prerequisite)
-- **Analytics tools** — run crosstabs, trends, and field-tree queries via MCP
-- **Dataset & package browsing** — list packages, datasets, fields
-- **Streaming results** — tables and structured data returned in a format MCP clients can render
+- **Auth-aware MCP tools** ✅ — PATs hashed (SHA-256) and resolved via Starlette middleware; access control piggybacks on the sub-project 8 entitlement layer
+- **Analytics tools** ✅ — `describe_field_tree`, `run_crosstab`, `run_trend`
+- **Dataset & package browsing** ✅ — `list_packages`, `list_collections`, `list_datasets`, `describe_dataset`
+- Streaming results — deferred to V2 (tools return structured JSON)
+- PAT expiry / per-token scoping / OAuth — deferred to V2
 
-**Done when:** A user can authenticate and run a full analytics query against their entitled packages from a Claude Code or Claude Desktop session.
+**Done when:** A user can generate a PAT on `/account`, paste the config snippet into Claude Desktop/Code, and run a full analytics query against their entitled packages.
