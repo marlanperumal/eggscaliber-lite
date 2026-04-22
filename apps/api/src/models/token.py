@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlmodel import Field, SQLModel
 
@@ -11,7 +11,7 @@ class ApiToken(SQLModel, table=True):
     name: str
     token_hash: str = Field(unique=True, index=True)
     prefix: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
     last_used_at: datetime | None = Field(default=None)
     revoked_at: datetime | None = Field(default=None)
 

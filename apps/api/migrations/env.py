@@ -16,6 +16,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 from src.models import (  # noqa: E402, F401
+    ApiToken,
     Collection,
     Dataset,
     Field,
