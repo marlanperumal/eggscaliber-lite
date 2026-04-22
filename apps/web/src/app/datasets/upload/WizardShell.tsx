@@ -23,6 +23,8 @@ function StepIndicator({
         return (
           <div
             key={s}
+            aria-current={s === current ? "step" : undefined}
+            data-skipped={isSkipped ? "true" : undefined}
             className={[
               "flex-1 border-b-2 pb-2 text-center font-semibold text-xs",
               isSkipped
