@@ -17,7 +17,7 @@ async def test_list_packages_empty(client):
     assert response.json() == []
 
 
-async def test_list_packages_returns_packages(client, db):
+async def test_list_packages_includes_created_package(client, db):
     await _make_package(db, "Brand Suite", "brand-suite")
     await _make_package(db, "Tracking Studies", "tracking-studies")
 

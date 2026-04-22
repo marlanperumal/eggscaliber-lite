@@ -698,6 +698,39 @@ async def _seed_trend_weighted_fixture(db):
     return col
 
 
+async def test_trend_rejects_inaccessible_collection(client, db):
+    """POST /analytics/trend returns 403 when the collection's package is not accessible."""
+    from src.auth import CurrentUser, get_accessible_package_ids, get_current_user
+    from src.main import app
+
+    col = await _seed_trend_fixture(db)
+
+    def override_user() -> CurrentUser:
+        return CurrentUser(clerk_id="no_access_user", email="noaccess@test.com", org_id=None)
+
+    async def override_accessible() -> set[int] | None:
+        return set()  # no packages accessible
+
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_accessible_package_ids] = override_accessible
+
+    resp = await client.post(
+        "/api/v1/analytics/trend",
+        json={
+            "collection_id": col.id,
+            "fields": [{"field_key": "brand_awareness"}],
+            "breakdown": None,
+            "filters": [],
+            "measure": {"type": "count", "field_key": None, "aggregation": None, "display": "n"},
+        },
+    )
+
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_accessible_package_ids, None)
+
+    assert resp.status_code == 403
+
+
 async def test_trend_weighted_measure_sums_weights_per_wave_per_level(client, db):
     # Each wave: Aware weighted total = 2.0+1.0 = 3.0, Not Aware = 1.5.
     col = await _seed_trend_weighted_fixture(db)

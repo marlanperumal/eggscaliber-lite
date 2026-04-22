@@ -115,6 +115,11 @@ async def test_update_collection_scope(
     assert response.status_code == 200
     assert response.json()["scope"] == "selected"
 
+    list_resp = await client.get(f"/api/v1/admin/packages/{pc_package.id}/collections")
+    assert list_resp.status_code == 200
+    row = next(c for c in list_resp.json() if c["collection_id"] == pc_collection.id)
+    assert row["scope"] == "selected"
+
 
 async def test_remove_collection_from_package(
     client: AsyncClient, pc_package, pc_collection, seed_package_collection

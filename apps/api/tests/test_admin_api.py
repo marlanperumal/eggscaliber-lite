@@ -27,7 +27,7 @@ async def test_admin_list_orgs_requires_superuser(client):
 
 
 @pytest.mark.asyncio
-async def test_admin_list_orgs_as_superuser_returns_all_orgs(client, admin_fixtures, db):
+async def test_admin_list_orgs_as_superuser_includes_seeded_org(client, admin_fixtures, db):
     from src.auth import CurrentUser, get_current_user
     from src.main import app
 
@@ -72,9 +72,7 @@ async def test_admin_subscribe_org_to_package_returns_201_with_package_id(
 
 
 @pytest.mark.asyncio
-async def test_admin_update_package_visibility_returns_updated_visibility(
-    client, admin_fixtures, db
-):
+async def test_admin_update_package_visibility_persists_change(client, admin_fixtures, db):
     from src.auth import CurrentUser, get_current_user
     from src.main import app
 
@@ -90,10 +88,15 @@ async def test_admin_update_package_visibility_returns_updated_visibility(
         f"/api/v1/admin/packages/{f['pkg'].id}",
         json={"visibility": "public"},
     )
-    app.dependency_overrides.pop(get_current_user, None)
-
     assert resp.status_code == 200
     assert resp.json()["visibility"] == "public"
+
+    # Re-fetch via GET to confirm the visibility change actually persisted.
+    get_resp = await client.get(f"/api/v1/packages/{f['pkg'].id}")
+    app.dependency_overrides.pop(get_current_user, None)
+
+    assert get_resp.status_code == 200
+    assert get_resp.json()["visibility"] == "public"
 
 
 @pytest.mark.asyncio

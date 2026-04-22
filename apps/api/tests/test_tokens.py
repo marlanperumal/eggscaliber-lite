@@ -76,6 +76,12 @@ async def test_revoke_token_returns_204(client, db):
     assert len(response.json()) == 0
 
 
+async def test_revoke_token_with_unknown_id_returns_404(client, db):
+    await _make_user(db)
+    response = await client.delete("/api/v1/tokens/99999999")
+    assert response.status_code == 404
+
+
 async def test_revoke_other_users_token_returns_404(client, db):
     await _make_user(db, "test_user")  # the authed user
     other = await _make_user(db, "other_user")

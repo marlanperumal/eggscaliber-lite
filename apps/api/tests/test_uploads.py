@@ -594,6 +594,88 @@ async def test_move_field_with_wrong_session_returns_404(client, db):
     assert move_r.status_code == 404
 
 
+async def test_override_field_type_persists_on_reread(client, db):
+    """PATCH field override_type returns 200 and the override is reflected on GET."""
+    sess = await _create_session(client, headers=["rating"], rows=[[str(i)] for i in range(1, 6)])
+    field_id = sess["fields"][0]["id"]
+    patch = await client.patch(
+        f"/api/v1/uploads/{sess['id']}/fields/{field_id}",
+        json={"override_type": "categorical"},
+    )
+    assert patch.status_code == 200
+
+    get_resp = await client.get(f"/api/v1/uploads/{sess['id']}")
+    assert get_resp.status_code == 200
+    field = next(f for f in get_resp.json()["fields"] if f["id"] == field_id)
+    assert field["override_type"] == "categorical"
+
+
+async def test_create_fieldgroup_appears_in_field_tree(client, db):
+    """POST fieldgroup returns 201 and the group is visible in a subsequent field-tree GET."""
+    sess = await _create_session(client)
+    resp = await client.post(
+        f"/api/v1/uploads/{sess['id']}/fieldgroups",
+        json={"name": "Demographics"},
+    )
+    assert resp.status_code == 201
+    gid = resp.json()["id"]
+
+    tree = await client.get(f"/api/v1/uploads/{sess['id']}/field-tree")
+    assert tree.status_code == 200
+    group_ids = [g["id"] for g in tree.json()["groups"]]
+    assert gid in group_ids
+
+
+async def test_update_fieldgroup_name_persists_on_reread(client, db):
+    """PATCH fieldgroup returns 200 and the new name is reflected on subsequent GET."""
+    sess = await _create_session(client)
+    grp_r = await client.post(f"/api/v1/uploads/{sess['id']}/fieldgroups", json={"name": "Old"})
+    gid = grp_r.json()["id"]
+
+    patch = await client.patch(
+        f"/api/v1/uploads/{sess['id']}/fieldgroups/{gid}",
+        json={"name": "New"},
+    )
+    assert patch.status_code == 200
+    assert patch.json()["name"] == "New"
+
+    tree = await client.get(f"/api/v1/uploads/{sess['id']}/field-tree")
+    grp = next(g for g in tree.json()["groups"] if g["id"] == gid)
+    assert grp["name"] == "New"
+
+
+async def test_delete_fieldgroup_removes_group_from_tree(client, db):
+    """DELETE fieldgroup removes the group on a subsequent field-tree GET."""
+    sess = await _create_session(client)
+    grp_r = await client.post(f"/api/v1/uploads/{sess['id']}/fieldgroups", json={"name": "Gone"})
+    gid = grp_r.json()["id"]
+
+    del_r = await client.delete(f"/api/v1/uploads/{sess['id']}/fieldgroups/{gid}")
+    assert del_r.status_code == 200
+
+    tree = await client.get(f"/api/v1/uploads/{sess['id']}/field-tree")
+    group_ids = [g["id"] for g in tree.json()["groups"]]
+    assert gid not in group_ids
+
+
+async def test_move_field_into_fieldgroup_persists_on_reread(client, db):
+    """PATCH field move returns 200 and the new parent group is reflected on GET."""
+    sess = await _create_session(client, headers=["q1", "q2"], rows=[["a", "b"]])
+    field_id = sess["fields"][0]["id"]
+    grp_r = await client.post(f"/api/v1/uploads/{sess['id']}/fieldgroups", json={"name": "G1"})
+    gid = grp_r.json()["id"]
+
+    move_r = await client.patch(
+        f"/api/v1/uploads/{sess['id']}/fields/{field_id}/move",
+        json={"upload_fieldgroup_id": gid},
+    )
+    assert move_r.status_code == 200
+
+    get_resp = await client.get(f"/api/v1/uploads/{sess['id']}")
+    field = next(f for f in get_resp.json()["fields"] if f["id"] == field_id)
+    assert field["upload_fieldgroup_id"] == gid
+
+
 async def test_bulk_resolve_with_empty_ids_returns_zero_resolved(client, db):
     from tests.test_reconciliation_api import _seed_ref_dataset, _upload
 
