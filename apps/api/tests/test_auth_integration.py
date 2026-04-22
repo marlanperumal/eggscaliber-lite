@@ -26,6 +26,37 @@ async def test_health_route_without_auth_returns_200():
 
 
 @pytest.mark.asyncio
+async def test_upload_route_without_auth_returns_401():
+    """POST /uploads must reject unauthenticated requests."""
+    import io
+
+    with patch("src.auth.settings") as mock_settings:
+        mock_settings.auth_mode = "jwt"
+        mock_settings.clerk_jwt_key = ""
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/api/v1/uploads",
+                files={"file": ("test.csv", io.BytesIO(b"col\nval"), "text/csv")},
+                data={"dataset_name": "Test"},
+            )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_create_package_without_auth_returns_401():
+    """POST /packages must reject unauthenticated requests."""
+    with patch("src.auth.settings") as mock_settings:
+        mock_settings.auth_mode = "jwt"
+        mock_settings.clerk_jwt_key = ""
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/api/v1/packages",
+                json={"name": "Sneaky Package"},
+            )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
 async def test_webhook_route_without_auth_returns_400_not_401():
     """Webhook route must not require bearer auth — it uses svix signature verification instead."""
     mock_session = MagicMock()
