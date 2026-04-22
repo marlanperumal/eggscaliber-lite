@@ -10,6 +10,7 @@ from src.auth import get_current_user
 from src.config import settings
 from src.database import lifespan as db_lifespan
 from src.errors import DomainError
+from src.mcp_external.server import external_mcp_app
 from src.models.error import ErrorResponse
 from src.routes import (
     admin as admin_router,
@@ -86,5 +87,8 @@ mcp = FastMCP.from_fastapi(
     ],
 )
 mcp_app = mcp.http_app(path="/")
-app.router.lifespan_context = combine_lifespans(db_lifespan, mcp_app.lifespan)
+app.router.lifespan_context = combine_lifespans(
+    db_lifespan, mcp_app.lifespan, external_mcp_app.lifespan
+)
+app.mount("/mcp/external", external_mcp_app)
 app.mount("/mcp", mcp_app)
