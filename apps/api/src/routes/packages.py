@@ -5,7 +5,6 @@ from sqlmodel import SQLModel
 from src.auth import CurrentUser, get_accessible_package_ids, get_current_user
 from src.database import get_session
 from src.models.package import PackageRead, PackageWithCollections
-from src.repositories import package_repo
 from src.services import package_service
 
 router = APIRouter(tags=["packages"])
@@ -18,7 +17,11 @@ class PackageCreate(SQLModel):
 
 
 @router.post("/packages", response_model=PackageRead, status_code=201)
-async def create_package(body: PackageCreate, session: AsyncSession = Depends(get_session)):
+async def create_package(
+    body: PackageCreate,
+    _: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
     """Create a new package."""
     return await package_service.create_package(
         session, name=body.name, slug=body.slug, description=body.description
@@ -32,10 +35,7 @@ async def list_packages(
     session: AsyncSession = Depends(get_session),
 ):
     """List all packages (top-level groupings of survey collections)."""
-    pkgs = await package_repo.get_all(session)
-    if accessible_ids is None:
-        return pkgs
-    return [p for p in pkgs if p.id in accessible_ids]
+    return await package_service.list_packages(session, accessible_ids)
 
 
 @router.get("/packages/{package_id}", response_model=PackageWithCollections)
