@@ -1,11 +1,17 @@
 import type { UIMessage } from "@ai-sdk/react"
 import { render, screen, within } from "@testing-library/react"
-import { beforeAll, expect, it } from "vitest"
+import { beforeAll, beforeEach, expect, it, vi } from "vitest"
 import { MessageList } from "./MessageList"
+
+const scrollIntoViewMock = vi.fn()
 
 beforeAll(() => {
   // JSDOM lacks scrollIntoView; stub so the effect doesn't throw
-  Element.prototype.scrollIntoView = () => {}
+  Element.prototype.scrollIntoView = scrollIntoViewMock
+})
+
+beforeEach(() => {
+  scrollIntoViewMock.mockClear()
 })
 
 function userMsg(id: string, text: string): UIMessage {
@@ -52,4 +58,16 @@ it("renders a thinking assistant bubble when isLoading is true", () => {
   render(<MessageList messages={[userMsg("1", "hi")]} isLoading={true} />)
   const assistantBubbles = screen.getAllByTestId("message-bubble-assistant")
   expect(assistantBubbles.some((b) => /thinking/i.test(b.textContent ?? ""))).toBe(true)
+})
+
+it("scrolls to bottom when a new message arrives", () => {
+  const { rerender } = render(<MessageList messages={[userMsg("1", "first")]} isLoading={false} />)
+  scrollIntoViewMock.mockClear()
+  rerender(
+    <MessageList
+      messages={[userMsg("1", "first"), assistantMsg("2", "second")]}
+      isLoading={false}
+    />,
+  )
+  expect(scrollIntoViewMock).toHaveBeenCalled()
 })
