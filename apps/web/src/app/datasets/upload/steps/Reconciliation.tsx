@@ -99,13 +99,14 @@ export function Reconciliation({ state, setStep }: Props) {
   }
 
   async function triggerReconcile() {
-    if (!state.sessionId || !refDatasetId) return
+    const { sessionId } = state
+    if (!sessionId || !refDatasetId) return
     setBusy(true)
     try {
       const { error } = await mutate(
         () =>
           api.POST("/api/v1/uploads/{session_id}/reconcile", {
-            params: { path: { session_id: state.sessionId! } },
+            params: { path: { session_id: sessionId } },
             body: { reference_dataset_id: Number(refDatasetId) },
           }),
         { errorMessage: "Failed to start reconciliation. Please try again." },
@@ -156,7 +157,8 @@ export function Reconciliation({ state, setStep }: Props) {
   }, [showAll, nextCursor])
 
   async function handleAction(rowId: number, action: "confirm" | "reject" | "exclude" | "map") {
-    if (!state.sessionId) return
+    const { sessionId } = state
+    if (!sessionId) return
     const statusMap: Record<string, ReconStatus> = {
       confirm: "confirmed",
       reject: "rejected",
@@ -166,7 +168,7 @@ export function Reconciliation({ state, setStep }: Props) {
     const { error } = await mutate(
       () =>
         api.PATCH("/api/v1/uploads/{session_id}/reconcile/{row_id}", {
-          params: { path: { session_id: state.sessionId!, row_id: rowId } },
+          params: { path: { session_id: sessionId, row_id: rowId } },
           body: { status },
         }),
       { errorMessage: "Failed to update row. Please try again." },
@@ -177,13 +179,14 @@ export function Reconciliation({ state, setStep }: Props) {
   }
 
   async function handleBulkAction(action: ReconStatus) {
-    if (!state.sessionId || selected.size === 0) return
+    const { sessionId } = state
+    if (!sessionId || selected.size === 0) return
     setBusy(true)
     try {
       const { error } = await mutate(
         () =>
           api.POST("/api/v1/uploads/{session_id}/reconcile/bulk", {
-            params: { path: { session_id: state.sessionId! } },
+            params: { path: { session_id: sessionId } },
             body: { ids: Array.from(selected), action },
           }),
         { errorMessage: "Failed to apply bulk action. Please try again." },

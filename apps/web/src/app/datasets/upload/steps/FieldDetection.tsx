@@ -33,11 +33,12 @@ export function FieldDetection({ state, setStep }: Props) {
   }, [state.sessionId])
 
   async function handleOverride(fieldId: number, overrideType: string | null) {
-    if (!state.sessionId) return
+    const { sessionId } = state
+    if (!sessionId) return
     const { data, error } = await mutate(
       () =>
         api.PATCH("/api/v1/uploads/{session_id}/fields/{field_id}", {
-          params: { path: { session_id: state.sessionId!, field_id: fieldId } },
+          params: { path: { session_id: sessionId, field_id: fieldId } },
           body: { override_type: overrideType as FieldType | null },
         }),
       { errorMessage: "Failed to update field type. Please try again." },

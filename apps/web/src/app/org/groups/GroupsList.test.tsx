@@ -99,7 +99,8 @@ describe("GroupsList", () => {
     await waitFor(() => screen.getByText("Analysts"))
 
     const groupRows = screen.getAllByTestId("group-row")
-    const analystsRow = groupRows.find((r) => r.textContent?.includes("Analysts"))!
+    const analystsRow = groupRows.find((r) => r.textContent?.includes("Analysts"))
+    if (!analystsRow) throw new Error("Analysts row not found")
     await user.click(within(analystsRow).getByText(/delete/i))
     const dialog = screen.getByRole("dialog")
     await user.click(within(dialog).getByRole("button", { name: /^delete$/i }))

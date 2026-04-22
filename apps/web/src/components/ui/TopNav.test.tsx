@@ -18,14 +18,8 @@ vi.mock("@clerk/nextjs", () => ({
   OrganizationSwitcher: () => null,
   UserButton: () => null,
   SignInButton: ({ children }: { children: React.ReactNode }) => children,
-  Show: ({
-    children,
-    fallback,
-  }: {
-    when: string
-    children: React.ReactNode
-    fallback?: React.ReactNode
-  }) => fallback ?? null,
+  Show: ({ fallback }: { when: string; children: React.ReactNode; fallback?: React.ReactNode }) =>
+    fallback ?? null,
 }))
 
 import { useFeatureFlag } from "@posthog/next"

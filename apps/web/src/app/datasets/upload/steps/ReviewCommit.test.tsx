@@ -11,7 +11,7 @@ vi.mock("@/lib/api", () => ({
 }))
 
 vi.mock("@/lib/mutate", () => ({
-  mutate: vi.fn((fn, opts) =>
+  mutate: vi.fn((fn, _opts) =>
     fn().then((r: { data: unknown; error: unknown }) => ({ data: r.data, error: r.error })),
   ),
 }))

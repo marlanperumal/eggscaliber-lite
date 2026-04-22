@@ -40,11 +40,12 @@ export function MetadataEditor({ state, setStep }: Props) {
   }, [state.sessionId])
 
   async function handleMoveField(fieldId: number, groupId: number | null) {
-    if (!state.sessionId) return
+    const { sessionId } = state
+    if (!sessionId) return
     await mutate(
       () =>
         api.PATCH("/api/v1/uploads/{session_id}/fields/{field_id}/move", {
-          params: { path: { session_id: state.sessionId!, field_id: fieldId } },
+          params: { path: { session_id: sessionId, field_id: fieldId } },
           body: { upload_fieldgroup_id: groupId },
         }),
       { errorMessage: "Failed to move field. Please try again." },
@@ -53,11 +54,12 @@ export function MetadataEditor({ state, setStep }: Props) {
   }
 
   async function handleCreateGroup(name: string, parentId: number | null) {
-    if (!state.sessionId) return
+    const { sessionId } = state
+    if (!sessionId) return
     await mutate(
       () =>
         api.POST("/api/v1/uploads/{session_id}/fieldgroups", {
-          params: { path: { session_id: state.sessionId! } },
+          params: { path: { session_id: sessionId } },
           body: { name, parent_id: parentId, sort_order: 0 },
         }),
       { errorMessage: "Failed to create group. Please try again." },
@@ -66,11 +68,12 @@ export function MetadataEditor({ state, setStep }: Props) {
   }
 
   async function handleDeleteGroup(id: number) {
-    if (!state.sessionId) return
+    const { sessionId } = state
+    if (!sessionId) return
     await mutate(
       () =>
         api.DELETE("/api/v1/uploads/{session_id}/fieldgroups/{group_id}", {
-          params: { path: { session_id: state.sessionId!, group_id: id } },
+          params: { path: { session_id: sessionId, group_id: id } },
         }),
       { errorMessage: "Failed to delete group. Please try again." },
     )
@@ -78,11 +81,12 @@ export function MetadataEditor({ state, setStep }: Props) {
   }
 
   async function handleMoveGroup(groupId: number, parentId: number | null) {
-    if (!state.sessionId) return
+    const { sessionId } = state
+    if (!sessionId) return
     await mutate(
       () =>
         api.PATCH("/api/v1/uploads/{session_id}/fieldgroups/{group_id}", {
-          params: { path: { session_id: state.sessionId!, group_id: groupId } },
+          params: { path: { session_id: sessionId, group_id: groupId } },
           body: { parent_id: parentId },
         }),
       { errorMessage: "Failed to move group. Please try again." },
@@ -128,11 +132,12 @@ export function MetadataEditor({ state, setStep }: Props) {
                 onMoveField={handleMoveField}
                 onCreateGroup={handleCreateGroup}
                 onRenameGroup={async (id: number, name: string) => {
-                  if (!state.sessionId) return
+                  const { sessionId } = state
+                  if (!sessionId) return
                   await mutate(
                     () =>
                       api.PATCH("/api/v1/uploads/{session_id}/fieldgroups/{group_id}", {
-                        params: { path: { session_id: state.sessionId!, group_id: id } },
+                        params: { path: { session_id: sessionId, group_id: id } },
                         body: { name },
                       }),
                     { errorMessage: "Failed to rename group. Please try again." },
@@ -164,12 +169,13 @@ export function MetadataEditor({ state, setStep }: Props) {
             onSaved={async () => await loadTree()}
             onCancel={() => setSelectedFieldId(null)}
             onDelete={async () => {
-              if (!state.sessionId || !selectedFieldId) return
+              const { sessionId } = state
+              if (!sessionId || !selectedFieldId) return
               await mutate(
                 () =>
                   api.DELETE("/api/v1/uploads/{upload_session_id}/fields/{field_id}", {
                     params: {
-                      path: { upload_session_id: state.sessionId!, field_id: selectedFieldId },
+                      path: { upload_session_id: sessionId, field_id: selectedFieldId },
                     },
                   }),
                 { errorMessage: "Failed to delete field. Please try again." },
