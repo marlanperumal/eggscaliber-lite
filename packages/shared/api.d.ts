@@ -68,6 +68,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List All Packages
+         * @description List all packages (super-user only).
+         */
+        get: operations["list_all_packages_api_v1_admin_packages_get"];
+        put?: never;
+        /**
+         * Create Package
+         * @description Create a new package (super-user only).
+         */
+        post: operations["create_package_api_v1_admin_packages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/packages/{package_id}": {
         parameters: {
             query?: never;
@@ -86,6 +110,154 @@ export interface paths {
          * @description Update a package's visibility or metadata (super-user only).
          */
         patch: operations["update_package_api_v1_admin_packages__package_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List All Collections
+         * @description List all collections (super-user only).
+         */
+        get: operations["list_all_collections_api_v1_admin_collections_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/packages/{package_id}/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Package Collections
+         * @description List collections included in a package with their scope and dataset inclusions.
+         */
+        get: operations["list_package_collections_api_v1_admin_packages__package_id__collections_get"];
+        put?: never;
+        /**
+         * Add Collection To Package
+         * @description Add a collection to a package.
+         */
+        post: operations["add_collection_to_package_api_v1_admin_packages__package_id__collections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/packages/{package_id}/collections/{collection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Collection From Package
+         * @description Remove a collection from a package.
+         */
+        delete: operations["remove_collection_from_package_api_v1_admin_packages__package_id__collections__collection_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Package Collection Scope
+         * @description Update the dataset scope for a collection within a package.
+         */
+        patch: operations["update_package_collection_scope_api_v1_admin_packages__package_id__collections__collection_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/packages/{package_id}/collections/{collection_id}/datasets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Dataset Inclusion
+         * @description Add a dataset to the selected-scope inclusion list for a collection.
+         */
+        post: operations["add_dataset_inclusion_api_v1_admin_packages__package_id__collections__collection_id__datasets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/packages/{package_id}/collections/{collection_id}/datasets/{dataset_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Dataset Inclusion
+         * @description Remove a dataset from the selected-scope inclusion list.
+         */
+        delete: operations["remove_dataset_inclusion_api_v1_admin_packages__package_id__collections__collection_id__datasets__dataset_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Org Members
+         * @description List all members of the current user's organisation with their roles.
+         */
+        get: operations["list_org_members_api_v1_org_members_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Org Subscribed Packages
+         * @description List packages available to the current user's org (public + active private subscriptions).
+         */
+        get: operations["list_org_subscribed_packages_api_v1_org_subscriptions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/health": {
@@ -800,7 +972,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Group Members
+         * @description List members of a group with their org role.
+         */
+        get: operations["list_group_members_api_v1_groups__group_id__members_get"];
         put?: never;
         /**
          * Add Member
@@ -840,7 +1016,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Group Packages
+         * @description List packages assigned to a group.
+         */
+        get: operations["list_group_packages_api_v1_groups__group_id__packages_get"];
         put?: never;
         /**
          * Assign Package
@@ -873,14 +1053,104 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Tokens
+         * @description List all active API tokens for the current user.
+         */
+        get: operations["list_tokens_api_v1_tokens_get"];
+        put?: never;
+        /**
+         * Create Token
+         * @description Create a new personal access token. The raw token is returned once and never stored.
+         */
+        post: operations["create_token_api_v1_tokens_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tokens/{token_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Token
+         * @description Revoke an API token. The token is immediately invalidated.
+         */
+        delete: operations["revoke_token_api_v1_tokens__token_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AddCollectionBody */
+        AddCollectionBody: {
+            /** Collection Id */
+            collection_id: number;
+            /** @default all */
+            scope: components["schemas"]["PackageCollectionScope"];
+        };
+        /** AddDatasetBody */
+        AddDatasetBody: {
+            /** Dataset Id */
+            dataset_id: number;
+        };
         /** AddMemberBody */
         AddMemberBody: {
             /** User Id */
             user_id: number;
+        };
+        /** ApiTokenCreated */
+        ApiTokenCreated: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Prefix */
+            prefix: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Last Used At */
+            last_used_at?: string | null;
+            /** Raw Token */
+            raw_token: string;
+        };
+        /** ApiTokenRead */
+        ApiTokenRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Prefix */
+            prefix: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Last Used At */
+            last_used_at?: string | null;
         };
         /** AssignPackageBody */
         AssignPackageBody: {
@@ -916,8 +1186,10 @@ export interface components {
              * @enum {string}
              */
             role: "user" | "assistant";
+            /** Parts */
+            parts?: components["schemas"]["_ContentPart"][] | null;
             /** Content */
-            content: string;
+            content?: string | components["schemas"]["_ContentPart"][] | null;
         };
         /** ChatRequest */
         ChatRequest: {
@@ -1313,6 +1585,30 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** GroupMemberRead */
+        GroupMemberRead: {
+            /** User Id */
+            user_id: number;
+            /** Clerk Id */
+            clerk_id: string;
+            /** Email */
+            email: string;
+            /** Display Name */
+            display_name: string | null;
+            /** Role */
+            role: string;
+        };
+        /** GroupPackageRead */
+        GroupPackageRead: {
+            /** Package Id */
+            package_id: number;
+            /** Name */
+            name: string;
+            /** Slug */
+            slug: string;
+            /** Visibility */
+            visibility: string;
+        };
         /** GroupRead */
         GroupRead: {
             /** Id */
@@ -1410,6 +1706,19 @@ export interface components {
             /** Display Name */
             display_name: string;
         };
+        /** OrgMemberRead */
+        OrgMemberRead: {
+            /** User Id */
+            user_id: number;
+            /** Clerk Id */
+            clerk_id: string;
+            /** Email */
+            email: string;
+            /** Display Name */
+            display_name: string | null;
+            /** Role */
+            role: string;
+        };
         /** OrgSubscriptionRead */
         OrgSubscriptionRead: {
             /** Id */
@@ -1445,6 +1754,27 @@ export interface components {
              */
             created_at: string;
         };
+        /** PackageCollectionDetail */
+        PackageCollectionDetail: {
+            /** Package Id */
+            package_id: number;
+            /** Collection Id */
+            collection_id: number;
+            scope: components["schemas"]["PackageCollectionScope"];
+            /** Collection Name */
+            collection_name: string;
+            /** Collection Slug */
+            collection_slug: string;
+            /** Collection Type */
+            collection_type: string;
+            /** Dataset Ids */
+            dataset_ids: number[];
+        };
+        /**
+         * PackageCollectionScope
+         * @enum {string}
+         */
+        PackageCollectionScope: "all" | "selected";
         /** PackageCreate */
         PackageCreate: {
             /** Name */
@@ -1475,10 +1805,6 @@ export interface components {
         /** PackageUpdate */
         PackageUpdate: {
             visibility?: components["schemas"]["PackageVisibility"] | null;
-            /** Name */
-            name?: string | null;
-            /** Description */
-            description?: string | null;
         };
         /**
          * PackageVisibility
@@ -1693,6 +2019,11 @@ export interface components {
             /** Dataset Name */
             dataset_name: string | null;
         };
+        /** TokenCreate */
+        TokenCreate: {
+            /** Name */
+            name: string;
+        };
         /** TrendMeta */
         TrendMeta: {
             /**
@@ -1737,6 +2068,10 @@ export interface components {
             meta: components["schemas"]["TrendMeta"];
             /** Rows */
             rows: components["schemas"]["ResultRow"][];
+        };
+        /** UpdateScopeBody */
+        UpdateScopeBody: {
+            scope: components["schemas"]["PackageCollectionScope"];
         };
         /** UploadCreatedResponse */
         UploadCreatedResponse: {
@@ -1933,6 +2268,13 @@ export interface components {
          * @enum {string}
          */
         WorkerType: "jsonb_response" | "external_table";
+        /** _ContentPart */
+        _ContentPart: {
+            /** Type */
+            type: string;
+            /** Text */
+            text?: string | null;
+        };
     };
     responses: never;
     parameters: never;
@@ -2058,6 +2400,59 @@ export interface operations {
             };
         };
     };
+    list_all_packages_api_v1_admin_packages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageRead"][];
+                };
+            };
+        };
+    };
+    create_package_api_v1_admin_packages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackageCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     update_package_api_v1_admin_packages__package_id__patch: {
         parameters: {
             query?: never;
@@ -2089,6 +2484,265 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_all_collections_api_v1_admin_collections_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionRead"][];
+                };
+            };
+        };
+    };
+    list_package_collections_api_v1_admin_packages__package_id__collections_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageCollectionDetail"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_collection_to_package_api_v1_admin_packages__package_id__collections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddCollectionBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageCollectionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_collection_from_package_api_v1_admin_packages__package_id__collections__collection_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: number;
+                collection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_package_collection_scope_api_v1_admin_packages__package_id__collections__collection_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: number;
+                collection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateScopeBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageCollectionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_dataset_inclusion_api_v1_admin_packages__package_id__collections__collection_id__datasets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: number;
+                collection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddDatasetBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_dataset_inclusion_api_v1_admin_packages__package_id__collections__collection_id__datasets__dataset_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: number;
+                collection_id: number;
+                dataset_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_org_members_api_v1_org_members_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgMemberRead"][];
+                };
+            };
+        };
+    };
+    list_org_subscribed_packages_api_v1_org_subscriptions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageRead"][];
                 };
             };
         };
@@ -3438,6 +4092,37 @@ export interface operations {
             };
         };
     };
+    list_group_members_api_v1_groups__group_id__members_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupMemberRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     add_member_api_v1_groups__group_id__members_post: {
         parameters: {
             query?: never;
@@ -3501,6 +4186,37 @@ export interface operations {
             };
         };
     };
+    list_group_packages_api_v1_groups__group_id__packages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupPackageRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     assign_package_api_v1_groups__group_id__packages_post: {
         parameters: {
             query?: never;
@@ -3541,6 +4257,88 @@ export interface operations {
             path: {
                 group_id: number;
                 package_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tokens_api_v1_tokens_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiTokenRead"][];
+                };
+            };
+        };
+    };
+    create_token_api_v1_tokens_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TokenCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiTokenCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_token_api_v1_tokens__token_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token_id: number;
             };
             cookie?: never;
         };
