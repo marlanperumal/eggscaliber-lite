@@ -21,3 +21,6 @@ export const NeverUsed: Story = {}
 export const WithLastUsed: Story = {
   args: { lastUsedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
 }
+export const WithConfigOpen: Story = {
+  args: { lastUsedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+}

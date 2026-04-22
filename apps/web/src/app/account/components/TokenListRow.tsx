@@ -1,8 +1,9 @@
 "use client"
-import { Trash2 } from "lucide-react"
+import { ChevronDown, ChevronRight, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { RevokeConfirmDialog } from "./RevokeConfirmDialog"
+import { TokenConfigSnippets } from "./TokenConfigSnippets"
 
 interface Props {
   id: number
@@ -25,6 +26,7 @@ function relativeTime(iso: string): string {
 export function TokenListRow({ id, name, prefix, createdAt, lastUsedAt, onRevoke }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isRevoking, setIsRevoking] = useState(false)
+  const [configOpen, setConfigOpen] = useState(false)
 
   const handleConfirm = async () => {
     setIsRevoking(true)
@@ -35,26 +37,44 @@ export function TokenListRow({ id, name, prefix, createdAt, lastUsedAt, onRevoke
 
   return (
     <>
-      <div
-        data-testid="token-row"
-        className="flex items-center justify-between gap-4 rounded-lg border border-border px-4 py-3"
-      >
-        <div className="min-w-0 flex-1 space-y-0.5">
-          <p className="truncate font-medium text-foreground text-sm">{name}</p>
-          <p className="font-mono text-muted-foreground text-xs">{prefix}…</p>
+      <div data-testid="token-row" className="space-y-3 rounded-lg border border-border px-4 py-3">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <p className="truncate font-medium text-foreground text-sm">{name}</p>
+            <p className="font-mono text-muted-foreground text-xs">{prefix}…</p>
+          </div>
+          <div className="hidden shrink-0 text-right text-muted-foreground text-xs sm:block">
+            <p>Created {relativeTime(createdAt)}</p>
+            {lastUsedAt ? <p>Last used {relativeTime(lastUsedAt)}</p> : <p>Never used</p>}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-expanded={configOpen}
+            aria-controls={`token-config-${id}`}
+            onClick={() => setConfigOpen((v) => !v)}
+          >
+            {configOpen ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+            <span className="ml-1 text-xs">Config</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={`Revoke token ${name}`}
+            onClick={() => setDialogOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
         </div>
-        <div className="hidden shrink-0 text-right text-muted-foreground text-xs sm:block">
-          <p>Created {relativeTime(createdAt)}</p>
-          {lastUsedAt ? <p>Last used {relativeTime(lastUsedAt)}</p> : <p>Never used</p>}
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={`Revoke token ${name}`}
-          onClick={() => setDialogOpen(true)}
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
+        {configOpen && (
+          <div id={`token-config-${id}`}>
+            <TokenConfigSnippets prefix={prefix} />
+          </div>
+        )}
       </div>
       <RevokeConfirmDialog
         open={dialogOpen}
