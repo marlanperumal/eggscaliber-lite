@@ -90,6 +90,9 @@ export function QueryBuilderPanel({
     }
     onLoadingChange(true)
     setError(null)
+    // Exception: analytics endpoints are semantically read-like (POST for payload size, no state
+    // change). Errors are displayed inline in the panel rather than as toasts, so mutate() is
+    // not appropriate here.
     try {
       if (q.mode === "crosstab") {
         const { data, error: apiError } = await api.POST("/api/v1/analytics/crosstab", {

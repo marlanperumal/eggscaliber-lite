@@ -87,14 +87,16 @@ Never raise `HTTPException` in services — domain errors raised there are caugh
 
 The CRUD passthrough exception applies to two cases where there is no existence question:
 
-**1. List endpoints** — no entity ID in the path:
+**1. List endpoints** — no entity ID in the path, and no access-control filtering needed:
 
 ```python
-# ALLOWED — list endpoint, no entity ID, no existence question
+# ALLOWED — list endpoint, no entity ID, no existence question, no access control
 @router.get("/packages", response_model=list[PackageRead])
 async def list_packages(session: AsyncSession = Depends(get_session)):
     return await package_repo.get_all(session)
 ```
+
+If the list endpoint applies access-control filtering (via `get_accessible_package_ids`), use a service — the filtering logic is business logic and belongs there. See **Access Control Dependency** below.
 
 **2. Pure ID-projection endpoints** — has a parent entity ID but returns a flat list (e.g. for pagination support) where a missing/empty parent is semantically equivalent to an empty result:
 

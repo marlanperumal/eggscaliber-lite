@@ -45,6 +45,14 @@ await fetchGroups()
 
 Never call `api.POST/PATCH/PUT/DELETE` directly in a component — always wrap in `mutate()` so errors surface as toasts. (Read-only `api.GET` calls do not need `mutate()`.)
 
+**Exception: semantically read-like POST endpoints** — some endpoints use POST only because the query payload is too large for a query string (e.g. `/analytics/crosstab`, `/analytics/trend`). These endpoints do not change state. Call them directly with `api.POST` if the component displays errors inline (rather than as toasts), and add an exception comment:
+
+```typescript
+// Exception: analytics POST is semantically a read — no state change, errors shown inline.
+const { data, error: apiError } = await api.POST("/api/v1/analytics/crosstab", { body: {...} })
+if (apiError) throw new Error(JSON.stringify(apiError))
+```
+
 ### Never cast API response data with `as any`
 
 The typed client infers response types from `api.d.ts`. Casting response `data` with `as any` defeats this:
