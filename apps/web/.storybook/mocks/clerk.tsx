@@ -1,5 +1,7 @@
 import type { ReactNode } from "react"
 
+export const useOrganization = () => ({ membership: null })
+
 export const Show = ({
   children,
   fallback,
