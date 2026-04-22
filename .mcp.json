@@ -6,7 +6,7 @@
     },
     "eggscaliber": {
       "type": "http",
-      "url": "http://localhost:8000/mcp"
+      "url": "http://localhost:8000/mcp/"
     },
     "postgres": {
       "command": "uvx",
