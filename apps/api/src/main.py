@@ -24,6 +24,7 @@ from src.routes import (
     packages,
     scope,
     sentry,
+    tokens,
     uploads,
     webhooks,
 )
@@ -70,6 +71,7 @@ app.include_router(analytics.router, prefix="/api/v1", dependencies=[Depends(get
 app.include_router(ai.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 app.include_router(uploads.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 app.include_router(groups.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
+app.include_router(tokens.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 
 mcp = FastMCP.from_fastapi(
     app,
