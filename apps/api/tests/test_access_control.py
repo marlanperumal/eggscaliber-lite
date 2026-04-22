@@ -329,6 +329,60 @@ async def test_dataset_route_returns_404_when_inaccessible(client, db, bare_data
 
 
 @pytest.mark.asyncio
+async def test_dataset_download_returns_404_when_inaccessible(client, db, bare_dataset):
+    """GET /datasets/{id}/download returns 404 when the dataset's package is not accessible."""
+    from src.auth import CurrentUser, get_accessible_package_ids, get_current_user
+    from src.main import app
+
+    def override_user() -> CurrentUser:
+        return CurrentUser(clerk_id="no_access_user", email="noaccess@test.com", org_id=None)
+
+    async def override_accessible() -> set[int] | None:
+        return set()  # no packages accessible
+
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_accessible_package_ids] = override_accessible
+
+    resp = await client.get(f"/api/v1/datasets/{bare_dataset.id}/download")
+
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_accessible_package_ids, None)
+
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_trend_rejects_inaccessible_collection(client, db, seeded_collection):
+    """POST /analytics/trend returns 403 when the collection's package is not accessible."""
+    from src.auth import CurrentUser, get_accessible_package_ids, get_current_user
+    from src.main import app
+
+    def override_user() -> CurrentUser:
+        return CurrentUser(clerk_id="no_access_user", email="noaccess@test.com", org_id=None)
+
+    async def override_accessible() -> set[int] | None:
+        return set()  # no packages accessible
+
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_accessible_package_ids] = override_accessible
+
+    resp = await client.post(
+        "/api/v1/analytics/trend",
+        json={
+            "collection_id": seeded_collection.id,
+            "fields": [{"field_key": "gender"}],
+            "filters": [],
+            "measure": {"type": "count", "field_key": None, "aggregation": None, "display": "n"},
+        },
+    )
+
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_accessible_package_ids, None)
+
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
 async def test_dataset_delete_returns_404_when_inaccessible(client, db, bare_dataset):
     """DELETE /datasets/{id} returns 404 for a dataset outside the accessible set."""
     from src.auth import CurrentUser, get_accessible_package_ids, get_current_user
