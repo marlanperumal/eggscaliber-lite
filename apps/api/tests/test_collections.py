@@ -41,7 +41,7 @@ async def test_get_collection_consistency_not_found(client):
     assert response.status_code == 404
 
 
-async def test_create_collection(client, db):
+async def test_create_collection_with_explicit_slug_returns_201_with_name_and_id(client, db):
     pkg = Package(name="Pkg", slug="pkg-col-create-test")
     db.add(pkg)
     await db.flush()

@@ -59,7 +59,7 @@ async def test_list_groups_for_org(client, group_fixtures, db):
 
 
 @pytest.mark.asyncio
-async def test_create_group(client, group_fixtures, db):
+async def test_create_group_with_org_user_returns_201_with_name(client, group_fixtures, db):
     from src.auth import CurrentUser, get_current_user
     from src.main import app
 

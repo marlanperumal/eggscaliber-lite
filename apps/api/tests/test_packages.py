@@ -29,7 +29,7 @@ async def test_list_packages_returns_packages(client, db):
     assert slugs == {"brand-suite", "tracking-studies"}
 
 
-async def test_create_package(client):
+async def test_create_package_with_explicit_slug_returns_201_with_slug_and_id(client):
     response = await client.post(
         "/api/v1/packages",
         json={"name": "New Package", "slug": "new-package"},

@@ -141,7 +141,7 @@ async def test_detects_inconsistency_between_later_dataset_pair_in_three_dataset
     assert any(r.field_key == "media" for r in removed)
 
 
-async def test_consistency_endpoint(client, db):
+async def test_consistency_endpoint_with_type_mismatch_returns_inconsistency_detail(client, db):
     col = await _make_collection(db)
     ds1 = await _add_dataset(db, col, "W1", "w1-ep", 1)
     ds2 = await _add_dataset(db, col, "W2", "w2-ep", 2)
