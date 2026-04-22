@@ -22,8 +22,13 @@ from src.models.package import Package, PackageVisibility
 from src.models.user import Organisation, User
 
 
-async def get_all(session: AsyncSession) -> list[Package]:
-    return list((await session.execute(select(Package))).scalars().all())
+async def get_all(
+    session: AsyncSession, *, accessible_ids: set[int] | None = None
+) -> list[Package]:
+    q = select(Package)
+    if accessible_ids is not None:
+        q = q.where(Package.id.in_(accessible_ids))
+    return list((await session.execute(q)).scalars().unique().all())
 
 
 async def get_by_id(session: AsyncSession, package_id: int) -> Package | None:

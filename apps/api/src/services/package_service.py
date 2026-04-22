@@ -13,6 +13,13 @@ def _slugify(name: str) -> str:
     return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", name.lower())).strip("-")
 
 
+async def list_packages(
+    session: AsyncSession, accessible_ids: set[int] | None = None
+) -> list[PackageRead]:
+    pkgs = await package_repo.get_all(session, accessible_ids=accessible_ids)
+    return [PackageRead.model_validate(p.model_dump()) for p in pkgs]
+
+
 async def create_package(
     session: AsyncSession,
     name: str,

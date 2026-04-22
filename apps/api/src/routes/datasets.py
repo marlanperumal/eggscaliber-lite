@@ -10,7 +10,6 @@ from src.database import get_session
 from src.models.analytics import FieldTreeOut
 from src.models.dataset import DatasetListPage, DatasetWithFields, FieldOut
 from src.models.response import ResponsePage
-from src.repositories import dataset_repo
 from src.services import analytics_service, dataset_service
 
 router = APIRouter(tags=["datasets"])
@@ -26,14 +25,13 @@ async def list_datasets(
     session: AsyncSession = Depends(get_session),
 ):
     """List datasets, optionally filtered by collection_id."""
-    total, items = await dataset_repo.list_enriched(
+    return await dataset_service.list_datasets(
         session,
         collection_id=collection_id,
         page=page,
         page_size=page_size,
-        accessible_package_ids=accessible_ids,
+        accessible_ids=accessible_ids,
     )
-    return {"total": total, "page": page, "page_size": page_size, "items": items}
 
 
 @router.get("/datasets/{dataset_id}", response_model=DatasetWithFields)

@@ -1,9 +1,26 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.errors import DatasetNotFoundError
-from src.models.dataset import DatasetWithFields, FieldWithLevels, LevelOut
+from src.models.dataset import DatasetListPage, DatasetWithFields, FieldWithLevels, LevelOut
 from src.models.response import Response, ResponsePage, ResponseRead
 from src.repositories import dataset_repo, package_repo
+
+
+async def list_datasets(
+    session: AsyncSession,
+    collection_id: int | None = None,
+    page: int = 1,
+    page_size: int = 50,
+    accessible_ids: set[int] | None = None,
+) -> DatasetListPage:
+    total, items = await dataset_repo.list_enriched(
+        session,
+        collection_id=collection_id,
+        page=page,
+        page_size=page_size,
+        accessible_package_ids=accessible_ids,
+    )
+    return DatasetListPage(total=total, page=page, page_size=page_size, items=items)
 
 
 async def get_with_fields(
