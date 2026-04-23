@@ -15,7 +15,7 @@ const MEASURE_TYPES = ["count", "weighted", "value_field"] as const
 const DISPLAY_TYPES = ["n", "pct_col", "pct_row"] as const
 const AGGREGATIONS = ["sum", "mean"] as const
 
-const analyticsParams = {
+export const analyticsParams = {
   mode: parseAsStringLiteral(MODES).withDefault("crosstab"),
   ds: parseAsInteger,
   col: parseAsInteger,
