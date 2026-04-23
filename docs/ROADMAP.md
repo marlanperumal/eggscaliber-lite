@@ -1,6 +1,6 @@
 # Eggscaliber-Lite Roadmap
 
-Five sub-projects, each with its own spec → plan → implementation cycle.
+Sub-projects, each with its own spec → plan → implementation cycle.
 
 | # | Sub-project | Status | Spec | Plan |
 |---|---|---|---|---|
@@ -13,6 +13,14 @@ Five sub-projects, each with its own spec → plan → implementation cycle.
 | 7 | AI Interface | ✅ Complete | [spec](superpowers/specs/2026-04-19-ai-interface-design.md) | [plan](superpowers/plans/2026-04-19-ai-interface.md) |
 | 8 | Full AuthN & AuthZ | ✅ Complete | [spec](superpowers/specs/2026-04-20-authn-authz-design.md) | [plan](superpowers/plans/2026-04-20-authn-authz-phase1.md) |
 | 9 | MCP Interface | ✅ Complete | [spec](superpowers/specs/2026-04-22-mcp-interface-design.md) | [plan](superpowers/plans/2026-04-22-mcp-interface-gap-fill.md) |
+| 10 | Verify Existing Functionality | 🔜 Next | — | — |
+| 11 | Design System V2 & Mobile | ⏳ Planned | — | — |
+| 12 | Platform Hardening | ⏳ Planned | — | — |
+| 13 | Analytics V2 | ⏳ Planned | — | — |
+| 14 | Ingestion V2 | ⏳ Planned | — | — |
+| 15 | MCP Interface V2 | ⏳ Planned | — | — |
+| 16 | AI Interface V2 | ⏳ Planned | — | — |
+| 17 | External Data Sources | ⏳ Planned | — | — |
 
 ---
 
@@ -79,3 +87,123 @@ External MCP server at `/mcp/external` authenticated via Personal Access Tokens 
 - PAT expiry / per-token scoping / OAuth — deferred to V2
 
 **Done when:** A user can generate a PAT on `/account`, paste the config snippet into Claude Desktop/Code, and run a full analytics query against their entitled packages.
+
+---
+
+### 10 — Verify Existing Functionality 🔜
+
+Audit the shipped sub-projects against their own specs. Each item below was either declared in-scope in a spec but may not have landed, or was deferred to a sub-project that has since been marked complete without explicit confirmation. For each: verify in code, write a failing test if the behaviour is missing, then fix.
+
+**Spec-declared behaviour to verify:**
+- **AuthZ package filtering** — all data endpoints (`/packages`, `/analytics`, `/ai/chat`) filter by package visibility and active org subscription dates
+- **Default group auto-assignment** — `organizationMembership.created` webhook adds new members to the org's Default group
+- **Ingestion: virtual list pagination** — reconciliation step uses cursor-based API + `@tanstack/react-virtual` under "Show all"
+- **Ingestion: bulk reconciliation** — `POST /datasets/upload/{id}/reconcile/bulk` exists and the select-all flow hits it
+- **Ingestion: deep field-group nesting** — tree supports 4+ levels with drag-drop intact
+- **Analytics: field tree hygiene** — identifier and weight fields excluded from the tree
+- **Analytics: weighted measure picker** — only weight fields appear in the Weighted-mode dropdown
+- **Analytics: multi-response expansion** — multi_response fields render as expandable branches
+- **Analytics: filter logic** — OR within a field, AND across fields
+- **AI: agent system prompt** — responses cite dataset names and return multiple structured parts
+- **AI: "Open in Analytics"** — button constructs a valid nuqs URL that loads the query
+- **AI: SSE stream shape** — `/ai/chat` emits text deltas + structured result parts + finish events
+- **MCP: token hash verification** — SHA-256 compare; invalid/revoked tokens rejected
+- **MCP: group entitlement filtering** — tool responses restricted to the PAT owner's entitled packages
+- **MCP: `last_used_at` update** — timestamp advances asynchronously on each tool call
+
+**Stale deferrals to reconcile** (originally deferred to a sub-project that has since shipped — confirm they made it in or carry them forward):
+- Clerk `useUser()` wired into top-nav avatar (real profile image, not placeholder)
+- AI conversation persistence (multi-turn history survives page reload)
+- AI per-user/org access control (AI tools honour group entitlements)
+- Enhanced home page — originally "UX Polish Iteration 4"
+
+**Done when:** Each item above is either ✅ verified (with a test where practical) or moved to a follow-up sub-project with a concrete plan.
+
+---
+
+### 11 — Design System V2 & Mobile ⏳
+
+Polish items deferred from the Design System and UX Polish specs.
+
+- **Touch support for drag & drop** — mobile-friendly field dragging
+- **Mobile-optimised layouts** — real responsive design beyond hiding columns at `md`
+- **Home page animations** — scroll-triggered micro-interactions
+- **Dark-mode chart palette** — Recharts colours tuned for dark tokens
+- **Animation & transition tokens** — formal tokens for easing/duration
+- **Font customisation hook** — honour `ThemeConfig` font override
+- **On-demand shadcn components** — `dialog`, `popover`, `toast`, `sheet` as needed
+
+**Done when:** The app is genuinely usable on a phone and the design system carries a full motion + theming vocabulary.
+
+---
+
+### 12 — Platform Hardening ⏳
+
+Cost and observability guardrails that were explicitly deferred from Project Foundation and the MCP spec.
+
+- **Rate limiting on AI endpoints** — per-user/org throttling on `/ai/chat` to cap LLM spend
+- **Rate limiting per PAT** — per-token throttling on `/mcp/external`
+- **OpenTelemetry tracing** — distributed traces for analytics queries and LLM tool calls; dataset/field-level usage metrics
+
+**Done when:** Runaway AI or MCP usage is capped before it becomes a bill; we can answer "which datasets are hot?" and "where is latency spent?" from traces.
+
+---
+
+### 13 — Analytics V2 ⏳
+
+Analytics features explicitly pushed out of Sub-project 3, ordered by user value.
+
+- **Query export** — CSV download of results; PNG/PDF export of charts
+- **Saved queries** — persist query configurations; new `saved_queries` table + endpoints
+- **Advanced chart types** — histogram, box plot, scatter, heatmap (architecture already accommodates `chartType` + `value_field`)
+- **Weighted quantiles & histogram binning** — statistical ops for numeric fields
+- **SQL push-down aggregation** — move aggregation from Python to SQL for scale
+
+**Done when:** Analysts can export, revisit, and visualise numeric distributions without leaving the app; queries scale past seed-data volumes.
+
+---
+
+### 14 — Ingestion V2 ⏳
+
+Deferred from Sub-project 6.
+
+- **Dataset versioning & post-commit edit** — mutate field definitions without losing query reproducibility
+- **API-based ingestion** — programmatic upload endpoint for ETL/batch jobs
+- **Dataset download/export** — wire up the placeholder button on the datasets page
+- **SPSS edge cases** — split files, system missing value codes
+- **Concurrent uploads per user** — relax single-session constraint
+- **Drag-handle reordering for field levels** — replace integer sort-order input in the metadata editor
+
+**Done when:** Enterprise/automation flows can ingest, and analysts can correct metadata without re-uploading.
+
+---
+
+### 15 — MCP Interface V2 ⏳
+
+V2 items called out in the MCP spec.
+
+- **OAuth 2.0 / PKCE flow** — browser-based auth for Claude Desktop, alternative to manual PAT paste
+- **Per-token package scoping** — restrict a PAT to a subset of the owner's entitlements
+- **PAT expiry dates** — TTL on tokens with a rotation flow
+- **Streaming tool results** — SSE-style progressive output for long-running analytics
+
+**Done when:** Integrators can issue narrowly-scoped, expiring credentials and connect Claude Desktop with no manual token handling.
+
+---
+
+### 16 — AI Interface V2 ⏳
+
+Deferred from Sub-project 7.
+
+- **File & image inputs** — upload a chart or document as part of a prompt
+- **Agent memory across turns** — remember user preferences and prior dataset context beyond the message array
+
+**Done when:** AI interactions feel persistent and multimodal rather than single-shot text.
+
+---
+
+### 17 — External Data Sources ⏳
+
+- **ExternalTableWorker** — generalise the analytics worker abstraction so queries can run against arbitrary Postgres tables, not just JSONB response payloads
+
+**Done when:** A new dataset backed by an external table can be registered and queried through the same UI and MCP tools as native datasets.
