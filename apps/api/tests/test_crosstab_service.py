@@ -237,6 +237,34 @@ def test_aggregate_nested_with_fewer_than_two_row_fields_delegates_to_stacked():
     assert good["values"]["Total"] == 1.0
 
 
+def test_apply_filters_or_within_field_and_across_fields():
+    """Filter semantics: OR within a single field's selected values, AND across fields.
+
+    Seeds 4 discriminating rows (region N/S × gender M/F). Selecting both regions
+    exercises OR within `region`; additionally filtering gender=M exercises AND
+    across fields. Expected result: 2 rows — (N, M) and (S, M).
+    """
+    data = [
+        {"region": "N", "gender": "M"},
+        {"region": "N", "gender": "F"},
+        {"region": "S", "gender": "M"},
+        {"region": "S", "gender": "F"},
+    ]
+    filters = [
+        {"field_key": "region", "levels": ["N", "S"], "value_range": None},
+        {"field_key": "gender", "levels": ["M"], "value_range": None},
+    ]
+    field_metas = {
+        "region": {"field_type": FieldType.categorical},
+        "gender": {"field_type": FieldType.categorical},
+    }
+    result = apply_filters(data, filters, field_metas)
+
+    assert len(result) == 2
+    assert all(r["gender"] == "M" for r in result)
+    assert {r["region"] for r in result} == {"N", "S"}
+
+
 def test_apply_filters_multi_response_keeps_rows_containing_any_selected_level():
     data = [
         {"tags": ["fun", "reliable"], "brand_rating": "Good"},
