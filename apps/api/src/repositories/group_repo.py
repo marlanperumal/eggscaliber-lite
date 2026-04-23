@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 if TYPE_CHECKING:
     from src.models.package import Package
@@ -79,15 +80,16 @@ async def add_user_to_default_group(session: AsyncSession, *, user_id: int, org_
     grp = await get_default_group(session, org_id)
     if grp is None:
         return
-    existing = await session.execute(
-        select(GroupMembership).where(
-            GroupMembership.group_id == cast(int, grp.id),
-            GroupMembership.user_id == user_id,
-        )
+    # Postgres-native upsert: safe under concurrent at-least-once webhook
+    # delivery. A plain SELECT-then-INSERT races on the composite PK
+    # (group_id, user_id) when two deliveries land simultaneously.
+    stmt = (
+        pg_insert(GroupMembership)
+        .values(group_id=cast(int, grp.id), user_id=user_id)
+        .on_conflict_do_nothing(index_elements=["group_id", "user_id"])
     )
-    if existing.scalars().first() is not None:
-        return
-    await add_member(session, group_id=cast(int, grp.id), user_id=user_id)
+    await session.execute(stmt)
+    await session.flush()
 
 
 async def assign_package(session: AsyncSession, *, group_id: int, package_id: int) -> None:

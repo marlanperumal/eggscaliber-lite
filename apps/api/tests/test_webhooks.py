@@ -544,6 +544,85 @@ async def test_membership_created_is_idempotent(client: AsyncClient, db: AsyncSe
 
 
 @pytest.mark.asyncio
+async def test_membership_created_is_concurrency_safe(async_engine):
+    """Concurrent deliveries of the same organizationMembership.created must
+    both succeed with exactly one GroupMembership row — Clerk's at-least-once
+    contract can fire simultaneous deliveries, so the default-group insert
+    must be race-safe, not just serially idempotent.
+
+    The test client fixture injects one shared AsyncSession per request, so a
+    true concurrent HTTP race can't be simulated through it. Instead we drive
+    the repo function directly with two independent sessions on the live test
+    engine — this is the regression test that would have caught the
+    SELECT-then-INSERT race under real deployment."""
+    import asyncio
+
+    from sqlalchemy import func
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+    from src.models.group import Group, GroupMembership
+    from src.repositories import group_repo
+
+    session_factory = async_sessionmaker(async_engine, expire_on_commit=False)
+
+    # Setup (committed so both racing sessions see it).
+    async with session_factory() as setup_session:
+        org = await user_repo.upsert_organisation(
+            setup_session, clerk_org_id="org_concurrent", name="Concurrent Org"
+        )
+        user = await user_repo.upsert_user(
+            setup_session,
+            clerk_id="user_concurrent",
+            email="concurrent@example.com",
+            display_name=None,
+        )
+        # Create the default group manually (mirrors what organization.created does).
+        grp = Group(org_id=cast(int, org.id), name="Default", is_default=True)
+        setup_session.add(grp)
+        await setup_session.commit()
+        await setup_session.refresh(grp)
+        org_id = cast(int, org.id)
+        user_id = cast(int, user.id)
+        group_id = cast(int, grp.id)
+
+    async def _add_and_commit() -> None:
+        async with session_factory() as s:
+            await group_repo.add_user_to_default_group(s, user_id=user_id, org_id=org_id)
+            await s.commit()
+
+    try:
+        # Two concurrent add calls on independent sessions — without
+        # ON CONFLICT DO NOTHING, one of these would raise a UniqueViolation
+        # on the composite PK.
+        await asyncio.gather(_add_and_commit(), _add_and_commit())
+
+        async with session_factory() as verify:
+            count = (
+                await verify.execute(
+                    select(func.count())
+                    .select_from(GroupMembership)
+                    .where(
+                        GroupMembership.group_id == group_id,
+                        GroupMembership.user_id == user_id,
+                    )
+                )
+            ).scalar_one()
+            assert count == 1
+    finally:
+        # Clean up since this test bypasses the rollback-per-test fixture.
+        async with session_factory() as cleanup:
+            await cleanup.execute(
+                GroupMembership.__table__.delete().where(
+                    GroupMembership.group_id == group_id,
+                    GroupMembership.user_id == user_id,
+                )
+            )
+            await cleanup.execute(Group.__table__.delete().where(Group.id == group_id))
+            await cleanup.execute(User.__table__.delete().where(User.id == user_id))
+            await cleanup.execute(Organisation.__table__.delete().where(Organisation.id == org_id))
+            await cleanup.commit()
+
+
+@pytest.mark.asyncio
 async def test_membership_created_tolerates_missing_default_group(
     client: AsyncClient, db: AsyncSession
 ):

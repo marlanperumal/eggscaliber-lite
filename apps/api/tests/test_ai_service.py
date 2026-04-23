@@ -1,4 +1,8 @@
+import json
+
 import pytest_asyncio
+from pydantic_ai import Agent
+from pydantic_ai.models.test import TestModel
 from src.models.analytics import CrosstabRequest, FieldSelection, MeasureSpec, TrendRequest
 from src.models.collection import Collection, CollectionType
 from src.models.dataset import Dataset
@@ -14,6 +18,48 @@ from src.services.ai_service import (
     _run_crosstab_impl,
     _run_trend_impl,
 )
+
+
+def reassemble_sse_text_deltas(body: bytes | str) -> str:
+    """Reassemble text-delta events from a Vercel-AI SSE stream body into a
+    single string. Accepts either bytes or str so callers can pass the raw
+    response body or its decoded text."""
+    text = body.decode() if isinstance(body, bytes) else body
+    out: list[str] = []
+    for line in text.splitlines():
+        if not line.startswith("data: "):
+            continue
+        event = json.loads(line[len("data: ") :])
+        if event.get("type") == "text-delta":
+            out.append(event["delta"])
+    return "".join(out)
+
+
+def make_tool_test_agent() -> Agent:
+    """Build a TestModel-backed Agent with the real ai_service tool impls
+    registered. TestModel.call_tools="all" invokes every tool once and echoes
+    their string return values as assistant text — so any leak in a tool-impl
+    would surface in the streamed text deltas."""
+    import src.services.ai_service as ai_svc
+    from src.services.ai_service import SYSTEM_PROMPT, AIServiceDeps
+
+    test_agent: Agent[AIServiceDeps, str] = Agent(
+        model=TestModel(),
+        system_prompt=SYSTEM_PROMPT,
+        deps_type=AIServiceDeps,
+    )
+
+    @test_agent.tool
+    async def list_packages(ctx):  # type: ignore[no-untyped-def]
+        return await ai_svc._list_packages_impl(ctx.deps.session, ctx.deps.accessible_ids)
+
+    @test_agent.tool
+    async def get_field_tree(ctx, dataset_id: int):  # type: ignore[no-untyped-def]
+        return await ai_svc._get_field_tree_impl(
+            ctx.deps.session, dataset_id, ctx.deps.accessible_ids
+        )
+
+    return test_agent
 
 
 class TestStreamEncoder:
@@ -409,37 +455,13 @@ class TestChatEntitlementFilter:
     async def test_sse_stream_does_not_leak_unentitled_package_or_fields(
         self, client, db, ai_dataset
     ):
-        import json
-
         import src.services.ai_service as ai_svc
-        from pydantic_ai import Agent
-        from pydantic_ai.models.test import TestModel
-        from src.services.ai_service import SYSTEM_PROMPT, AIServiceDeps
 
         unentitled_pkg_name = ai_dataset["pkg"].name
         unentitled_field_display = ai_dataset["field"].display_name
         unentitled_field_key = ai_dataset["field"].field_key
 
-        # TestModel.call_tools="all" invokes every registered tool once with
-        # plausible args, then returns a final assistant message that echoes
-        # their string return values. Any package/field name leaked by the
-        # tool impls would surface in the streamed text deltas.
-        test_agent: Agent[AIServiceDeps, str] = Agent(
-            model=TestModel(),
-            system_prompt=SYSTEM_PROMPT,
-            deps_type=AIServiceDeps,
-        )
-
-        # Re-register the same tools against the test agent so TestModel sees them.
-        @test_agent.tool
-        async def list_packages(ctx):  # type: ignore[no-untyped-def]
-            return await ai_svc._list_packages_impl(ctx.deps.session, ctx.deps.accessible_ids)
-
-        @test_agent.tool
-        async def get_field_tree(ctx, dataset_id: int):  # type: ignore[no-untyped-def]
-            return await ai_svc._get_field_tree_impl(
-                ctx.deps.session, dataset_id, ctx.deps.accessible_ids
-            )
+        test_agent = make_tool_test_agent()
 
         original = ai_svc._agent
         ai_svc._agent = test_agent
@@ -495,18 +517,8 @@ class TestChatEntitlementFilter:
 
         assert resp2.status_code == 200
 
-        def _reassemble_text(sse_body: str) -> str:
-            out: list[str] = []
-            for line in sse_body.splitlines():
-                if not line.startswith("data: "):
-                    continue
-                event = json.loads(line[len("data: ") :])
-                if event.get("type") == "text-delta":
-                    out.append(event["delta"])
-            return "".join(out)
-
-        reassembled_unrestricted = _reassemble_text(body)
-        reassembled_empty = _reassemble_text(body2)
+        reassembled_unrestricted = reassemble_sse_text_deltas(body)
+        reassembled_empty = reassemble_sse_text_deltas(body2)
 
         # Sanity: the first (unrestricted) call DID include the package name,
         # so we know the tools actually ran and emitted content.
