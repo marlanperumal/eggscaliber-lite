@@ -15,11 +15,26 @@ vi.mock("next-themes", () => ({
 }))
 
 vi.mock("@clerk/nextjs", () => ({
-  OrganizationSwitcher: () => null,
-  UserButton: () => null,
+  OrganizationSwitcher: () => <div data-testid="org-switcher" />,
+  UserButton: ({ userProfileUrl }: { userProfileUrl?: string }) => (
+    <div data-testid="user-button" data-profile-url={userProfileUrl} />
+  ),
   SignInButton: ({ children }: { children: React.ReactNode }) => children,
-  Show: ({ fallback }: { when: string; children: React.ReactNode; fallback?: React.ReactNode }) =>
-    fallback ?? null,
+  // Render BOTH children and fallback so a single render can exercise either path.
+  // This matches Clerk's <Show> API semantically: tests decide which branch they care about.
+  Show: ({
+    children,
+    fallback,
+  }: {
+    when: string
+    children: React.ReactNode
+    fallback?: React.ReactNode
+  }) => (
+    <>
+      <div data-testid="signed-in-branch">{children}</div>
+      <div data-testid="signed-out-branch">{fallback ?? null}</div>
+    </>
+  ),
 }))
 
 import { useFeatureFlag } from "@posthog/next"
@@ -55,5 +70,18 @@ describe("TopNav AI link feature flag", () => {
     mockUseFeatureFlag.mockReturnValue(undefined)
     render(<TopNav />)
     expect(screen.getByRole("link", { name: "Analytics" })).toBeInTheDocument()
+  })
+})
+
+describe("TopNav signed-in avatar", () => {
+  it("renders Clerk UserButton wired to /account when signed in", () => {
+    mockUseFeatureFlag.mockReturnValue(undefined)
+    render(<TopNav />)
+    const userButton = screen.getByTestId("user-button")
+    expect(userButton).toBeInTheDocument()
+    // Verifies the avatar is Clerk's real component (which renders user.imageUrl)
+    // wired to the account profile page rather than a local placeholder.
+    expect(userButton).toHaveAttribute("data-profile-url", "/account")
+    expect(screen.getByTestId("org-switcher")).toBeInTheDocument()
   })
 })
