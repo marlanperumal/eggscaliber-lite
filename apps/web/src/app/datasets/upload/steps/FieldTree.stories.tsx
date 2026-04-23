@@ -69,3 +69,36 @@ export const Default: Story = {
 export const FieldSelected: Story = {
   args: { ...baseArgs, selectedFieldId: 1 },
 }
+
+// Regression fixture for deep field-group nesting (sub-project 6 spec promised ≥4 levels
+// with drag-drop). Depth: Survey → Section → Battery → Question.
+const DEEP_GROUPS = [
+  { id: 10, name: "Brand Tracker Survey", parent_id: null, sort_order: 0 },
+  { id: 11, name: "Awareness Section", parent_id: 10, sort_order: 0 },
+  { id: 12, name: "Unaided Awareness Battery", parent_id: 11, sort_order: 0 },
+  { id: 13, name: "Top-of-mind Brand", parent_id: 12, sort_order: 0 },
+]
+
+const DEEP_FIELDS = [
+  {
+    id: 101,
+    field_key: "tom_brand",
+    display_name: "Top-of-mind Brand",
+    detected_type: "categorical",
+    override_type: null,
+    sort_order: 0,
+    upload_fieldgroup_id: 13,
+    levels: [],
+  },
+]
+
+export const DeepNesting: Story = {
+  name: "MetadataEditor — Deep Nesting",
+  args: {
+    ...baseArgs,
+    groups: DEEP_GROUPS,
+    fields: DEEP_FIELDS,
+    unassignedFields: [],
+    selectedFieldId: null,
+  },
+}
