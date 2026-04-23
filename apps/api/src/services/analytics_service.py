@@ -28,7 +28,7 @@ from src.services import crosstab_service, trend_service
 from src.workers.factory import WorkerFactory
 
 
-async def _assert_dataset_accessible(
+async def assert_dataset_accessible(
     session: AsyncSession,
     dataset_id: int,
     accessible_ids: set[int] | None,
@@ -49,7 +49,7 @@ async def run_crosstab(
     request: CrosstabRequest,
     accessible_ids: set[int] | None = None,
 ) -> CrosstabResponse:
-    await _assert_dataset_accessible(session, request.dataset_id, accessible_ids)
+    await assert_dataset_accessible(session, request.dataset_id, accessible_ids)
     dataset = await analytics_repo.get_dataset(session, request.dataset_id)
     if dataset is None:
         raise DatasetNotFoundError(request.dataset_id)

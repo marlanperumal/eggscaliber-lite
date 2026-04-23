@@ -84,7 +84,7 @@ async def _get_field_tree_impl(
     accessible_ids: set[int] | None = None,
 ) -> str:
     try:
-        await analytics_service._assert_dataset_accessible(session, dataset_id, accessible_ids)
+        await analytics_service.assert_dataset_accessible(session, dataset_id, accessible_ids)
         tree = await analytics_service.get_field_tree(session, dataset_id)
     except DatasetNotFoundError:
         return f"Dataset {dataset_id} not found."

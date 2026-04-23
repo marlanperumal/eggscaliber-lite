@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import type React from "react"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("@posthog/next", () => ({
   useFeatureFlag: vi.fn(),
@@ -14,14 +14,17 @@ vi.mock("next-themes", () => ({
   useTheme: vi.fn(() => ({ setTheme: vi.fn() })),
 }))
 
+// Controls which branch the mocked Clerk <Show> renders. Each test sets this
+// once at the top so the mock renders exactly one branch (mirroring runtime
+// semantics). Reset to "signed-in" in beforeEach so tests are order-independent.
+let showBranch: "signed-in" | "signed-out" = "signed-in"
+
 vi.mock("@clerk/nextjs", () => ({
   OrganizationSwitcher: () => <div data-testid="org-switcher" />,
   UserButton: ({ userProfileUrl }: { userProfileUrl?: string }) => (
     <div data-testid="user-button" data-profile-url={userProfileUrl} />
   ),
   SignInButton: ({ children }: { children: React.ReactNode }) => children,
-  // Render BOTH children and fallback so a single render can exercise either path.
-  // This matches Clerk's <Show> API semantically: tests decide which branch they care about.
   Show: ({
     children,
     fallback,
@@ -29,12 +32,7 @@ vi.mock("@clerk/nextjs", () => ({
     when: string
     children: React.ReactNode
     fallback?: React.ReactNode
-  }) => (
-    <>
-      <div data-testid="signed-in-branch">{children}</div>
-      <div data-testid="signed-out-branch">{fallback ?? null}</div>
-    </>
-  ),
+  }) => <>{showBranch === "signed-in" ? children : (fallback ?? null)}</>,
 }))
 
 import { useFeatureFlag } from "@posthog/next"
@@ -42,7 +40,16 @@ import { TopNav } from "./top-nav"
 
 const mockUseFeatureFlag = vi.mocked(useFeatureFlag)
 
+beforeEach(() => {
+  showBranch = "signed-in"
+})
+
 describe("TopNav AI link feature flag", () => {
+  beforeEach(() => {
+    // These tests cover nav link visibility, which lives inside the signed-in branch.
+    showBranch = "signed-in"
+  })
+
   it("hides the AI link when the flag is not yet loaded (undefined)", () => {
     mockUseFeatureFlag.mockReturnValue(undefined)
     render(<TopNav />)
@@ -75,6 +82,7 @@ describe("TopNav AI link feature flag", () => {
 
 describe("TopNav signed-in avatar", () => {
   it("renders Clerk UserButton wired to /account when signed in", () => {
+    showBranch = "signed-in"
     mockUseFeatureFlag.mockReturnValue(undefined)
     render(<TopNav />)
     const userButton = screen.getByTestId("user-button")

@@ -10,7 +10,7 @@ from src.models.analytics import (
     TrendRequest,
 )
 from src.services import analytics_service
-from src.services.analytics_service import _assert_dataset_accessible
+from src.services.analytics_service import assert_dataset_accessible
 
 
 def _user() -> CurrentUser:
@@ -26,7 +26,7 @@ def register(mcp: FastMCP) -> None:
         assert SessionLocal is not None
         async with SessionLocal() as session:
             accessible_ids = await _get_accessible_package_ids(user, session)
-            await _assert_dataset_accessible(session, dataset_id, accessible_ids)
+            await assert_dataset_accessible(session, dataset_id, accessible_ids)
             tree = await analytics_service.get_field_tree(session, dataset_id)
         return tree.model_dump()
 
