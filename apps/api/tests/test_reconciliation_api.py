@@ -96,8 +96,8 @@ async def test_bulk_resolve_rows(client, db):
     assert resp.json()["resolved"] == len(ids)
 
 
-async def test_bulk_resolve_applies_atomically_across_rows(client, db):
-    """Bulk endpoint applies the action to every row in one shot (single transaction)."""
+async def test_bulk_resolve_applies_to_every_row_in_one_call(client, db):
+    """Bulk endpoint applies the action to every row in a single request."""
     col, ref_ds = await _seed_ref_dataset(db)
     sess = await _upload(client, col.id)
     await client.post(
@@ -144,9 +144,13 @@ async def test_reconcile_cursor_pagination_respects_after_id(client, db):
     assert p1["next_cursor"] is not None
     seen_ids = {p1["items"][0]["id"]}
 
-    # Walk the cursor until exhausted — verifies the endpoint respects after_id
+    # Walk the cursor until exhausted — verifies the endpoint respects after_id.
+    # Bounded guard so a non-null-terminating cursor regression fails loudly in CI
+    # rather than looping until the pytest timeout.
     cursor = p1["next_cursor"]
-    while cursor is not None:
+    for _ in range(50):
+        if cursor is None:
+            break
         page = (
             await client.get(f"/api/v1/uploads/{sid}/reconcile?page_size=1&after_id={cursor}")
         ).json()
@@ -154,6 +158,8 @@ async def test_reconcile_cursor_pagination_respects_after_id(client, db):
             assert item["id"] not in seen_ids, "cursor pagination returned duplicate row"
             seen_ids.add(item["id"])
         cursor = page["next_cursor"]
+    else:
+        raise AssertionError("cursor pagination did not terminate within 50 pages")
 
     # All ids from the /ids projection should now be covered
     all_ids = set((await client.get(f"/api/v1/uploads/{sid}/reconcile/ids")).json()["ids"])
