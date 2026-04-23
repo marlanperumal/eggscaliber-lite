@@ -480,3 +480,101 @@ async def test_membership_deleted_removes_group_memberships(client: AsyncClient,
         )
     )
     assert gm_res.scalars().first() is None
+
+
+@pytest.mark.asyncio
+async def test_membership_created_is_idempotent(client: AsyncClient, db: AsyncSession):
+    """Re-firing organizationMembership.created must not raise on the default-group insert."""
+    from sqlalchemy import func
+    from src.models.group import Group, GroupMembership
+
+    await _post_webhook(
+        client,
+        {
+            "type": "organization.created",
+            "data": {"id": "org_idem", "name": "Idem Org"},
+        },
+    )
+    await _post_webhook(
+        client,
+        {
+            "type": "user.created",
+            "data": {
+                "id": "user_idem",
+                "first_name": "I",
+                "last_name": "Dem",
+                "email_addresses": [{"email_address": "idem@example.com"}],
+            },
+        },
+    )
+    membership_payload = {
+        "type": "organizationMembership.created",
+        "data": {
+            "role": "org:member",
+            "public_user_data": {"user_id": "user_idem"},
+            "organization": {"id": "org_idem"},
+        },
+    }
+    resp1 = await _post_webhook(client, membership_payload)
+    resp2 = await _post_webhook(client, membership_payload)
+    assert resp1.status_code == 200
+    assert resp2.status_code == 200, (
+        "Re-delivered organizationMembership.created must not error — "
+        "the default-group assignment must be idempotent."
+    )
+
+    user_res = await db.execute(select(User).where(User.clerk_id == "user_idem"))
+    user = user_res.scalars().first()
+    org_res = await db.execute(select(Organisation).where(Organisation.clerk_org_id == "org_idem"))
+    org = org_res.scalars().first()
+    grp_res = await db.execute(
+        select(Group).where(Group.org_id == org.id, Group.is_default == True)  # noqa: E712
+    )
+    grp = grp_res.scalars().first()
+
+    count_res = await db.execute(
+        select(func.count())
+        .select_from(GroupMembership)
+        .where(
+            GroupMembership.group_id == grp.id,
+            GroupMembership.user_id == user.id,
+        )
+    )
+    assert count_res.scalar_one() == 1
+
+
+@pytest.mark.asyncio
+async def test_membership_created_tolerates_missing_default_group(
+    client: AsyncClient, db: AsyncSession
+):
+    """If organizationMembership.created arrives before organization.created
+    (out-of-order webhook delivery), the handler must not crash. The user is
+    left unassigned to any group; a follow-up delivery of organization.created
+    is expected to reconcile."""
+    from src.models.group import GroupMembership
+
+    await user_repo.upsert_organisation(db, clerk_org_id="org_race", name="Race Org")
+    await user_repo.upsert_user(
+        db, clerk_id="user_race", email="race@example.com", display_name=None
+    )
+    await db.commit()
+
+    resp = await _post_webhook(
+        client,
+        {
+            "type": "organizationMembership.created",
+            "data": {
+                "role": "org:member",
+                "public_user_data": {"user_id": "user_race"},
+                "organization": {"id": "org_race"},
+            },
+        },
+    )
+    assert resp.status_code == 200
+
+    user_res = await db.execute(select(User).where(User.clerk_id == "user_race"))
+    user = user_res.scalars().first()
+    assert user is not None
+
+    gm_res = await db.execute(select(GroupMembership).where(GroupMembership.user_id == user.id))
+    assert gm_res.scalars().first() is None

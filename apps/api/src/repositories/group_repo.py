@@ -77,8 +77,17 @@ async def remove_user_from_org_groups(session: AsyncSession, *, user_id: int, or
 
 async def add_user_to_default_group(session: AsyncSession, *, user_id: int, org_id: int) -> None:
     grp = await get_default_group(session, org_id)
-    if grp is not None:
-        await add_member(session, group_id=cast(int, grp.id), user_id=user_id)
+    if grp is None:
+        return
+    existing = await session.execute(
+        select(GroupMembership).where(
+            GroupMembership.group_id == cast(int, grp.id),
+            GroupMembership.user_id == user_id,
+        )
+    )
+    if existing.scalars().first() is not None:
+        return
+    await add_member(session, group_id=cast(int, grp.id), user_id=user_id)
 
 
 async def assign_package(session: AsyncSession, *, group_id: int, package_id: int) -> None:
