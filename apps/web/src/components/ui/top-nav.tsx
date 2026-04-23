@@ -17,6 +17,7 @@ import {
 import { themeConfig } from "@/config/theme.config"
 
 const ALL_NAV_LINKS = [
+  { href: "/datasets", label: "Datasets", flag: null },
   { href: "/analytics", label: "Analytics", flag: null },
   { href: "/ai", label: "AI", flag: "ai-interface" as const },
 ]

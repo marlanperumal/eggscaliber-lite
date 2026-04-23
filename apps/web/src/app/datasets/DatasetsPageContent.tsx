@@ -276,7 +276,7 @@ export function DatasetsPageContent({ initialPackages, initialDrafts, initialDat
                 <td className="py-3 pr-4 text-right text-muted-foreground">{d.response_count}</td>
                 <td className="py-3 pr-4 text-right text-muted-foreground">{d.field_count}</td>
                 <td className="py-3 pr-4 text-muted-foreground">
-                  {new Date(d.created_at).toLocaleDateString()}
+                  {new Date(d.created_at).toLocaleDateString("en-GB")}
                 </td>
                 <td className="py-3 pr-4">
                   <span className="rounded-full bg-[--success-subtle] px-2 py-0.5 font-semibold text-[--success-foreground] text-xs">

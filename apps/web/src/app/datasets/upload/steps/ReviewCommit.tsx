@@ -207,7 +207,7 @@ export function ReviewCommit({ state, setStep }: Props) {
               <div className="flex gap-2">
                 <span className="w-28 text-muted-foreground">Collected</span>
                 <span className="font-medium">
-                  {new Date(summary.collected_at).toLocaleDateString()}
+                  {new Date(summary.collected_at).toLocaleDateString("en-GB")}
                 </span>
               </div>
             )}

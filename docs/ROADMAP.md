@@ -14,13 +14,14 @@ Sub-projects, each with its own spec → plan → implementation cycle.
 | 8 | Full AuthN & AuthZ | ✅ Complete | [spec](superpowers/specs/2026-04-20-authn-authz-design.md) | [plan](superpowers/plans/2026-04-20-authn-authz-phase1.md) |
 | 9 | MCP Interface | ✅ Complete | [spec](superpowers/specs/2026-04-22-mcp-interface-design.md) | [plan](superpowers/plans/2026-04-22-mcp-interface-gap-fill.md) |
 | 10 | Verify Existing Functionality | ✅ Complete | [spec](superpowers/specs/2026-04-23-verify-existing-functionality-design.md) | [plan](superpowers/plans/2026-04-23-verify-existing-functionality.md) |
-| 11 | Design System V2 & Mobile | 🔜 Next | — | — |
-| 12 | Platform Hardening | ⏳ Planned | — | — |
-| 13 | Analytics V2 | ⏳ Planned | — | — |
-| 14 | Ingestion V2 | ⏳ Planned | — | — |
-| 15 | MCP Interface V2 | ⏳ Planned | — | — |
-| 16 | AI Interface V2 | ⏳ Planned | — | — |
-| 17 | External Data Sources | ⏳ Planned | — | — |
+| 11 | Design Review & Redesign | 🔜 Next | — | — |
+| 12 | Design System V2 & Mobile | ⏳ Planned | — | — |
+| 13 | Platform Hardening | ⏳ Planned | — | — |
+| 14 | Analytics V2 | ⏳ Planned | — | — |
+| 15 | Ingestion V2 | ⏳ Planned | — | — |
+| 16 | MCP Interface V2 | ⏳ Planned | — | — |
+| 17 | AI Interface V2 | ⏳ Planned | — | — |
+| 18 | External Data Sources | ⏳ Planned | — | — |
 
 ---
 
@@ -145,9 +146,31 @@ Each classified as ✅ verified / 🔧 fix-inline / 📋 spin-out before Phase 1
 
 ---
 
-### 11 — Design System V2 & Mobile 🔜
+### 11 — Design Review & Redesign 🔜
 
-Polish items deferred from the Design System and UX Polish specs.
+A creative design exercise *before* committing to the Design System V2 build. The goal is to step back from incremental polish and ask whether the current information architecture, layout language, and interaction model are the *right* foundation for the next phase — or whether a bolder direction would serve the product better.
+
+Scope:
+
+- **Audit the current product** — walk every primary surface (home, datasets list, dataset detail, metadata editor, analytics, AI chat, MCP/PAT settings) and document strengths, weaknesses, and tensions in the existing design language
+- **Establish design principles** — articulate 3–5 explicit principles (e.g. data density vs. breathing room; chat-first vs. canvas-first analytics; toolbar vs. command-palette interaction model) to evaluate alternatives against
+- **Generate divergent concepts** — at least 2–3 distinct design directions per primary surface (not incremental variants of the same layout). Use Claude Design for visual exploration once it is set up against the codebase; supplement with HTML mockups via `just brainstorm` where useful
+- **Converge on a chosen direction** — a single documented design language + layout system, with explicit non-goals and a list of patterns to retire
+- **Produce the change list** — concrete deltas that feed the Sub-project 12 implementation: which components/layouts/tokens change, which stay, what is net-new
+
+Tools:
+
+- `frontend-design:frontend-design` skill for visual judgment during exploration and convergence
+- Claude Design (research preview) for visual prototyping with our extracted design system and live web-capture from `localhost:3000`
+- `superpowers:brainstorming` to structure each surface review
+
+**Done when:** A written spec exists describing the chosen design direction, principles, and concrete change list — ready to drive the Sub-project 12 build. No production code changes in this sub-project; outputs are mockups, prototypes, and the spec.
+
+---
+
+### 12 — Design System V2 & Mobile ⏳
+
+Polish items deferred from the Design System and UX Polish specs, plus whatever the Sub-project 11 redesign demands.
 
 - **Touch support for drag & drop** — mobile-friendly field dragging
 - **Mobile-optimised layouts** — real responsive design beyond hiding columns at `md`
@@ -156,12 +179,13 @@ Polish items deferred from the Design System and UX Polish specs.
 - **Animation & transition tokens** — formal tokens for easing/duration
 - **Font customisation hook** — honour `ThemeConfig` font override
 - **On-demand shadcn components** — `dialog`, `popover`, `toast`, `sheet` as needed
+- **Redesign implementation** — execute the change list produced by Sub-project 11
 
-**Done when:** The app is genuinely usable on a phone and the design system carries a full motion + theming vocabulary.
+**Done when:** The app is genuinely usable on a phone, the design system carries a full motion + theming vocabulary, and the Sub-project 11 design direction is shipped.
 
 ---
 
-### 12 — Platform Hardening ⏳
+### 13 — Platform Hardening ⏳
 
 Cost and observability guardrails that were explicitly deferred from Project Foundation and the MCP spec.
 
@@ -173,7 +197,7 @@ Cost and observability guardrails that were explicitly deferred from Project Fou
 
 ---
 
-### 13 — Analytics V2 ⏳
+### 14 — Analytics V2 ⏳
 
 Analytics features explicitly pushed out of Sub-project 3, ordered by user value.
 
@@ -187,7 +211,7 @@ Analytics features explicitly pushed out of Sub-project 3, ordered by user value
 
 ---
 
-### 14 — Ingestion V2 ⏳
+### 15 — Ingestion V2 ⏳
 
 Deferred from Sub-project 6.
 
@@ -197,12 +221,13 @@ Deferred from Sub-project 6.
 - **SPSS edge cases** — split files, system missing value codes
 - **Concurrent uploads per user** — relax single-session constraint
 - **Drag-handle reordering for field levels** — replace integer sort-order input in the metadata editor
+- **Dataset detail page** — build `/datasets/[id]` (currently a placeholder) with metadata summary, field tree, row preview, and edit/delete actions
 
 **Done when:** Enterprise/automation flows can ingest, and analysts can correct metadata without re-uploading.
 
 ---
 
-### 15 — MCP Interface V2 ⏳
+### 16 — MCP Interface V2 ⏳
 
 V2 items called out in the MCP spec.
 
@@ -215,7 +240,7 @@ V2 items called out in the MCP spec.
 
 ---
 
-### 16 — AI Interface V2 ⏳
+### 17 — AI Interface V2 ⏳
 
 Deferred from Sub-project 7.
 
@@ -226,7 +251,7 @@ Deferred from Sub-project 7.
 
 ---
 
-### 17 — External Data Sources ⏳
+### 18 — External Data Sources ⏳
 
 - **ExternalTableWorker** — generalise the analytics worker abstraction so queries can run against arbitrary Postgres tables, not just JSONB response payloads
 
