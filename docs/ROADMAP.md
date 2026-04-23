@@ -13,8 +13,8 @@ Sub-projects, each with its own spec → plan → implementation cycle.
 | 7 | AI Interface | ✅ Complete | [spec](superpowers/specs/2026-04-19-ai-interface-design.md) | [plan](superpowers/plans/2026-04-19-ai-interface.md) |
 | 8 | Full AuthN & AuthZ | ✅ Complete | [spec](superpowers/specs/2026-04-20-authn-authz-design.md) | [plan](superpowers/plans/2026-04-20-authn-authz-phase1.md) |
 | 9 | MCP Interface | ✅ Complete | [spec](superpowers/specs/2026-04-22-mcp-interface-design.md) | [plan](superpowers/plans/2026-04-22-mcp-interface-gap-fill.md) |
-| 10 | Verify Existing Functionality | 🔜 Next | — | — |
-| 11 | Design System V2 & Mobile | ⏳ Planned | — | — |
+| 10 | Verify Existing Functionality | ✅ Complete | [spec](superpowers/specs/2026-04-23-verify-existing-functionality-design.md) | [plan](superpowers/plans/2026-04-23-verify-existing-functionality.md) |
+| 11 | Design System V2 & Mobile | 🔜 Next | — | — |
 | 12 | Platform Hardening | ⏳ Planned | — | — |
 | 13 | Analytics V2 | ⏳ Planned | — | — |
 | 14 | Ingestion V2 | ⏳ Planned | — | — |
@@ -90,7 +90,7 @@ External MCP server at `/mcp/external` authenticated via Personal Access Tokens 
 
 ---
 
-### 10 — Verify Existing Functionality 🔜
+### 10 — Verify Existing Functionality ✅
 
 Audit the shipped sub-projects against their own specs. Each item below was either declared in-scope in a spec but may not have landed, or was deferred to a sub-project that has since been marked complete without explicit confirmation.
 
@@ -135,9 +135,17 @@ Each classified as ✅ verified / 🔧 fix-inline / 📋 spin-out before Phase 1
 
 **Done when:** Each item above is either ✅ verified (with a test where practical) or moved to a follow-up sub-project with a concrete plan.
 
+**Outcome (2026-04-23):** 19 audit items — 14 ✅ verified, 2 🔧 fixed inline, 3 📋 spun out.
+
+- **Real bugs closed:** (a) `get_field_tree` AI tool leaked dataset field metadata to unentitled users — `assert_dataset_accessible` now applied before metadata emission. (b) `organizationMembership.created` webhook default-group assignment was non-idempotent *and* racy — now uses Postgres `INSERT ... ON CONFLICT DO NOTHING` with a concurrency regression test.
+- **Spin-outs:**
+  - [AI conversation persistence](superpowers/plans/2026-04-23-ai-conversation-persistence.md) — to fold into §16 AI Interface V2
+  - [Weighted-measure field picker](superpowers/plans/2026-04-23-weighted-measure-field-picker.md) — backend (`/weight-fields`, `MeasureSpec.field_key`) exists; frontend dropdown missing. Candidate for §13 Analytics V2
+  - [Multi-response field expansion](superpowers/plans/2026-04-23-multi-response-field-expansion.md) — backend schema + frontend rendering both missing. Candidate for §13 Analytics V2
+
 ---
 
-### 11 — Design System V2 & Mobile ⏳
+### 11 — Design System V2 & Mobile 🔜
 
 Polish items deferred from the Design System and UX Polish specs.
 
