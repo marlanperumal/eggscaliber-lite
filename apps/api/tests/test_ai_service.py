@@ -35,6 +35,25 @@ def reassemble_sse_text_deltas(body: bytes | str) -> str:
     return "".join(out)
 
 
+def parse_sse_events(body: bytes | str) -> list[dict]:
+    """Parse a Vercel-AI SSE stream body into an ordered list of event dicts.
+    Accepts either bytes or str. Counterpart to reassemble_sse_text_deltas for
+    callers that need to inspect non-text events (start/finish, data parts)."""
+    text = body.decode() if isinstance(body, bytes) else body
+    out: list[dict] = []
+    for line in text.splitlines():
+        if not line.startswith("data: "):
+            continue
+        out.append(json.loads(line[len("data: ") :]))
+    return out
+
+
+def extract_sse_data_parts(body: bytes | str) -> list[dict]:
+    """Return the structured `data-<kind>` parts from a Vercel-AI SSE body in
+    order. Each element is the full event dict (with `type`, `id`, `data`)."""
+    return [e for e in parse_sse_events(body) if str(e.get("type", "")).startswith("data-")]
+
+
 def make_tool_test_agent() -> Agent:
     """Build a TestModel-backed Agent with the real ai_service tool impls
     registered. TestModel.call_tools="all" invokes every tool once and echoes
@@ -542,3 +561,170 @@ class TestChatEntitlementFilter:
             f"SSE stream leaked unentitled field_key "
             f"{unentitled_field_key!r}: {reassembled_empty!r}"
         )
+
+
+class TestStructuredMultiPartOutput:
+    """Task 14 — verify the agent emits a multi-part structured response:
+    the stream must carry both free-text parts AND at least one structured
+    `data-<kind>` part that cites the source dataset/collection by name."""
+
+    async def test_crosstab_stream_emits_text_and_structured_part_with_dataset_citation(
+        self, db, ai_dataset
+    ):
+        """After a crosstab tool-call, the SSE stream must include:
+        - text-delta event(s) (natural-language answer)
+        - exactly one `data-crosstab_result` event whose `data.data.meta.dataset_name`
+          matches the queried dataset (source citation)."""
+        import src.services.ai_service as ai_svc
+        from pydantic_ai import Agent
+        from pydantic_ai.models.test import TestModel
+        from src.models.ai import ChatMessage
+        from src.models.analytics import CrosstabRequest, FieldSelection, MeasureSpec
+        from src.services.ai_service import SYSTEM_PROMPT, AIServiceDeps
+
+        dataset_id = ai_dataset["ds"].id
+        dataset_name = ai_dataset["ds"].name
+
+        # TestModel will call every registered tool once; register only the
+        # crosstab tool with a pre-baked request targeting our seeded dataset
+        # so we get a deterministic single structured part.
+        test_agent: Agent[AIServiceDeps, str] = Agent(
+            model=TestModel(custom_output_text=f"Here are results for {dataset_name}."),
+            system_prompt=SYSTEM_PROMPT,
+            deps_type=AIServiceDeps,
+        )
+
+        prebuilt_request = CrosstabRequest(
+            dataset_id=dataset_id,
+            rows=[FieldSelection(field_key="gender")],
+            measure=MeasureSpec(type="count", display="n"),
+        )
+
+        @test_agent.tool
+        async def run_crosstab(ctx, request: CrosstabRequest = prebuilt_request):  # type: ignore[no-untyped-def]
+            return await ai_svc._run_crosstab_impl(
+                ctx.deps.session,
+                prebuilt_request,
+                ctx.deps.result_parts,
+                ctx.deps.accessible_ids,
+            )
+
+        original = ai_svc._agent
+        ai_svc._agent = test_agent
+        try:
+            events: list[str] = []
+            async for chunk in ai_svc.stream_response(
+                db, [ChatMessage(role="user", content=f"Analyse dataset {dataset_id}.")]
+            ):
+                events.append(chunk)
+        finally:
+            ai_svc._agent = original
+
+        body = "".join(events)
+        parsed = parse_sse_events(body)
+        types = [e["type"] for e in parsed]
+
+        # Multi-part shape: text AND structured result.
+        assert any(t == "text-delta" for t in types), (
+            "Stream must include at least one text-delta event."
+        )
+        data_parts = extract_sse_data_parts(body)
+        assert len(data_parts) >= 1, (
+            f"Stream must include at least one structured data-<kind> part; got types={types!r}"
+        )
+
+        # Structured part is well-formed and carries a dataset citation.
+        crosstab_parts = [p for p in data_parts if p["type"] == "data-crosstab_result"]
+        assert len(crosstab_parts) == 1, (
+            f"Expected exactly one data-crosstab_result part, got {len(crosstab_parts)}: "
+            f"{[p['type'] for p in data_parts]!r}"
+        )
+        part = crosstab_parts[0]
+        # Envelope shape the Vercel AI SDK client consumes.
+        assert "id" in part and "data" in part
+        payload = part["data"]
+        assert payload["type"] == "crosstab_result"
+        assert payload["query_config"]["dataset_id"] == dataset_id
+        # Source citation: dataset_name round-trips through meta.
+        assert payload["data"]["meta"]["dataset_name"] == dataset_name
+
+
+class TestSseStreamShape:
+    """Task 16 — verify the `/api/v1/ai/chat` SSE byte stream deserialises into
+    the event sequence the Vercel AI SDK client expects: start → start-step →
+    text-start → text-delta+ → text-end → (data-<kind>)* → finish-step → finish."""
+
+    async def test_sse_byte_stream_deserialises_to_expected_event_sequence(
+        self, client, db, ai_dataset
+    ):
+        import src.services.ai_service as ai_svc
+        from pydantic_ai import Agent
+        from pydantic_ai.models.test import TestModel
+        from src.models.analytics import CrosstabRequest, FieldSelection, MeasureSpec
+        from src.services.ai_service import SYSTEM_PROMPT, AIServiceDeps
+
+        dataset_id = ai_dataset["ds"].id
+
+        test_agent: Agent[AIServiceDeps, str] = Agent(
+            model=TestModel(custom_output_text="Done."),
+            system_prompt=SYSTEM_PROMPT,
+            deps_type=AIServiceDeps,
+        )
+
+        prebuilt_request = CrosstabRequest(
+            dataset_id=dataset_id,
+            rows=[FieldSelection(field_key="gender")],
+            measure=MeasureSpec(type="count", display="n"),
+        )
+
+        @test_agent.tool
+        async def run_crosstab(ctx, request: CrosstabRequest = prebuilt_request):  # type: ignore[no-untyped-def]
+            return await ai_svc._run_crosstab_impl(
+                ctx.deps.session,
+                prebuilt_request,
+                ctx.deps.result_parts,
+                ctx.deps.accessible_ids,
+            )
+
+        original = ai_svc._agent
+        ai_svc._agent = test_agent
+        try:
+            resp = await client.post(
+                "/api/v1/ai/chat",
+                json={"messages": [{"role": "user", "content": f"Analyse ds {dataset_id}."}]},
+            )
+            body = resp.text
+        finally:
+            ai_svc._agent = original
+
+        assert resp.status_code == 200
+        assert "text/event-stream" in resp.headers["content-type"]
+        assert resp.headers.get("x-vercel-ai-ui-message-stream") == "v1"
+
+        parsed = parse_sse_events(body)
+        types = [e["type"] for e in parsed]
+
+        # Ordering invariants the Vercel AI SDK UI message stream requires.
+        assert types[0] == "start"
+        assert types[1] == "start-step"
+        assert "text-start" in types
+        assert types.count("text-start") == types.count("text-end"), (
+            f"Every text-start must have a matching text-end: {types!r}"
+        )
+        assert any(t == "text-delta" for t in types), "Must emit text deltas"
+        # Structured part must land after text-end but before finish-step.
+        text_end_idx = types.index("text-end")
+        finish_step_idx = types.index("finish-step")
+        data_types = [t for t in types[text_end_idx + 1 : finish_step_idx] if t.startswith("data-")]
+        assert data_types == ["data-crosstab_result"], (
+            f"Expected one data-crosstab_result between text-end and finish-step, "
+            f"got slice={types[text_end_idx + 1 : finish_step_idx]!r}"
+        )
+        assert types[-2] == "finish-step"
+        assert types[-1] == "finish"
+        assert parsed[-1]["finishReason"] == "stop"
+
+        # reassemble_sse_text_deltas is a parallel helper — confirm it agrees
+        # with the raw byte-stream shape checked above.
+        reassembled = reassemble_sse_text_deltas(body)
+        assert "Done" in reassembled
