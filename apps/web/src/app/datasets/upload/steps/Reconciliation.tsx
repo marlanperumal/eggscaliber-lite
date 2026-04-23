@@ -400,6 +400,7 @@ export function Reconciliation({ state, setStep }: Props) {
       {showAll ? (
         <div
           ref={parentRef}
+          data-testid="recon-virtual-scroll"
           className="relative max-h-96 overflow-auto"
           style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
         >

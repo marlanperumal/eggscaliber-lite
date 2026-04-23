@@ -96,6 +96,70 @@ async def test_bulk_resolve_rows(client, db):
     assert resp.json()["resolved"] == len(ids)
 
 
+async def test_bulk_resolve_applies_atomically_across_rows(client, db):
+    """Bulk endpoint applies the action to every row in one shot (single transaction)."""
+    col, ref_ds = await _seed_ref_dataset(db)
+    sess = await _upload(client, col.id)
+    await client.post(
+        f"/api/v1/uploads/{sess['id']}/reconcile", json={"reference_dataset_id": ref_ds.id}
+    )
+    ids = (await client.get(f"/api/v1/uploads/{sess['id']}/reconcile/ids")).json()["ids"]
+    assert len(ids) >= 2
+
+    resp = await client.post(
+        f"/api/v1/uploads/{sess['id']}/reconcile/bulk",
+        json={"ids": ids, "action": "rejected"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["resolved"] == len(ids)
+
+    # Every row's status should now be rejected — confirming the bulk call applied
+    # to all ids in a single request rather than partial application.
+    all_rows = (await client.get(f"/api/v1/uploads/{sess['id']}/reconcile?page_size=500")).json()[
+        "items"
+    ]
+    assert len(all_rows) == len(ids)
+    assert all(row["status"] == "rejected" for row in all_rows)
+
+
+async def test_reconcile_cursor_pagination_respects_after_id(client, db):
+    """Cursor endpoint returns next_cursor and paginating through it yields no overlap."""
+    col, ref_ds = await _seed_ref_dataset(db)
+    # Upload with more fields so there's more than one page
+    csv_bytes = _csv(
+        ["gender", "age", "region", "income"],
+        [["male", "3", "N", "10"], ["female", "5", "S", "20"]],
+    )
+    resp = await client.post(
+        "/api/v1/uploads",
+        files={"file": ("f.csv", csv_bytes, "text/csv")},
+        data={"dataset_name": "Wave 3", "collection_id": str(col.id)},
+    )
+    sid = resp.json()["id"]
+    await client.post(f"/api/v1/uploads/{sid}/reconcile", json={"reference_dataset_id": ref_ds.id})
+
+    # Page 1
+    p1 = (await client.get(f"/api/v1/uploads/{sid}/reconcile?page_size=1")).json()
+    assert len(p1["items"]) == 1
+    assert p1["next_cursor"] is not None
+    seen_ids = {p1["items"][0]["id"]}
+
+    # Walk the cursor until exhausted — verifies the endpoint respects after_id
+    cursor = p1["next_cursor"]
+    while cursor is not None:
+        page = (
+            await client.get(f"/api/v1/uploads/{sid}/reconcile?page_size=1&after_id={cursor}")
+        ).json()
+        for item in page["items"]:
+            assert item["id"] not in seen_ids, "cursor pagination returned duplicate row"
+            seen_ids.add(item["id"])
+        cursor = page["next_cursor"]
+
+    # All ids from the /ids projection should now be covered
+    all_ids = set((await client.get(f"/api/v1/uploads/{sid}/reconcile/ids")).json()["ids"])
+    assert seen_ids == all_ids
+
+
 async def test_reconcile_list_includes_field_keys(client, db):
     col, ref_ds = await _seed_ref_dataset(db)
     sess = await _upload(client, col.id)

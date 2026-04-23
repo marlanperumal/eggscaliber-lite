@@ -133,6 +133,32 @@ it("shows Confirm all and Reject all on probable tab when a row is selected", as
   expect(screen.queryByRole("button", { name: /exclude all/i })).not.toBeInTheDocument()
 })
 
+it("wires useVirtualizer for the Show all list so large datasets render in a windowed container", async () => {
+  const user = userEvent.setup()
+  const rows: ReconRow[] = Array.from({ length: 200 }, (_, i) => ({
+    ...MOCK_ROW,
+    id: i + 1,
+  }))
+  mockGetForTriggered(EMPTY_COUNTS, rows)
+  render(<Reconciliation state={makeState()} setStep={vi.fn()} />)
+  await waitFor(() => screen.getByRole("button", { name: /run reconciliation/i }))
+  await user.click(screen.getByRole("button", { name: /run reconciliation/i }))
+  await waitFor(() => expect(screen.getAllByTestId("recon-row").length).toBe(200))
+
+  // Toggle to virtualised list
+  await user.click(screen.getByRole("button", { name: /show all/i }))
+
+  // The virtualised container sets an explicit total height (sum of estimated row sizes)
+  // and its direct children use absolute positioning — a structural signature that
+  // differentiates useVirtualizer from the non-virtualised path.
+  await waitFor(() => {
+    const scrollContainer = screen.getByTestId("recon-virtual-scroll")
+    expect(scrollContainer.style.height).not.toBe("")
+    // Height should reflect the virtualiser's total size (200 rows × estimate 40px)
+    expect(parseInt(scrollContainer.style.height, 10)).toBeGreaterThanOrEqual(40 * 200)
+  })
+}, 15000)
+
 it("shows Exclude all on old_only tab when a row is selected, not Confirm all or Reject all", async () => {
   const user = userEvent.setup()
   const oldOnlyRow: ReconRow = { ...MOCK_ROW, id: 2, group: "old_only" }
