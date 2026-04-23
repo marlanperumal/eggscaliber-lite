@@ -185,6 +185,15 @@ class TestListPackagesTool:
         result = await _list_packages_impl(db)
         assert "no" in result.lower() and "package" in result.lower()
 
+    async def test_accessible_ids_filters_list(self, db, ai_dataset):
+        """AI list_packages must not expose packages outside accessible_ids."""
+        from src.services.ai_service import _list_packages_impl
+
+        # empty set → no packages accessible
+        result = await _list_packages_impl(db, accessible_ids=set())
+        assert "AI Test Pkg" not in result
+        assert "AI Test DS" not in result
+
 
 class TestGetFieldTreeTool:
     async def test_returns_field_info(self, db, ai_dataset):
@@ -200,6 +209,25 @@ class TestGetFieldTreeTool:
 
         result = await _get_field_tree_impl(db, 999_999)
         assert "not found" in result.lower()
+
+    async def test_accessible_ids_filters_unentitled_dataset(self, db, ai_dataset):
+        """AI tool must not leak field metadata for unentitled packages."""
+        from src.services.ai_service import _get_field_tree_impl
+
+        ds_id = ai_dataset["ds"].id
+        # accessible_ids is an empty set → user has entitlements loaded but none grant this package
+        result = await _get_field_tree_impl(db, ds_id, accessible_ids=set())
+        # Must not leak field names
+        assert "gender" not in result.lower()
+        assert "not found" in result.lower()
+
+    async def test_accessible_ids_none_means_unrestricted(self, db, ai_dataset):
+        """accessible_ids=None (dev / no-auth mode) should return full tree."""
+        from src.services.ai_service import _get_field_tree_impl
+
+        ds_id = ai_dataset["ds"].id
+        result = await _get_field_tree_impl(db, ds_id, accessible_ids=None)
+        assert "gender" in result
 
 
 class TestRunCrosstabTool:
@@ -232,6 +260,22 @@ class TestRunCrosstabTool:
         )
         result = await _run_crosstab_impl(db, request, [])
         assert "error" in result.lower() or "not found" in result.lower()
+
+    async def test_accessible_ids_blocks_unentitled_crosstab(self, db, ai_dataset):
+        """AI run_crosstab must reject datasets outside accessible_ids."""
+        from src.models.analytics import CrosstabRequest, FieldSelection, MeasureSpec
+        from src.services.ai_service import _run_crosstab_impl
+
+        request = CrosstabRequest(
+            dataset_id=ai_dataset["ds"].id,
+            rows=[FieldSelection(field_key="gender")],
+            measure=MeasureSpec(type="count", display="n"),
+        )
+        result_parts: list[dict] = []
+        result = await _run_crosstab_impl(db, request, result_parts, accessible_ids=set())
+        # Must not return data
+        assert len(result_parts) == 0
+        assert "error" in result.lower() or "not accessible" in result.lower()
 
 
 class TestRunTrendTool:

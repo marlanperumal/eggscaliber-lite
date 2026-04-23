@@ -9,7 +9,7 @@ from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, Text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.errors import CollectionNotFoundError, DatasetNotFoundError
+from src.errors import CollectionNotFoundError, DatasetNotFoundError, ForbiddenError
 from src.models.ai import AICrosstabResultPart, AITrendResultPart, ChatMessage
 from src.models.analytics import CrosstabRequest, TrendRequest
 from src.services import analytics_service, package_service
@@ -78,10 +78,17 @@ async def _list_packages_impl(session: AsyncSession, accessible_ids: set[int] | 
     return "\n".join(lines)
 
 
-async def _get_field_tree_impl(session: AsyncSession, dataset_id: int) -> str:
+async def _get_field_tree_impl(
+    session: AsyncSession,
+    dataset_id: int,
+    accessible_ids: set[int] | None = None,
+) -> str:
     try:
+        await analytics_service._assert_dataset_accessible(session, dataset_id, accessible_ids)
         tree = await analytics_service.get_field_tree(session, dataset_id)
     except DatasetNotFoundError:
+        return f"Dataset {dataset_id} not found."
+    except ForbiddenError:
         return f"Dataset {dataset_id} not found."
     lines: list[str] = []
     for group in tree.groups:
@@ -183,7 +190,7 @@ def _build_agent() -> "Agent[AIServiceDeps, str]":
     @agent.tool
     async def get_field_tree(ctx: RunContext[AIServiceDeps], dataset_id: int) -> str:
         """Get all fields available in a dataset. Call this before constructing a query."""
-        return await _get_field_tree_impl(ctx.deps.session, dataset_id)
+        return await _get_field_tree_impl(ctx.deps.session, dataset_id, ctx.deps.accessible_ids)
 
     @agent.tool
     async def run_crosstab(ctx: RunContext[AIServiceDeps], request: CrosstabRequest) -> str:
