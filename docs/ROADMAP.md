@@ -30,7 +30,7 @@ Land on the naming hierarchy for data entities, define all field types (numeric,
 Cross-tab and trending queries against seed data, table + chart output components, query builder UI, working prototype deployed and accessible via feature flag.  
 **Done when:** End-to-end — select dataset → configure analysis → view table + chart — deployed to Vercel/Render.
 
-### 4 — UX Polish ⏳
+### 4 — UX Polish ✅
 
 Bringing the frontend from unstyled prototype to a polished, usable product:
 
