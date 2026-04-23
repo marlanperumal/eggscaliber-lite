@@ -92,30 +92,46 @@ External MCP server at `/mcp/external` authenticated via Personal Access Tokens 
 
 ### 10 — Verify Existing Functionality 🔜
 
-Audit the shipped sub-projects against their own specs. Each item below was either declared in-scope in a spec but may not have landed, or was deferred to a sub-project that has since been marked complete without explicit confirmation. For each: verify in code, write a failing test if the behaviour is missing, then fix.
+Audit the shipped sub-projects against their own specs. Each item below was either declared in-scope in a spec but may not have landed, or was deferred to a sub-project that has since been marked complete without explicit confirmation.
 
-**Spec-declared behaviour to verify:**
-- **AuthZ package filtering** — all data endpoints (`/packages`, `/analytics`, `/ai/chat`) filter by package visibility and active org subscription dates
-- **Default group auto-assignment** — `organizationMembership.created` webhook adds new members to the org's Default group
-- **Ingestion: virtual list pagination** — reconciliation step uses cursor-based API + `@tanstack/react-virtual` under "Show all"
-- **Ingestion: bulk reconciliation** — `POST /datasets/upload/{id}/reconcile/bulk` exists and the select-all flow hits it
-- **Ingestion: deep field-group nesting** — tree supports 4+ levels with drag-drop intact
-- **Analytics: field tree hygiene** — identifier and weight fields excluded from the tree
-- **Analytics: weighted measure picker** — only weight fields appear in the Weighted-mode dropdown
-- **Analytics: multi-response expansion** — multi_response fields render as expandable branches
-- **Analytics: filter logic** — OR within a field, AND across fields
-- **AI: agent system prompt** — responses cite dataset names and return multiple structured parts
-- **AI: "Open in Analytics"** — button constructs a valid nuqs URL that loads the query
-- **AI: SSE stream shape** — `/ai/chat` emits text deltas + structured result parts + finish events
-- **MCP: token hash verification** — SHA-256 compare; invalid/revoked tokens rejected
-- **MCP: group entitlement filtering** — tool responses restricted to the PAT owner's entitled packages
-- **MCP: `last_used_at` update** — timestamp advances asynchronously on each tool call
+**Approach — hybrid fix/spin-out:**
+- Verify each item in code. Add a backend test where cheap (pytest for filtering/entitlements/webhook/token-hash logic) or a targeted unit/Storybook check for UI-shape items. Skip tests where a full E2E harness would be disproportionate.
+- If broken and <1 hour of work: fix inline (failing test first where practical), commit.
+- If broken and larger: file a concrete follow-up plan (or fold into an existing planned sub-project like Ingestion V2 / AI V2) and mark the item 📋 spun-out.
+- Regression tests land in the normal pytest/vitest suites — no separate audit harness.
 
-**Stale deferrals to reconcile** (originally deferred to a sub-project that has since shipped — confirm they made it in or carry them forward):
+**Phase 0 — Triage stale deferrals** (do first, before the main audit):
 - Clerk `useUser()` wired into top-nav avatar (real profile image, not placeholder)
 - AI conversation persistence (multi-turn history survives page reload)
 - AI per-user/org access control (AI tools honour group entitlements)
 - Enhanced home page — originally "UX Polish Iteration 4"
+
+Each classified as ✅ verified / 🔧 fix-inline / 📋 spin-out before Phase 1 begins.
+
+**Phase 1 — Sub-project 8 (AuthZ):**
+- **Package filtering** — all data endpoints (`/packages`, `/analytics`, `/ai/chat`) filter by package visibility and active org subscription dates
+- **Default group auto-assignment** — `organizationMembership.created` webhook adds new members to the org's Default group
+
+**Phase 2 — Sub-project 6 (Ingestion):**
+- **Virtual list pagination** — reconciliation step uses cursor-based API + `@tanstack/react-virtual` under "Show all"
+- **Bulk reconciliation** — `POST /datasets/upload/{id}/reconcile/bulk` exists and the select-all flow hits it
+- **Deep field-group nesting** — tree supports 4+ levels with drag-drop intact
+
+**Phase 3 — Sub-project 3 (Analytics):**
+- **Field tree hygiene** — identifier and weight fields excluded from the tree
+- **Weighted measure picker** — only weight fields appear in the Weighted-mode dropdown
+- **Multi-response expansion** — multi_response fields render as expandable branches
+- **Filter logic** — OR within a field, AND across fields
+
+**Phase 4 — Sub-project 7 (AI):**
+- **Agent system prompt** — responses cite dataset names and return multiple structured parts
+- **"Open in Analytics"** — button constructs a valid nuqs URL that loads the query
+- **SSE stream shape** — `/ai/chat` emits text deltas + structured result parts + finish events
+
+**Phase 5 — Sub-project 9 (MCP):**
+- **Token hash verification** — SHA-256 compare; invalid/revoked tokens rejected
+- **Group entitlement filtering** — tool responses restricted to the PAT owner's entitled packages
+- **`last_used_at` update** — timestamp advances asynchronously on each tool call
 
 **Done when:** Each item above is either ✅ verified (with a test where practical) or moved to a follow-up sub-project with a concrete plan.
 
