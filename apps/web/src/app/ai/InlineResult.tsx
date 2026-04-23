@@ -31,6 +31,8 @@ export function buildAnalyticsUrl(
   } else {
     const col = queryConfig.collection_id as number | undefined
     if (col) params.set("col", String(col))
+    // Trend-mode fields share the `rows` query param with crosstab rows —
+    // the analytics page routes on `mode`, so the two modes share storage.
     const fields = queryConfig.fields as unknown[] | undefined
     if (fields?.length) params.set("rows", JSON.stringify(fields))
     const bd = queryConfig.breakdown as { field_key: string } | null | undefined

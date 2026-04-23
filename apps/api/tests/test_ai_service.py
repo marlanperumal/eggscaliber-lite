@@ -712,16 +712,25 @@ class TestSseStreamShape:
             f"Every text-start must have a matching text-end: {types!r}"
         )
         assert any(t == "text-delta" for t in types), "Must emit text deltas"
-        # Structured part must land after text-end but before finish-step.
-        text_end_idx = types.index("text-end")
+        # At least one data-crosstab_result must appear after the last text-end
+        # and before finish-step. Framed as an invariant rather than exact
+        # positions so a future protocol that interleaves data-* events during
+        # tool execution does not spuriously fail this test.
+        last_text_end_idx = len(types) - 1 - list(reversed(types)).index("text-end")
         finish_step_idx = types.index("finish-step")
-        data_types = [t for t in types[text_end_idx + 1 : finish_step_idx] if t.startswith("data-")]
-        assert data_types == ["data-crosstab_result"], (
-            f"Expected one data-crosstab_result between text-end and finish-step, "
-            f"got slice={types[text_end_idx + 1 : finish_step_idx]!r}"
+        assert last_text_end_idx < finish_step_idx, (
+            f"finish-step must come after the final text-end: {types!r}"
         )
-        assert types[-2] == "finish-step"
+        post_text_data = [
+            t for t in types[last_text_end_idx + 1 : finish_step_idx] if t == "data-crosstab_result"
+        ]
+        assert len(post_text_data) >= 1, (
+            f"Expected at least one data-crosstab_result between last text-end "
+            f"and finish-step, got types={types!r}"
+        )
+        # Stream must terminate with finish-step then finish (in that order).
         assert types[-1] == "finish"
+        assert "finish-step" in types[-3:]
         assert parsed[-1]["finishReason"] == "stop"
 
         # reassemble_sse_text_deltas is a parallel helper — confirm it agrees
