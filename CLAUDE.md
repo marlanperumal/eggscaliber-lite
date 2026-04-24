@@ -9,7 +9,7 @@ These are enforced by hooks but check them yourself first:
 3. **`git add` and `git commit` must be separate Bash calls** — write message to `/tmp/commit-msg.txt` with the Write tool, then `git commit -F /tmp/commit-msg.txt`.
 4. **Never edit `packages/shared/api.d.ts` manually** — it is AUTO-GENERATED. Run `just generate-types`.
 5. **Subagents must `Read CLAUDE.md` as their very first step** — include this instruction explicitly in every subagent prompt.
-6. **Never use raw hex colors or `text-primary` as a text color in the frontend** — use design token classes only. Never write `dark:` overrides.
+6. **Never use raw colour literals in component code.** No hex (`#fff`, `#0ea5e9`), no `rgb()`/`rgba()`, no `hsl()`/`hsla()`, no `oklch()` literals in `.tsx`/`.jsx`/`.css` files. The only sanctioned raw values in component code are `transparent` and `currentColor`. Hex is permitted *only* in the token definition site (`apps/web/src/lib/theme.ts`). Never use `text-primary` as a text colour (it's a surface token — chips/icons/focus rings only). Never write `dark:` overrides — tokens handle both modes.
 7. **Never use `git -C`** — fix the cwd with `cd` first. `git -C` bypasses allowlist approvals.
 8. **Never use bare `python3` or `pip`** — always use `uv run python3` / `uv pip`.
 
