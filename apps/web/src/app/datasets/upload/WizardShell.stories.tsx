@@ -49,7 +49,7 @@ const MOCK_SESSION = {
 export const AtStep1: Story = {
   parameters: {
     nextjs: {
-      navigation: { pathname: "/datasets/upload", searchParams: new URLSearchParams("step=1") },
+      navigation: { pathname: "/datasets/upload", query: { step: "1" } },
     },
     msw: {
       handlers: [http.get(`${BASE}/api/v1/packages`, () => HttpResponse.json(MOCK_PACKAGES))],
@@ -64,7 +64,7 @@ export const AtStep4ReconcileSkipped: Story = {
     nextjs: {
       navigation: {
         pathname: "/datasets/upload",
-        searchParams: new URLSearchParams("step=4&session=1&reconcile=0"),
+        query: { step: "4", session: "1", reconcile: "0" },
       },
     },
     msw: {
@@ -81,7 +81,7 @@ export const AtStep5: Story = {
     nextjs: {
       navigation: {
         pathname: "/datasets/upload",
-        searchParams: new URLSearchParams("step=5&session=1&reconcile=1"),
+        query: { step: "5", session: "1", reconcile: "1" },
       },
     },
     msw: {
