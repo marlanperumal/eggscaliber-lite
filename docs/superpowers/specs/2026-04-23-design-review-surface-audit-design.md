@@ -41,7 +41,7 @@ Settled before this audit began, via brainstorm:
 
 ## Design principles
 
-Five principles, **ordered by priority** — the priority ordering is load-bearing: when two principles conflict in Phase 2, the higher-priority principle wins.
+Six principles, **ordered by priority** — the priority ordering is load-bearing: when two principles conflict in Phase 2, the higher-priority principle wins.
 
 ### 1. AI is a capability, not a destination. *(highest priority)*
 AI lives where the work is, not on a separate page. On desktop, AI is available alongside whatever the analyst is doing — a side panel, an inline action, a command-palette entry — and knows the context (current dataset, current query). On mobile, AI *is* the product: the whole screen, the primary interaction. A `/ai` route that is disconnected from dataset context is exactly what this principle rejects.
@@ -57,14 +57,22 @@ Skeleton loading, empty states that explain *why* and suggest a next action, err
 - *Honours:* Query Builder empty state (illustrated, explanatory); datasets-list populated state
 - *North star:* Linear's empty states; Stripe's loading skeletons
 
-### 3. Data density over decoration.
-Analyst-primary means information-per-pixel beats breathing-room-per-pixel. Decoration has to earn its space the same way data does. Visual quiet comes from restrained colour and hierarchy, not from empty margins.
+### 3. Friendly to onboard, restrained to disappear.
+Power users start as first-time users. The product is warm and instructive on first encounter — empty states explain, the home page guides, hints surface key concepts — and quietly retreats as the analyst becomes productive. Personality lives in the moments that matter for new users; restraint dominates the daily-use moments. A first-time user should feel welcomed without ever blocking a returning user.
+
+- *Violates:* `/ai` empty state (no welcome, no example prompts); `/datasets` (no first-time onboarding for "how do I get a dataset in here"); top nav (no hint that ⌘K exists, once we add it); current home hero (decorative for new users without teaching).
+- *Honours:* Query Builder empty state (illustrated + explanatory — points new users at what to do).
+- *Reference:* Linear's onboarding panels; Notion's "What's this?" affordances; Stripe's first-time-success states.
+- *Tension with #4 (density), resolved by:* For first-time-user moments (empty states, onboarding home, never-used surfaces), generosity wins. For daily-use moments (populated analytics, datasets list), density wins. Most surfaces have *both* modes; the redesign makes the mode-switch explicit (e.g., dismissible onboarding banners; "show me" affordances; progressive disclosure of advanced controls).
+
+### 4. Data density over decoration.
+Analyst-primary means information-per-pixel beats breathing-room-per-pixel. Decoration has to earn its space the same way data does. Visual quiet comes from restrained colour and hierarchy, not from empty margins. Density is calibrated to user state per principle #3 — generous for new users learning the product, dense for returning users who know what they're doing.
 
 - *Violates:* `/` home hero (half the viewport is whitespace around a CTA); `/ai` empty state
 - *Honours:* `/datasets` list (packed table); Query Builder zone chips
 - *North star:* Attio for tables, Linear for chrome density
 
-### 4. Navigation reflects frequency. Investment reflects importance.
+### 5. Navigation reflects frequency. Investment reflects importance.
 Three distinct rules in one principle:
 - **Navigation rule:** Top-nav real estate is scarce and reflects how *often* analysts do a thing. High-frequency workflows get the fastest path. Rare-use workflows (admin, org settings, API tokens) move to the user menu, org menu, or ⌘K — one level deeper, never hidden.
 - **Investment rule:** Every surface gets the same craft regardless of audience size. Admin, org settings, API tokens, and analytics all get the full principles treatment. Decision-makers (buyers, procurement, adopters) often live in the rare-use surfaces — a crappy admin experience is a deal-breaker regardless of how nice analytics feels.
@@ -73,7 +81,7 @@ Three distinct rules in one principle:
 - *Violates:* top nav has `/ai` even though AI's natural home is ambient; API Tokens implemented with less care than `/datasets`; `/admin` empty state is bare
 - *Honours:* `/datasets` (right nav placement, invested appropriately)
 
-### 5. Keyboard is first-class, not a courtesy.
+### 6. Keyboard is first-class, not a courtesy.
 Every action has a keyboard path. A command palette (⌘K) is a primary input method, not a power-user easter egg. Shortcut hints are visible where the action lives. Mouse and drag remain supported but are never the only path.
 
 - *Violates:* every primary action in the current product — no global ⌘K, no visible shortcuts, query-building requires drag
@@ -83,7 +91,7 @@ Every action has a keyboard path. A command palette (⌘K) is a primary input me
 ### What's absent (deliberately)
 - *Dark mode parity* — floor requirement, not a principle
 - *Accessibility (WCAG AA)* — floor requirement, not a principle
-- *Brand personality / "delight"* — for an analyst-primary product, personality lives in typography, motion restraint, and occasional well-placed moments; not in mascots, illustrations, or novelty
+- *Brand personality / "delight" beyond onboarding* — outside first-time-user moments (covered by principle #3), personality lives in typography, motion restraint, and occasional well-placed moments; not in mascots or novelty
 
 ## Cross-cutting audits
 
@@ -99,7 +107,7 @@ Always-visible dark-teal bar: logo, four links (Datasets / Analytics / AI), them
 Wildly inconsistent — Query Builder has illustrated empty state with headline + copy; `/ai`, `/org/groups`, and `/admin` are bare.
 
 - **Gap:** no documented pattern; empty states are one-off per surface.
-- **Redesign posture:** canonicalise a single pattern and retrofit every surface. See load-bearing Q8 for the specific style question.
+- **Redesign posture:** canonicalise a single pattern and retrofit every surface. Empty states have *two roles* per principles #2 and #3: explain what's missing and what to do (correctness) AND teach what this surface is for (onboarding). See load-bearing Q8 for the specific style + depth question.
 
 ### c. Loading states
 Minimally invested. No skeleton pattern visible in captures; likely ad-hoc `useEffect` + spinner.
@@ -132,12 +140,17 @@ Iconography (lucide works), form controls (shadcn defaults), toasts (sonner is w
 
 Each surface: one-line current state → key weaknesses → **redesign posture** with rationale.
 
-### Home (`/`)
+### Home (`/` and `/home`)
 **Current:** marketing-style hero + CTA + right-side illustration. Same for authed and unauth.
 
-**Weaknesses:** violates density principle (#3); identical for authed + unauth — authed users get a marketing page instead of a workspace.
+**Weaknesses:** violates density principle (#4); identical for authed + unauth — authed users get a marketing page instead of a workspace; no onboarding for first-time users; no resumption hooks for returning users.
 
-**Posture: Rethink (authed) / Keep (unauth).** Authed users land on a workspace view with recent queries, pinned datasets, ambient AI entry. Unauth keeps the marketing hero. The exact workspace shape is load-bearing Q4.
+**Posture: Split routes — Rethink (authed) / Keep (unauth).** `/` for authed users redirects to `/home`; unauth `/` keeps the marketing hero. `/home` is the *authed workspace + onboarding gateway*:
+- For **first-time / low-activity users** it's primarily a teaching surface — guided next actions, dataset onboarding hint, "try asking AI" example prompts, "what's a Package?" / "what's a Dataset?" cards.
+- For **returning / high-activity users** it's a workspace — recent queries, pinned datasets, "resume where you left off", ambient AI entry.
+- Same route, two density modes, mode chosen from a user-activity signal (e.g. `recent_queries.length > 0` or `last_seen_at` recency). Honours principle #3 (friendly to onboard, restrained to disappear).
+
+The exact workspace + onboarding shape and the mode-switch mechanic are load-bearing Q4.
 
 ### Datasets list (`/datasets`)
 **Current:** dense paginated table with filters (package, collection) and search.
@@ -149,7 +162,7 @@ Each surface: one-line current state → key weaknesses → **redesign posture**
 ### Dataset detail (`/datasets/[id]`)
 **Current:** intentional placeholder card — "planned as part of Ingestion V2".
 
-**Posture: Rethink content, keep route.** The URL is the shareable handle to "this dataset". Content becomes analytics pre-filtered to that dataset — either by redirect or by rendering the analytics surface with dataset preselected. Routing rule (principle #4) says routes are cheap; keep the URL.
+**Posture: Rethink content, keep route.** The URL is the shareable handle to "this dataset". Content becomes analytics pre-filtered to that dataset — either by redirect or by rendering the analytics surface with dataset preselected. Routing rule (principle #5) says routes are cheap; keep the URL.
 
 ### Dataset upload wizard
 **Current:** 5 steps — File & Hierarchy → Field Detection → Reconciliation → Metadata → Review & Commit.
@@ -191,7 +204,7 @@ Each surface: one-line current state → key weaknesses → **redesign posture**
 
 **Weaknesses:** earns a top-level nav slot despite being rare-use superuser-only; empty state is bare ("No organisations").
 
-**Posture: Relocate (nav only) + Invest.** Nav link moves to user menu dropdown — admin isn't *frequent*, doesn't earn top-nav real estate. But the *surface* gets more polish, not less: real empty states, seeded-data path for dev, keyboard navigation. Admin users are decision-makers (principle #4 investment rule).
+**Posture: Relocate (nav only) + Invest.** Nav link moves to user menu dropdown — admin isn't *frequent*, doesn't earn top-nav real estate. But the *surface* gets more polish, not less: real empty states, seeded-data path for dev, keyboard navigation. Admin users are decision-makers (principle #5 investment rule).
 
 ### Org groups (`/org/groups`)
 **Current:** column headers (Name / Members / Packages), search, empty for users without an org.
@@ -239,10 +252,11 @@ Each question has (a) options, (b) what it shapes downstream, (c) a prompt templ
 - **Shapes:** Whether analysis is conversational or one-shot; how saved queries surface; what "share" means; state complexity.
 - **Prompt:** "Show four analyses on screen simultaneously in three different layouts: notebook (stacked), canvas (draggable), tabs. For each, show the transition from 'just one result' to 'four results'."
 
-### Q4. What's the authed home page?
-- **Options:** (a) workspace — recent queries, pinned datasets, ambient AI entry; (b) redirect to `/analytics`; (c) traditional dashboard with KPIs; (d) ask-AI-first splash (Raycast-style centred input).
-- **Shapes:** First impression after sign-in; whether home is a destination or a default route; Tier 2 mobile entry.
-- **Prompt:** "Design the authed home page for an analyst who uses this product daily. They've signed in — what do they see? Generate options for (a) workspace with recent/pinned, (b) ask-AI-first splash, (c) redirect-to-analytics with a welcome banner."
+### Q4. How does `/home` onboard new users while staying out of the way for returning users?
+- **Options for *shape*:** (a) workspace-with-onboarding-banner — recent queries + pinned datasets, dismissible "Welcome / try this" cards layered on top; (b) redirect to `/analytics` for returning users, dedicated `/home` for first-timers only; (c) traditional dashboard with KPIs; (d) ask-AI-first splash (Raycast-style centred input) that gradually fills with workspace content as the user accumulates history.
+- **Options for *mode-switch mechanic*:** (i) dismissible cards — same layout, banner stack visible until dismissed; (ii) state-driven layout — `/home` reshapes between teaching mode and workspace mode based on activity signal, no explicit dismiss; (iii) progressive — teaching elements fade out one at a time as related actions are taken (e.g., "what's a Dataset?" card disappears once the user opens any dataset).
+- **Shapes:** First impression after sign-in; whether home is a destination or a default route; Tier 2 mobile entry; how aggressively the product self-teaches.
+- **Prompt:** "Design `/home` for two user states side by side: (1) brand-new user — no datasets, no queries, no AI history; (2) daily user — 12 saved queries, 3 pinned datasets, ongoing AI conversations. The shift between states should be elegant, not a separate page. Show three different mode-switch mechanics — dismissible cards, state-driven layout reshape, and progressive fade-out — applied to the same visual concept."
 
 ### Q5. ⌘K command palette — what's in it?
 - **Options:** (a) navigation only; (b) navigation + actions (run query, save, share, switch dataset, change mode); (c) navigation + actions + AI entry point (type a question directly); (d) all of the above plus fuzzy search across datasets, saved queries, fields.
@@ -259,16 +273,22 @@ Each question has (a) options, (b) what it shapes downstream, (c) a prompt templ
 - **Shapes:** How "noisy" the field tree looks; whether field type is a visual or label affordance; cohesion with chart series colours.
 - **Prompt:** "Show the field tree + a crosstab result side by side, with three treatments of field-type colour: (a) current semantic hues, (b) derived from chart tokens, (c) monochrome + icons only. Judge which feels most cohesive with the overall steel palette."
 
-### Q8. Empty-state illustration system?
-- **Options:** (a) keep the current illustrated style and extend it to new surfaces (AI, admin, org groups); (b) shift to typographic empty-state pattern — bold heading + muted copy + action button (Linear/Stripe style); (c) hybrid — illustrations for "no data yet", typography for "no permission / not configured".
-- **Shapes:** Personality level; production cost.
-- **Prompt:** "Show empty states across five surfaces: Query Builder (no dataset), Results (no query run yet), `/ai` (new conversation), `/admin` (no orgs), `/org/groups` (no org selected). Render each in illustration-style vs. typographic-style. Pick the style that fits the most surfaces best."
+### Q8. Empty-state illustration system + teaching depth?
+- **Options for *style*:** (a) keep the current illustrated style and extend it to new surfaces (AI, admin, org groups); (b) shift to typographic empty-state pattern — bold heading + muted copy + action button (Linear/Stripe style); (c) hybrid — illustrations for "no data yet", typography for "no permission / not configured".
+- **Options for *depth* (per principle #3):** (i) terse — heading + one-line copy + action; (ii) explanatory — heading + paragraph + action + "what this surface is for" link; (iii) two-tier — terse for users with prior activity in adjacent surfaces (familiar with the product), explanatory for true first-timers.
+- **Shapes:** Personality level; production cost; how much the product self-teaches; whether empty states stay relevant once the user is no longer new.
+- **Prompt:** "Show empty states across five surfaces: Query Builder (no dataset), Results (no query run yet), `/ai` (new conversation), `/admin` (no orgs), `/org/groups` (no org selected). Render each in illustration-vs-typographic style AND in terse-vs-explanatory depth (4 cells per surface). Pick the combination that fits the most surfaces best."
+
+### Q9. How do new users discover power-user features?
+- **Options:** (a) discoverable through use — keyboard shortcut hints appear on second action (e.g., after the user clicks "Save", a toast says "next time, ⌘S"); (b) guided spotlight tour on first sign-in; (c) persistent "tips" surface on `/home` rotating through features; (d) `⌘K` palette has a "Learn the shortcuts" / "What can I do here?" entry that's always visible; (e) just-in-time hints — when user does X, surface "did you know ⌘K does this?".
+- **Shapes:** Whether the product needs a guided-tour system at all; how aggressively keyboard discoverability is invested in; whether a "What's new" surface is needed; how principle #3 (friendly-to-restrained) and principle #6 (keyboard-first) coexist.
+- **Prompt:** "Show three approaches to power-user-feature discoverability for a new analyst's first session: (a) guided spotlight tour on first sign-in, (b) ambient just-in-time hints during natural use, (c) persistent learn-the-product card on `/home`. Each shown without obscuring the first useful action and without nagging returning users."
 
 ## Success criteria for Phase 2
 
 Phase 2 (divergent-concept generation in Claude Design) is complete when:
 
-1. Each of the 8 load-bearing questions above has at least 2 distinct visual answers produced in Claude Design
+1. Each of the 9 load-bearing questions above has at least 2 distinct visual answers produced in Claude Design
 2. The redesigned `/analytics` surface is shown end-to-end at data-sufficient density in both light and dark
 3. The redesigned mobile AI experience is shown end-to-end (landing → conversation → result → history)
 4. The redesigned empty-state pattern is applied to all 5 specified surfaces
@@ -276,7 +296,7 @@ Phase 2 (divergent-concept generation in Claude Design) is complete when:
 6. Top nav + ⌘K + user menu shown populated with the agreed structure
 7. Every artefact passes the no-raw-colour grep check (per CLAUDE.md rule 6)
 
-Phase 2 output is reviewed against the 5 principles in priority order. Concepts that violate principle #1 (AI as destination) or #2 (empty states) are not candidates regardless of visual polish.
+Phase 2 output is reviewed against the 6 principles in priority order. Concepts that violate principle #1 (AI as destination) or #2 (empty states) are not candidates regardless of visual polish.
 
 ## What Phase 1 does not cover
 
