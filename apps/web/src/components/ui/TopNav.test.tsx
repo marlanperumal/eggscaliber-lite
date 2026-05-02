@@ -1,8 +1,14 @@
 import { render, screen } from "@testing-library/react"
 import type React from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("@posthog/next", () => ({
+// TopNav conditionally renders Clerk auth components only when the publishable key is set.
+// Stub it so tests exercise that branch with the mocked @clerk/nextjs below.
+beforeAll(() => {
+  vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_mock")
+})
+
+vi.mock("@/lib/use-feature-flag", () => ({
   useFeatureFlag: vi.fn(),
 }))
 
@@ -35,7 +41,7 @@ vi.mock("@clerk/nextjs", () => ({
   }) => <>{showBranch === "signed-in" ? children : (fallback ?? null)}</>,
 }))
 
-import { useFeatureFlag } from "@posthog/next"
+import { useFeatureFlag } from "@/lib/use-feature-flag"
 import { TopNav } from "./top-nav"
 
 const mockUseFeatureFlag = vi.mocked(useFeatureFlag)

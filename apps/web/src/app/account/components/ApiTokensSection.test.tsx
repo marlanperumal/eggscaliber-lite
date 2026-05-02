@@ -4,8 +4,8 @@ import { beforeEach, expect, it, vi } from "vitest"
 import { api } from "@/lib/api"
 import { ApiTokensSection } from "./ApiTokensSection"
 
-vi.mock("@clerk/nextjs", () => ({
-  useAuth: () => ({ getToken: vi.fn().mockResolvedValue("dev-token") }),
+vi.mock("@/lib/use-get-token", () => ({
+  useGetToken: () => vi.fn().mockResolvedValue("dev-token"),
 }))
 
 vi.mock("@/lib/api", () => ({

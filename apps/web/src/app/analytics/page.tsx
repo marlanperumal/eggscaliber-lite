@@ -1,7 +1,7 @@
 "use client"
-import { useFeatureFlag } from "@posthog/next"
 import { notFound } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
+import { useFeatureFlag } from "@/lib/use-feature-flag"
 import { AnalyticsLayout } from "./AnalyticsLayout"
 
 const loadingFallback = (

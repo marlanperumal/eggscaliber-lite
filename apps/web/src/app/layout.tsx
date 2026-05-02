@@ -17,7 +17,52 @@ export const metadata: Metadata = {
   description: "Data analysis platform",
 }
 
+// Real PostHog publishable keys are ~52 chars (phc_ + 48). Anything shorter is a placeholder.
+const posthogEnabled = (process.env.NEXT_PUBLIC_POSTHOG_KEY?.length ?? 0) > 20
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const content = (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: CSS-only, no user input */}
+        <style dangerouslySetInnerHTML={{ __html: generateThemeCSS(themeConfig) }} />
+      </head>
+      <body className={`${inter.className} flex min-h-screen flex-col`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <NuqsAdapter>
+            {posthogEnabled ? (
+              <PostHogProvider
+                clientOptions={{
+                  api_host: "/ingest",
+                  debug: process.env.NODE_ENV === "development",
+                }}
+              >
+                <PostHogPageView />
+                <TopNav />
+                <main className="flex-1 overflow-hidden">{children}</main>
+              </PostHogProvider>
+            ) : (
+              <>
+                <TopNav />
+                <main className="flex-1 overflow-hidden">{children}</main>
+              </>
+            )}
+          </NuqsAdapter>
+          <Toaster />
+        </ThemeProvider>
+      </body>
+    </html>
+  )
+
+  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    return content
+  }
+
   return (
     <ClerkProvider
       afterSignOutUrl="/"
@@ -32,34 +77,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         },
       }}
     >
-      <html lang="en" suppressHydrationWarning>
-        <head>
-          {/* biome-ignore lint/security/noDangerouslySetInnerHtml: CSS-only, no user input */}
-          <style dangerouslySetInnerHTML={{ __html: generateThemeCSS(themeConfig) }} />
-        </head>
-        <body className={`${inter.className} flex min-h-screen flex-col`}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <NuqsAdapter>
-              <PostHogProvider
-                clientOptions={{
-                  api_host: "/ingest",
-                  debug: process.env.NODE_ENV === "development",
-                }}
-              >
-                <PostHogPageView />
-                <TopNav />
-                <main className="flex-1 overflow-hidden">{children}</main>
-              </PostHogProvider>
-            </NuqsAdapter>
-            <Toaster />
-          </ThemeProvider>
-        </body>
-      </html>
+      {content}
     </ClerkProvider>
   )
 }

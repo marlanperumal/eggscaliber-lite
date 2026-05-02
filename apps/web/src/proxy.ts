@@ -20,7 +20,7 @@ export const proxy = clerkMiddleware(async (auth, req: NextRequest) => {
     return
   }
 
-  if (!isPublicRoute(req)) {
+  if (!isPublicRoute(req) && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
     await auth.protect()
   }
 })

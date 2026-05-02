@@ -1,10 +1,10 @@
 "use client"
-import { useAuth } from "@clerk/nextjs"
 import type { components } from "@shared/api"
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { mutate } from "@/lib/mutate"
+import { useGetToken } from "@/lib/use-get-token"
 import { GenerateTokenForm } from "./GenerateTokenForm"
 import { TokenList } from "./TokenList"
 import { TokenRevealCallout } from "./TokenRevealCallout"
@@ -13,7 +13,7 @@ type ApiTokenRead = components["schemas"]["ApiTokenRead"]
 type ApiTokenCreated = components["schemas"]["ApiTokenCreated"]
 
 export function ApiTokensSection() {
-  const { getToken } = useAuth()
+  const getToken = useGetToken()
   const [tokens, setTokens] = useState<ApiTokenRead[]>([])
   const [showForm, setShowForm] = useState(false)
   const [pendingToken, setPendingToken] = useState<ApiTokenCreated | null>(null)

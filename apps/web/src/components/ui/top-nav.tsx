@@ -1,7 +1,6 @@
 "use client"
 
 import { OrganizationSwitcher, Show, SignInButton, UserButton } from "@clerk/nextjs"
-import { useFeatureFlag } from "@posthog/next"
 import { Moon, Sun } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -15,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { themeConfig } from "@/config/theme.config"
+import { useFeatureFlag } from "@/lib/use-feature-flag"
 
 const ALL_NAV_LINKS = [
   { href: "/datasets", label: "Datasets", flag: null },
@@ -78,23 +78,25 @@ export function TopNav() {
             <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Show
-          when="signed-in"
-          fallback={
-            <SignInButton mode="redirect">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-nav-foreground hover:bg-nav-foreground/15 hover:text-nav-foreground"
-              >
-                Sign in
-              </Button>
-            </SignInButton>
-          }
-        >
-          <OrganizationSwitcher hidePersonal />
-          <UserButton userProfileUrl="/account" />
-        </Show>
+        {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && (
+          <Show
+            when="signed-in"
+            fallback={
+              <SignInButton mode="redirect">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-nav-foreground hover:bg-nav-foreground/15 hover:text-nav-foreground"
+                >
+                  Sign in
+                </Button>
+              </SignInButton>
+            }
+          >
+            <OrganizationSwitcher hidePersonal />
+            <UserButton userProfileUrl="/account" />
+          </Show>
+        )}
       </div>
     </nav>
   )
