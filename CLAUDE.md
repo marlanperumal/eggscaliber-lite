@@ -119,6 +119,22 @@ Agent skills live in `.claude/skills/`. After running `uv sync`, re-sync the Fas
 cp -r .venv/lib/python3.13/site-packages/fastapi/.agents/skills/fastapi .claude/skills/fastapi
 ```
 
+## Agent workflow (for autonomous Claude Code runs)
+
+When an issue is labeled `agent-ready`:
+
+1. Mirror the issue into beads (`bd add`), break into sub-tasks if non-trivial.
+2. Branch: `agent/<issue-number>-<short-slug>` off `master`.
+3. Implement focused commits using the preset git identity.
+4. Run the project's test suite. Don't claim done if anything fails.
+5. Open a PR referencing the issue (`Closes #<n>`).
+6. Stop. Human reviews and merges.
+
+### Conventions
+- Don't modify CI config, secrets, or `.beads/` files unless explicitly asked.
+- Read existing code before introducing new abstractions; match the repo's style.
+- If a task is out of scope or unclear, comment on the issue and stop — don't guess.
+
 ## Adding New Libraries
 
 Before writing any integration code for a new library or framework:
