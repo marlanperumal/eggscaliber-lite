@@ -1,27 +1,47 @@
 {
   "hooks": {
-    "SessionStart": [
+    "PreCompact": [
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "bash .claude/hooks/session-start.sh",
-            "timeout": 5,
-            "statusMessage": "Loading project rules..."
+            "command": "bd prime",
+            "type": "command"
           }
-        ]
+        ],
+        "matcher": ""
       }
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash",
         "hooks": [
           {
-            "type": "command",
             "command": "bash .claude/hooks/pre-bash-check.sh",
-            "timeout": 5
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "bash .claude/hooks/session-start.sh",
+            "statusMessage": "Loading project rules...",
+            "timeout": 5,
+            "type": "command"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "bd prime",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
       }
     ]
   }

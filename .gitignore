@@ -247,3 +247,8 @@ storybook-static/
 playwright-report/
 test-results/
 e2e/.auth/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
