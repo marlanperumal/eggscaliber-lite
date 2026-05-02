@@ -130,6 +130,13 @@ When an issue is labeled `agent-ready`:
 5. Open a PR referencing the issue (`Closes #<n>`).
 6. Stop. Human reviews and merges.
 
+### Agent runtime environment
+
+The agent container has all dev deps (just, Node, pnpm, uv, Python). The dev databases
+(Postgres etc.) are already running on the host and reachable via `localhost`. Do **not**
+run `just db-up` — it's already up. If a connection fails, ask for help; do not try to
+restart Docker services.
+
 ### Conventions
 - Don't modify CI config, secrets, or `.beads/` files unless explicitly asked.
 - Read existing code before introducing new abstractions; match the repo's style.
