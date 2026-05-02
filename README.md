@@ -39,6 +39,31 @@ just generate-types # regenerate TypeScript types from FastAPI OpenAPI spec
 
 Run `just` at the repo root to see all available commands.
 
+## Task Management
+
+Issues are tracked in two places that work together:
+
+- **GitHub Issues / Projects** — the source of truth for planned and in-flight work. Use labels and the project board to prioritise.
+- **Beads (`bd`)** — a git-native CLI tracker (`.beads/`) that lives next to the code. Agents and developers use it for session-level tracking and to surface what is ready to work.
+
+```bash
+bd ready              # issues with no blockers
+bd show <id>          # view details
+bd update <id> --claim  # take ownership
+bd close <id>         # mark complete
+```
+
+### Autonomous agent workflow
+
+Issues labelled **`agent-ready`** on GitHub are safe for an AI agent to pick up end-to-end:
+
+1. Mirror the issue into Beads and break into sub-tasks if non-trivial.
+2. Create a branch: `agent/<issue-number>-<short-slug>` off `master`.
+3. Implement in focused commits.
+4. Run `just lint && just format-check && just typecheck && just test` — nothing ships with a failing check.
+5. Open a PR referencing the issue (`Closes #<n>`).
+6. Stop — a human reviews and merges.
+
 ## Deployment
 
 Pushes to `master` deploy automatically:
