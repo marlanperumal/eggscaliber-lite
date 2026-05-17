@@ -1,6 +1,9 @@
 {
   "name": "eggscaliber-lite",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "postinstall": "husky"
   },
