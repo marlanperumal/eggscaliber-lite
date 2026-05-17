@@ -6,9 +6,11 @@
   },
   "pnpm": {
     "overrides": {
-      "axios": ">=1.15.0",
+      "axios": ">=1.15.2",
       "follow-redirects": ">=1.16.0",
-      "protobufjs": ">=7.5.5",
+      "protobufjs": ">=8.0.2",
+      "@protobufjs/utf8": ">=1.1.1",
+      "postcss": ">=8.5.10",
       "dompurify": ">=3.4.0"
     },
     "onlyBuiltDependencies": [
@@ -21,8 +23,8 @@
     ]
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.5.0",
-    "@commitlint/config-conventional": "^20.5.0",
+    "@commitlint/cli": "^21.0.1",
+    "@commitlint/config-conventional": "^21.0.1",
     "@playwright/test": "^1.59.1",
     "concurrently": "^9.2.1",
     "husky": "^9.1.7",
