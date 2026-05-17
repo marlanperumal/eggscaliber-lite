@@ -39,6 +39,33 @@ just generate-types # regenerate TypeScript types from FastAPI OpenAPI spec
 
 Run `just` at the repo root to see all available commands.
 
+### Beads (bd)
+
+[Beads](https://beads.sh) is a versioned issue-tracking CLI used during autonomous agent runs. It mirrors GitHub Issues>
+
+```bash
+bd prime                      # Print full workflow context and command reference
+bd ready                      # List agent-ready issues available for work
+bd show <id>                  # View issue details and sub-tasks
+bd add                        # Mirror a GitHub issue into beads
+bd update <id> --claim        # Claim an issue before starting work
+bd close <id>                 # Mark work complete
+bd dolt push                  # Sync beads state to remote
+```
+
+### Autonomous agent workflow
+
+When an issue is labelled `agent-ready`:
+
+1. The agent mirrors it into beads (`bd add`) and breaks it into sub-tasks if non-trivial.
+2. A branch is created: `agent/<issue-number>-<short-slug>` off `master`.
+3. The agent implements focused commits, following the conventions in `CLAUDE.md`.
+4. Tests must pass — the agent does not claim completion if anything fails.
+5. A PR is opened referencing the issue (`Closes #<n>`).
+6. A human reviews and merges. The agent stops.
+
+See `CLAUDE.md` → *Agent workflow* for the full protocol and conventions.
+
 ## Deployment
 
 Pushes to `master` deploy automatically:

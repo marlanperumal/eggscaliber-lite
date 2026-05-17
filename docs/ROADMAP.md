@@ -242,12 +242,28 @@ V2 items called out in the MCP spec.
 
 ### 17 — AI Interface V2 ⏳
 
-Deferred from Sub-project 7.
+Deferred from Sub-project 7, plus agent efficiency improvements identified in May 2026.
 
 - **File & image inputs** — upload a chart or document as part of a prompt
 - **Agent memory across turns** — remember user preferences and prior dataset context beyond the message array
 
-**Done when:** AI interactions feel persistent and multimodal rather than single-shot text.
+**Phase 1 — Agent efficiency (independent, any order):**
+
+- **Pre-inject package list into system prompt** — `list_packages` is called as the agent's first tool on every request, even though `accessible_ids` are known at auth time. Build `build_system_prompt(session, accessible_ids)` to fetch and embed the package/collection/dataset catalogue directly into the system prompt before the agent runs, removing one guaranteed tool round-trip per query. Benefit scales with prompt caching on frontier models (cached input tokens are ~10× cheaper than output tokens from tool calls). `list_packages` tool and `_list_packages_impl` are removed; `stream_response` awaits the dynamic prompt. _No dependencies._
+
+- **Compact tool output format** — `_get_field_tree_impl` emits 3 lines per field; for wide datasets this exceeds 400 tokens. Reformat to one line per field (`Group > field_key (Display Name, type)`), halving context token usage without information loss. _No dependencies._
+
+- **Simplified `run_crosstab` / `run_trend` tool signatures** — both tools currently accept full nested Pydantic models (`CrosstabRequest`, `TrendRequest`) including `list[FieldSelection]`, `MeasureSpec`, filters, and mode flags. Constructing these correctly is a common failure point for smaller models. Expose flat primitive signatures for the common case (`dataset_id: int, row_field_key: str, col_field_key: str | None, options: dict | None`) and move schema construction into the impl functions. Power-query parameters remain reachable via `options`. _No dependencies._
+
+**Phase 2 — Compound discovery tool (best after Phase 1 pre-injection):**
+
+- **Replace `get_field_tree` with `find_fields(query: str)` keyword search** — the current two-step discovery chain requires the model to reason about IDs across sequential tool calls. A single `find_fields(query: str, limit: int = 10)` tool accepts natural-language search terms and returns ranked `(dataset_id, field_key, display_name, type)` tuples via case-insensitive match against field display names, dataset names, and group names — all in Python with no model round-trip. The agent chain becomes `find_fields` → `run_crosstab`/`run_trend`. `get_field_tree` tool and `_get_field_tree_impl` are removed; new `_find_fields_impl` added with unit tests.
+
+**Phase 3 — Semantic field search (depends on Phase 2):**
+
+- **Embedding index for `find_fields`** — keyword search fails on synonyms and natural-language mismatch (e.g. "how old are respondents" won't match `age_group`). Replace `_find_fields_impl` internals with vector similarity search: embed each field as `"Dataset > Group > field_key: Display Name (type)"` via a configurable embedding endpoint (default: `nomic-embed-text` via local Ollama), store vectors, query by cosine similarity at runtime. Index rebuilt on dataset/field changes. New `embedding_service.py`; `AI_EMBEDDING_MODEL` and `AI_EMBEDDING_BASE_URL` env vars. _Depends on Phase 2 `find_fields` interface; replaces internals only._
+
+**Done when:** AI interactions feel persistent and multimodal rather than single-shot text, and agent queries are efficient across both local and frontier model backends.
 
 ---
 
