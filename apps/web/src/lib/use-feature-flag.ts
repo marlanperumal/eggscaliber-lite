@@ -24,9 +24,12 @@ function useFeatureFlagDev(flag: string): { key: string; enabled: boolean } | un
   return { key: flag, enabled }
 }
 
-function useFeatureFlagPostHog(flag: string) {
-  return posthogUseFeatureFlag(flag)
+function useFeatureFlagPostHog(flag: string): { key: string; enabled: boolean } | undefined {
+  const result = posthogUseFeatureFlag(flag)
+  if (!result) return undefined
+  return { key: result.key, enabled: result.enabled }
 }
 
 // Assigned at module-evaluation time — same function on every render for a given build.
-export const useFeatureFlag = isPostHogEnabled ? useFeatureFlagPostHog : useFeatureFlagDev
+export const useFeatureFlag: (flag: string) => { key: string; enabled: boolean } | undefined =
+  isPostHogEnabled ? useFeatureFlagPostHog : useFeatureFlagDev
