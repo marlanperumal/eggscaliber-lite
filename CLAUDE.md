@@ -15,6 +15,16 @@ These are enforced by hooks but check them yourself first:
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Working Discipline
+
+**Verification before completion.** Never claim work is "done", "fixed", "passing", or "ready" without running the actual check and observing its output. When reporting completion, paste the exact command you ran and a relevant snippet of its real output — not a summary, not a paraphrase. If a subagent reports a result (e.g. "0 tests found", "all green"), grep-verify the claim before trusting it.
+
+**Research before custom implementations.** For framework-specific work (shadcn/ui, next-themes, Clerk, nuqs, Next.js App Router, FastAPI, Pydantic), first consult the official docs via `WebFetch` or `context7` and quote the recommended pattern. Deviate only with explicit approval. Past detours: custom next-themes implementation when the shadcn-recommended fix existed; sweeping `sed` substitutions across multiple files without dry-run.
+
+**Step-gate audits and destructive ops.** When asked for step-by-step verification, run one step, paste its output, wait for confirmation. Do not batch. Before any operation that touches many files at once (multi-file `sed`, shadcn re-install, mass refactor), preview the scope first.
+
+**Persistence is part of "done".** When you swap a tool, change a convention, or settle on a new pattern mid-session, update CLAUDE.md and/or `bd remember` as part of the same task — not as a follow-up the user has to prompt for.
+
 ## Commands
 
 **`just` commands are pre-approved and MUST always be used when a recipe exists.** Using the raw equivalent (e.g. `cd apps/api && uv run pytest` instead of `just test-api`) is never acceptable — it may require manual approval and block progress, and it violates this rule regardless. Check `just --list` before reaching for any direct invocation. Only fall back when no recipe covers the operation.
@@ -99,6 +109,8 @@ just lint && just format-check && just typecheck && just build-storybook && just
 ```
 
 These mirror the CI pipeline. Every check must be green before pushing.
+
+**Enforced by hook.** `.claude/hooks/pre-push-check.sh` runs `just lint`, `just format-check`, `just typecheck`, and `just test` automatically before any `git push` and blocks on failure. To bypass for a deliberate WIP push, prefix the command: `SKIP_PRE_PUSH=1 git push ...`. The hook does not run `just build-storybook` — run that manually if you've touched Storybook-relevant code.
 
 ## Key Conventions
 
