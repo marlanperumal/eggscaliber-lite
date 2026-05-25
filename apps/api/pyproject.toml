@@ -3,7 +3,7 @@ name = "api"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi[standard]>=0.136.1",
+    "fastapi[standard]>=0.136.3",
     "sqlmodel>=0.0.38",
     "alembic>=1.18.4",
     "pydantic-settings>=2.14.1",
