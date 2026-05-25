@@ -33,7 +33,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@sentry/nextjs": "^10.53.1",
     "@tanstack/react-virtual": "^3.13.26",
-    "ai": "^6.0.168",
+    "ai": "^6.0.191",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
     "next": "^16.2.6",
