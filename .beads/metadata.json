@@ -1,7 +1,0 @@
-{
-  "database": "dolt",
-  "backend": "dolt",
-  "dolt_mode": "embedded",
-  "dolt_database": "eggscaliber_lite",
-  "project_id": "fcb61bf4-4989-453f-be0b-fdd01219c00d"
-}

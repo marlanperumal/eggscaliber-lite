@@ -23,7 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Step-gate audits and destructive ops.** When asked for step-by-step verification, run one step, paste its output, wait for confirmation. Do not batch. Before any operation that touches many files at once (multi-file `sed`, shadcn re-install, mass refactor), preview the scope first.
 
-**Persistence is part of "done".** When you swap a tool, change a convention, or settle on a new pattern mid-session, update CLAUDE.md and/or `bd remember` as part of the same task — not as a follow-up the user has to prompt for.
+**Persistence is part of "done".** When you swap a tool, change a convention, or settle on a new pattern mid-session, update CLAUDE.md (or auto-memory) as part of the same task — not as a follow-up the user has to prompt for.
 
 ## Commands
 
@@ -135,12 +135,11 @@ cp -r .venv/lib/python3.13/site-packages/fastapi/.agents/skills/fastapi .claude/
 
 When an issue is labeled `agent-ready`:
 
-1. Mirror the issue into beads (`bd add`), break into sub-tasks if non-trivial.
-2. Branch: `agent/<issue-number>-<short-slug>` off `master`.
-3. Implement focused commits using the preset git identity.
-4. Run the project's test suite. Don't claim done if anything fails.
-5. Open a PR referencing the issue (`Closes #<n>`).
-6. Stop. Human reviews and merges.
+1. Branch: `agent/<issue-number>-<short-slug>` off `master`.
+2. Implement focused commits using the preset git identity.
+3. Run the project's test suite. Don't claim done if anything fails.
+4. Open a PR referencing the issue (`Closes #<n>`).
+5. Stop. Human reviews and merges.
 
 ### Agent runtime environment
 
@@ -150,7 +149,7 @@ run `just db-up` — it's already up. If a connection fails, ask for help; do no
 restart Docker services.
 
 ### Conventions
-- Don't modify CI config, secrets, or `.beads/` files unless explicitly asked.
+- Don't modify CI config or secrets unless explicitly asked.
 - Read existing code before introducing new abstractions; match the repo's style.
 - If a task is out of scope or unclear, comment on the issue and stop — don't guess.
 
@@ -190,49 +189,17 @@ Use a **hybrid approach** for UI work — HTML display-server mockups for high-l
 - CORS: `CORS_ORIGINS` env var on Render must include the Vercel URL — update it if the Vercel project URL ever changes
 
 
-<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
-## Beads Issue Tracker
+## Task Tracking
 
-This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
-
-### Quick Reference
-
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work
-bd close <id>         # Complete work
-```
-
-### Rules
-
-- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
-- Run `bd prime` for detailed command reference and session close protocol
-- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+Use Claude Code's built-in task tools for in-session work. For anything that needs to outlive a session, file a GitHub issue. Don't use markdown TODO files.
 
 ## Session Completion
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+Work is not complete until `git push` succeeds. Before ending a session:
 
-**MANDATORY WORKFLOW:**
+1. Run quality gates (`just lint && just typecheck && just test`) if code changed
+2. Commit outstanding work
+3. `git pull --rebase` then `git push`
+4. Verify `git status` shows "up to date with origin"
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   bd dolt push
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
-
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
-<!-- END BEADS INTEGRATION -->
+If push fails, resolve and retry — never leave work stranded locally.
